@@ -1,0 +1,48 @@
+name: devops-orchestrator
+version: 0.1.0
+domain_agent: DevOps Orchestrator
+runtime_boundary:
+  traffic:
+    - feishu_chatops
+  autonomy:
+    - route
+    - notify
+  workspace: none
+  secrets:
+    - FEISHU_APP_ID
+    - FEISHU_APP_SECRET
+allowed_skills:
+  L3:
+    - intent-parse
+    - kanban-route
+    - result-notify
+toolsets:
+  - kanban
+  - skills
+  - memory
+mcp_servers: []
+enabled_tools:
+  - kanban:kanban_create
+  - kanban:kanban_get
+  - kanban:kanban_list
+  - kanban:delegate_task
+  - hermes:profile_list
+denied_tools:
+  - devops-observe:prometheus_query
+  - devops-observe:loki_query
+  - devops-observe:k8s_get
+  - devops-observe:k8s_list
+  - devops-prod-breakglass:prod_restart_workload
+  - devops-prod-breakglass:prod_scale_workload
+  - devops-gitops-draft:argocd_sync
+  - devops-gitops-draft:kubectl_apply
+entry_rules:
+  no_mutation: true
+  no_direct_ops: true
+  require_kanban_audit: true
+  no_profile_switch: false
+acceptance:
+  - "hermes profile use devops-orchestrator"
+  - "hermes tools list must not show devops-observe or devops-prod-breakglass tools"
+  - "send feishu message with service=intlsms, request_type=observability_query → kanban task created with correct assignee"
+  - "send feishu message with urgency=urgent → delegate_task fired AND kanban audit task created"

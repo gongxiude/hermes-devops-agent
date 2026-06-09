@@ -2,7 +2,7 @@
 
 [![License: CC BY 4.0](https://img.shields.io/badge/License-CC_BY_4.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
 [![Code License: MIT](https://img.shields.io/badge/Code_License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Chapters: 13](https://img.shields.io/badge/Chapters-13-green.svg)](#guide-structure)
+[![Chapters: 15](https://img.shields.io/badge/Chapters-15-green.svg)](#guide-structure)
 
 > How to design, build, and operate AI agents for infrastructure teams — safely.
 
@@ -38,6 +38,8 @@ AI agents can write IaC, fix compliance findings, detect drift, review PRs, and 
 | 11 | [Testing & Hardening](./11-testing-hardening.md) | Trajectory tests, prompt injection defense, security benchmarks |
 | 12 | [UX & Usability](./12-ux-usability.md) | Multi-tenancy, RBAC, onboarding, team collaboration, error prevention |
 | 13 | [Risk Framework & Checklists](./13-risk-framework.md) | Decision matrices, compliance mapping, go-live checklists |
+| 14 | [Hermes Agent DevOps 落地方案](./14-hermes-agent-devops-implementation.md) | 基于 Hermes profile、skills、subagents、MCP 和 gateway 的 DevOps 落地方案 |
+| 15 | [Python OpenAI Agents DevOps 落地方案](./15-python-openai-agents-devops-implementation.md) | 基于 Python OpenAI SDK / OpenAI Agents SDK 的内部 Agent 服务化落地方案 |
 
 ---
 
