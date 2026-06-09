@@ -12,8 +12,10 @@ This directory is the Hermes DevOps Agent repository.
 Key anchors:
 
 - `skills/catalog.yaml` — shared layered skill catalog
+- `docs/implementation/hermes-devops-implementation.md` — 完整落地方案手册（profile/plugin/skills/MCP/Kanban）
+- `docs/reports/hermes-devops-agent-architecture-report.md` — 技术架构与落地汇报（面向技术总监）
 - `docs/research/official-basis.md` — official-source basis for the current design
-- `docs/implementation/observability-query-intlsms-runtime-inspection.md` — phase-1 landing doc
+- `docs/implementation/observability-query-intlsms-runtime-inspection.md` — phase-1 国际短信巡检落地文档
 
 Phase 1 ships one installable distribution:
 
