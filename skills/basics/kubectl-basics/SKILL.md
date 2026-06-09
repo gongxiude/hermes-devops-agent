@@ -1,6 +1,6 @@
 ---
-name: kubectl-skill
-description: Execute and manage Kubernetes clusters via kubectl commands. Query resources, deploy applications, debug containers, manage configurations, and monitor cluster health. Use when working with Kubernetes clusters, containers, deployments, or pod diagnostics.
+name: kubectl-basics
+description: 在 DevOps Agent 中以只读优先方式使用 kubectl，理解 get、describe、logs、events、context、namespace 和输出格式约束，并区分查询动作与变更动作。
 license: MIT
 metadata:
   author: Dennis de Vaal <d.devaal@gmail.com>

@@ -14,7 +14,7 @@ terminal:
 mcp_servers:
   devops-observe:
     command: "python3"
-    args: ["mcp-servers/devops-observe/devops_observe_mcp.py"]
+    args: ["mcp-servers/devops-observe/src/server.py"]
     env:
       OBSERVE_PROMETHEUS_BASE_URL_PROD: "${OBSERVE_PROMETHEUS_BASE_URL_PROD}"
       OBSERVE_LOKI_BASE_URL_PROD: "${OBSERVE_LOKI_BASE_URL_PROD}"
@@ -26,18 +26,11 @@ mcp_servers:
       KUBECTL_BIN_TEST: "${KUBECTL_BIN_TEST}"
     tools:
       include:
-        - intlsms_runtime_inspection
+        - intlsms_inspect
         - readonly_guard_check
         - prometheus_query
-        - loki_query
-        - k8s_readonly_get_workload
-  devops-governance:
-    command: "python3"
-    args: ["mcp-servers/devops-governance/devops_governance_mcp.py"]
-    tools:
-      include:
-        - policy_decide
-        - audit_emit
+        - loki_query_range
+        - k8s_get_workload
 
 # Profile-specific settings
 observability_query:

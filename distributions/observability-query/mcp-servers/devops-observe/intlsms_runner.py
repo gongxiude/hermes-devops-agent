@@ -21,15 +21,20 @@ AGENT_ROOT = Path(__file__).resolve().parents[2]
 
 
 def default_config_path() -> Path:
-    # 优先使用新路径 skills/governance/domains/
-    new_path = AGENT_ROOT / "skills/governance/domains/intlsms-runtime-inspection.yaml"
-    if new_path.exists():
-        return new_path
-    # 兼容旧路径（过渡期）
-    old_path = AGENT_ROOT / "skills/devops/domain-governance/domains/intlsms-runtime-inspection.yaml"
-    if old_path.exists():
-        return old_path
-    return new_path
+    current = Path(__file__).resolve()
+    candidates: list[Path] = []
+    for parent in current.parents:
+        candidates.extend(
+            [
+                parent / "skills/governance/domains/intlsms-runtime-inspection.yaml",
+                parent / "skills/devops/governance/domains/intlsms-runtime-inspection.yaml",
+                parent / "skills/devops/domain-governance/domains/intlsms-runtime-inspection.yaml",
+            ]
+        )
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return candidates[0]
 
 
 DEFAULT_CONFIG = default_config_path()
@@ -411,7 +416,7 @@ def inspect(
                 k8s_status = "unknown"
                 k8s_summary = f"kubernetes read failed: {exc}"
                 failures.append({"source": "kubernetes", "query": "workload_status", "service": service_name, "reason": str(exc)})
-        tool_calls.append(ToolCall("devops-observe:k8s_get", "workload_status", service_name, k8s_status, k8s_summary))
+        tool_calls.append(ToolCall("devops-observe:k8s_get_workload", "workload_status", service_name, k8s_status, k8s_summary))
         evidence.append(
             {
                 "source": "kubernetes",

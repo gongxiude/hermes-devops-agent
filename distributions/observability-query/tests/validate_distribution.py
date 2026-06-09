@@ -30,21 +30,21 @@ def load_skill(path: Path) -> dict:
 
 def main() -> int:
     manifest = load_yaml(ROOT / "distribution.yaml")
-    assert manifest["profile"] == "observability-query"
+    assert manifest["name"] == "hermes-devops-observability-query"
+    assert manifest["hermes_requires"] == ">=0.12.0"
 
     config = load_yaml(PROFILE / "config.yaml")
-    enabled = config["tools"]["enabled"]["feishu"]
-    disabled = config["tools"]["disabled"]["feishu"]
     assert config["observability_query"]["supported_environments"] == ["prod", "test"]
-    assert "devops-observe:intlsms_runtime_inspection" in enabled
-    assert "devops-observe:readonly_guard_check" in enabled
-    assert "devops-prod-breakglass:prod_restart_workload" in disabled
+    include = config["mcp_servers"]["devops-observe"]["tools"]["include"]
+    assert "intlsms_inspect" in include
+    assert "readonly_guard_check" in include
+    assert "k8s_get_workload" in include
 
     mcp = json.loads((PROFILE / "mcp.json").read_text(encoding="utf-8"))
     server = mcp["mcpServers"]["devops-observe"]
     assert server["transport"] == "stdio"
     assert server["command"] == "python3"
-    assert server["args"] == ["mcp-servers/devops-observe/devops_observe_mcp.py"]
+    assert server["args"] == ["mcp-servers/devops-observe/src/server.py"]
     assert "OBSERVE_PROMETHEUS_BASE_URL_PROD" in server["env"]
     assert "OBSERVE_PROMETHEUS_BASE_URL_TEST" in server["env"]
 
@@ -61,31 +61,31 @@ def main() -> int:
 
     required_layers = {
         "L0": PROFILE / "skills/devops/basics",
-        "L1": PROFILE / "skills/devops/safe-tool-wrappers",
-        "L2": PROFILE / "skills/devops/functional-skills",
-        "L3": PROFILE / "skills/devops/orchestration-skills",
-        "L4": PROFILE / "skills/devops/domain-governance",
-        "L5": PROFILE / "skills/devops/entry-skills",
-        "subagents": PROFILE / "skills/devops/subagents",
-        "profiles": PROFILE / "skills/devops/profiles",
+        "L1": PROFILE / "skills/devops/tool-contracts",
+        "L2": PROFILE / "skills/devops/capabilities",
+        "L3": PROFILE / "skills/devops/orchestration",
+        "L4": PROFILE / "skills/devops/governance",
+        "L5": PROFILE / "skills/devops/entry",
+        "subagents": PROFILE / "skills/devops/specs/subagents",
+        "profiles": PROFILE / "skills/devops/specs/profiles",
     }
     for layer, path in required_layers.items():
         assert path.exists(), f"missing layered skills path: {layer} {path}"
         assert any(path.rglob("*")), f"empty layered skills path: {layer} {path}"
 
-    domain = load_yaml(PROFILE / "skills/devops/domain-governance/domains/intlsms-runtime-inspection.yaml")
+    domain = load_yaml(PROFILE / "skills/devops/governance/domains/intlsms-runtime-inspection.yaml")
     assert domain["profile"] == "observability-query"
     assert domain["allowed_autonomy"] == ["observe", "recommend"]
     assert set(domain["environments"]) == {"prod", "test"}
     assert domain["environments"]["prod"]["observability"]["prometheus"]["endpoint_env"] == "OBSERVE_PROMETHEUS_BASE_URL_PROD"
     assert domain["environments"]["test"]["observability"]["loki"]["endpoint_env"] == "OBSERVE_LOKI_BASE_URL_TEST"
 
-    profile_spec = load_yaml(PROFILE / "skills/devops/profiles/observability-query.yaml")
+    profile_spec = load_yaml(PROFILE / "skills/devops/specs/profiles/observability-query.yaml")
     assert profile_spec["name"] == "observability-query"
     assert "observability-agent" in profile_spec["subagents"]
     assert profile_spec["allowed_skills"]["L5"] == ["chat-ops-entry", "scheduled-entry"]
 
-    l1_catalog = load_yaml(PROFILE / "skills/devops/safe-tool-wrappers/catalog.yaml")
+    l1_catalog = load_yaml(PROFILE / "skills/devops/tool-contracts/catalog.yaml")
     assert l1_catalog["layer"] == "L1"
     assert {item["name"] for item in l1_catalog["skills"]} == {
         "prometheus-query-tool",
@@ -93,7 +93,7 @@ def main() -> int:
         "k8s-readonly-tool",
     }
 
-    entry_catalog = load_yaml(PROFILE / "skills/devops/entry-skills/catalog.yaml")
+    entry_catalog = load_yaml(PROFILE / "skills/devops/entry/catalog.yaml")
     assert entry_catalog["layer"] == "L5"
     assert {item["name"] for item in entry_catalog["skills"]} == {"chat-ops-entry", "scheduled-entry"}
 
@@ -102,17 +102,17 @@ def main() -> int:
         PROFILE / "skills/devops/basics/loki-logql-basics/SKILL.md",
         PROFILE / "skills/devops/basics/kubectl-basics/SKILL.md",
         PROFILE / "skills/devops/basics/kubernetes-object-basics/SKILL.md",
-        PROFILE / "skills/devops/safe-tool-wrappers/prometheus-query-tool/SKILL.md",
-        PROFILE / "skills/devops/safe-tool-wrappers/loki-query-tool/SKILL.md",
-        PROFILE / "skills/devops/safe-tool-wrappers/k8s-readonly-tool/SKILL.md",
-        PROFILE / "skills/devops/functional-skills/observability-health-query/SKILL.md",
-        PROFILE / "skills/devops/functional-skills/kubernetes-debug/SKILL.md",
-        PROFILE / "skills/devops/orchestration-skills/intlsms-runtime-inspection/SKILL.md",
-        PROFILE / "skills/devops/domain-governance/skill-policy-gate/SKILL.md",
-        PROFILE / "skills/devops/domain-governance/audit-trail/SKILL.md",
-        PROFILE / "skills/devops/domain-governance/secret-redaction/SKILL.md",
-        PROFILE / "skills/devops/entry-skills/chat-ops-entry/SKILL.md",
-        PROFILE / "skills/devops/entry-skills/scheduled-entry/SKILL.md",
+        PROFILE / "skills/devops/tool-contracts/prometheus-query-tool/SKILL.md",
+        PROFILE / "skills/devops/tool-contracts/loki-query-tool/SKILL.md",
+        PROFILE / "skills/devops/tool-contracts/k8s-readonly-tool/SKILL.md",
+        PROFILE / "skills/devops/capabilities/observability-health-query/SKILL.md",
+        PROFILE / "skills/devops/capabilities/kubernetes-debug/SKILL.md",
+        PROFILE / "skills/devops/orchestration/intlsms-runtime-inspection/SKILL.md",
+        PROFILE / "skills/devops/governance/skill-policy-gate/SKILL.md",
+        PROFILE / "skills/devops/governance/audit-trail/SKILL.md",
+        PROFILE / "skills/devops/governance/secret-redaction/SKILL.md",
+        PROFILE / "skills/devops/entry/chat-ops-entry/SKILL.md",
+        PROFILE / "skills/devops/entry/scheduled-entry/SKILL.md",
     ]
     for path in required_skills:
         skill = load_skill(path)

@@ -23,12 +23,12 @@
 
 ## skills 分层
 
-- L0：`shared-skills/devops/basics/`
-- L1：`shared-skills/devops/safe-tool-wrappers/`
-- L2：`shared-skills/devops/functional-skills/observability-health-query/`
-- L3：`shared-skills/devops/orchestration-skills/intlsms-runtime-inspection/`
-- L4：`shared-skills/devops/domain-governance/domains/intlsms-runtime-inspection.yaml`
-- L5：`shared-skills/devops/entry-skills/catalog.yaml`
+- L0：`skills/basics/`
+- L1：`skills/tool-contracts/`
+- L2：`skills/capabilities/observability-health-query/`
+- L3：`skills/orchestration/intlsms-runtime-inspection/`
+- L4：`skills/governance/domains/intlsms-runtime-inspection.yaml`
+- L5：`skills/entry/catalog.yaml`
 
 ## subagent 编排
 
@@ -42,14 +42,19 @@
 - tool 必须由 profile 独立启用
 - shared skill 不授予工具权限
 - 当前分布只启用：
-  - `devops-observe:intlsms_runtime_inspection`
+  - `devops-observe:intlsms_inspect`
   - `devops-observe:readonly_guard_check`
+  - `devops-observe:prometheus_query`
+  - `devops-observe:loki_query_range`
+  - `devops-observe:k8s_get_workload`
+  - `devops_policy_decide`
+  - `devops_audit_emit`
 
 ## 多环境 / 多集群模型
 
 领域上下文文件：
 
-`shared-skills/devops/domain-governance/domains/intlsms-runtime-inspection.yaml`
+`skills/governance/domains/intlsms-runtime-inspection.yaml`
 
 当前已定义：
 
@@ -218,6 +223,7 @@ runner 输出两种报告：
 - distribution config：`distributions/observability-query/config.yaml`
 - distribution cron：`distributions/observability-query/cron/intlsms-runtime-inspection.yaml`
 - distribution mcp：`distributions/observability-query/mcp.json`
+- 领域上下文：`skills/governance/domains/intlsms-runtime-inspection.yaml`
 
 ## 执行流程
 

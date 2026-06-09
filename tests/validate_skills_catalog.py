@@ -6,7 +6,7 @@ import yaml
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SKILLS_ROOT = ROOT / "shared-skills/devops"
+SKILLS_ROOT = ROOT / "skills"
 
 
 def load_yaml(path: Path) -> dict:
@@ -81,11 +81,6 @@ def main() -> int:
         domain = load_yaml(SKILLS_ROOT / str(item["path"]))
         assert set(domain["environments"]) >= {"prod", "test"}
 
-    for item in layers["L4"]["subagents"]:
-        assert_relative_file(str(item["path"]))
-        subagent = load_yaml(SKILLS_ROOT / str(item["path"]))
-        assert "allowed_skills" in subagent
-
     for item in layers["L5"]["skills"]:
         assert_relative_file(str(item["path"]))
         skill = load_skill(SKILLS_ROOT / str(item["path"]))
@@ -97,7 +92,18 @@ def main() -> int:
         subcatalog = load_yaml(SKILLS_ROOT / str(item["path"]))
         assert subcatalog["layer"] == "L5"
 
-    for item in layers["L4"]["profiles"]:
+    specs = catalog.get("specs")
+    assert isinstance(specs, dict), "catalog.specs must be a mapping"
+
+    for item in specs["subagents"]:
+        assert_relative_file(str(item["path"]))
+        subagent = load_yaml(SKILLS_ROOT / str(item["path"]))
+        assert subagent["name"] == item["name"]
+        assert "allowed_skills" in subagent
+        for skill_name in subagent.get("allowed_skills", []):
+            assert skill_name in actual_skills, f"subagent references missing skill: {skill_name}"
+
+    for item in specs["profiles"]:
         assert_relative_file(str(item["path"]))
         profile = load_yaml(SKILLS_ROOT / str(item["path"]))
         assert profile["name"] == item["name"]
@@ -105,7 +111,7 @@ def main() -> int:
             for skill_name in skills:
                 assert skill_name in actual_skills, f"profile references missing skill: {skill_name}"
 
-    for path in (SKILLS_ROOT / "subagents").glob("*.yaml"):
+    for path in (SKILLS_ROOT / "specs/subagents").glob("*.yaml"):
         subagent = load_yaml(path)
         for skill_name in subagent.get("allowed_skills", []):
             assert skill_name in actual_skills, f"subagent references missing skill: {skill_name}"

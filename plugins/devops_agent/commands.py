@@ -50,6 +50,22 @@ def handle_devops_status(raw_args: str) -> str:
     else:
         lines.append("    (no recent audit events)")
 
+    # ── Guardrails status ─────────────────────────────────────────────
+    try:
+        from . import guardrails as _guardrails
+        gs = _guardrails.guardrails_status()
+        mode = gs.get("mode", "uninitiated")
+        mode_icon = "✅" if "nemo" in mode else ("⚠️" if mode == "fallback_regex" else "⏳")
+        lines.append("")
+        lines.append(f"  Guardrails  : {mode_icon} {mode}")
+        if gs.get("init_error"):
+            lines.append(f"    ↳ Error   : {gs['init_error'][:70]}")
+        else:
+            lines.append(f"    ↳ Config  : {gs.get('config_path', '?')}")
+    except Exception:
+        lines.append("")
+        lines.append("  Guardrails  : (unavailable)")
+
     lines.append("╰─────────────────────────────────────────────────────────╯")
     return "\n".join(lines)
 

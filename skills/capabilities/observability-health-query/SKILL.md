@@ -24,12 +24,12 @@ description: Query Prometheus, Loki, and Kubernetes read-only evidence for one s
 
 ## 调用边界
 
-| 能力 | MCP tool | 允许 | 禁止 |
+| 能力 | MCP / Plugin tool | 允许 | 禁止 |
 |---|---|---|---|
-| Prometheus | `devops-observe:prometheus_query`、`devops-observe:prometheus_query_range` | query、query_range、受限窗口 | admin API、无限窗口、高基数探索 |
+| Prometheus | `devops-observe:prometheus_query` | query_range 语义、受限窗口 | admin API、无限窗口、高基数探索 |
 | Loki | `devops-observe:loki_query_range` | query_range、limit、脱敏输出 | 原始日志批量导出、未脱敏输出 |
-| Kubernetes | `devops-observe:k8s_get`、`devops-observe:k8s_list` | get、list pod/deployment/event | exec、logs 写入、patch、delete、scale、rollout |
-| Governance | `devops-governance:policy_decide`、`devops-governance:audit_emit` | policy 和 audit | 返回长期 secret |
+| Kubernetes | `devops-observe:k8s_get_workload` | 只读 get 单个 workload | exec、patch、delete、scale、rollout |
+| Governance | `devops_policy_decide`、`devops_audit_emit` | policy 和 audit | 返回长期 secret |
 
 ## 输出
 

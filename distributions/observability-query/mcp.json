@@ -21,20 +21,8 @@
           "prometheus_query",
           "loki_query_range",
           "k8s_get_workload",
-          "readonly_guard_check"
-        ]
-      }
-    },
-    "devops-governance": {
-      "transport": "stdio",
-      "command": "python3",
-      "args": [
-        "mcp-servers/devops-governance/devops_governance_mcp.py"
-      ],
-      "tools": {
-        "include": [
-          "policy_decide",
-          "audit_emit"
+          "readonly_guard_check",
+          "intlsms_inspect"
         ]
       }
     }

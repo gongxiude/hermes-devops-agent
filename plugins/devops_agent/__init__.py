@@ -2,8 +2,9 @@
 
 Registers:
   Hooks:
-    pre_tool_call    — policy gate: block production write tools for non-breakglass profiles
-    post_tool_call   — audit trail: write structured action log to devops_audit.jsonl
+    pre_gateway_dispatch — NeMo Guardrails input rail: jailbreak/injection detection
+    pre_tool_call        — policy gate: block production write tools for non-breakglass profiles
+    post_tool_call       — audit trail: write structured action log to devops_audit.jsonl
     transform_tool_result — redaction: strip secrets from tool output before model sees it
 
   Tools:
@@ -11,11 +12,11 @@ Registers:
     devops_audit_emit     (toolset: devops_governance) — explicit audit event
 
   Slash commands:
-    /devops_status  — show active profile, MCP status, recent audit summary
+    /devops_status  — show active profile, guardrails status, recent audit summary
     /devops_audit   — query devops_audit.jsonl (tail / search)
 
   CLI commands:
-    hermes devops status         — profile + MCP status
+    hermes devops status         — profile + guardrails + MCP status
     hermes devops audit          — audit trail query
     hermes devops check-profile  — validate profile config
 """
@@ -28,6 +29,7 @@ import os
 from typing import Any, Optional
 
 from . import audit as _audit
+from . import guardrails as _guardrails
 from . import policy as _policy
 from . import redaction as _redaction
 from .commands import (
@@ -207,8 +209,9 @@ def _devops_audit_emit(args: dict, **_: Any) -> str:
 
 def register(ctx) -> None:
     # ── Hooks ─────────────────────────────────────────────────────────────
-    ctx.register_hook("pre_tool_call",       _pre_tool_call)
-    ctx.register_hook("post_tool_call",      _post_tool_call)
+    ctx.register_hook("pre_gateway_dispatch",  _guardrails.pre_gateway_dispatch)
+    ctx.register_hook("pre_tool_call",         _pre_tool_call)
+    ctx.register_hook("post_tool_call",        _post_tool_call)
     ctx.register_hook("transform_tool_result", _transform_tool_result)
 
     # ── Tools ─────────────────────────────────────────────────────────────
@@ -251,4 +254,4 @@ def register(ctx) -> None:
         description="CLI interface for the DevOps Agent plugin.",
     )
 
-    logger.info("devops_agent plugin registered (3 hooks, 2 tools, 2 slash commands, 1 CLI command)")
+    logger.info("devops_agent plugin registered (4 hooks, 2 tools, 2 slash commands, 1 CLI command)")
