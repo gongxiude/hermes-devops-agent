@@ -46,6 +46,20 @@ raw_request: <原始请求完整文本>
 urgency: <normal|urgent>
 ```
 
+## ⚠️ kanban_create 禁止传递的参数
+
+**绝对不要传 `max_runtime_seconds`**（包括 0）。该参数未传时默认 `NULL`，允许任务无限运行直到完成。
+- `max_runtime_seconds=0` 等于立即超时，任务会在首次 LLM 调用前就被杀死。
+- 仅当用户明确要求限时时才设置，且值必须 > 60。
+
+```python
+# ✅ 正确
+task = kanban_create(title="...", assignee="...", body=envelope)
+
+# ❌ 错误 — 会导致任务立即超时
+task = kanban_create(title="...", assignee="...", body=envelope, max_runtime_seconds=0)
+```
+
 ## Step 4：选择编排模式
 
 ### 单任务（Single）
