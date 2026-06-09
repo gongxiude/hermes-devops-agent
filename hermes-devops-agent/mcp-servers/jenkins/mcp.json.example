@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "jenkins": {
+      "transport": "streamable_http",
+      "url": "${JENKINS_MCP_URL}",
+      "headers": {
+        "Authorization": "Bearer ${JENKINS_MCP_TOKEN}"
+      }
+    }
+  }
+}

@@ -24,6 +24,9 @@ Hermes profile distribution
 | Hermes profiles | `~/.hermes/profiles/<domain>-<capability>` | Platform | 每个 profile 有独立 config、`.env`、SOUL、gateway、skills、memory/session、workspace、tool/MCP scope 和日志 |
 | Git workspace / worktree 池 | `~/.hermes/profiles/software-delivery-draft/workspace/` | Platform + DevOps | 每个 GitOps 任务或 MR 草稿在独立 branch/worktree 执行，互不覆盖，结束后可审计和清理 |
 | Skills 源码目录 | `hermes-devops-agent/skills/` | Platform + SRE | 共享分层 skills 被 distribution 引用，validator 通过 |
+| Basics 技能清单 | `hermes-devops-agent/skills/basics/` | Platform + SRE | 至少覆盖 Kubernetes、Jenkins、ArgoCD、Prometheus、Grafana、Alertmanager、阿里云、Codeup |
+| 共享 MCP 目录 | `hermes-devops-agent/mcp-servers/` | Platform + SRE | 至少包含 Kubernetes、Prometheus、Loki、ArgoCD、Jenkins、Git-Codeup、云厂商 |
+| 能力技能清单 | `hermes-devops-agent/skills/capabilities/` | Platform + SRE | 至少包含 anomaly-detection、capacity-forecast、security-event-detection、release-impact-analysis、service-risk-summary |
 | 第一阶段细化落地文档 | `docs/implementation/observability-query-intlsms-runtime-inspection.md` | Platform + SRE | 国际短信 `observability-query` 巡检 dry-run、只读边界和写动作拒绝验证通过 |
 | 第一阶段 profile distribution | `hermes-devops-agent/distributions/observability-query/` | Platform | 包含 `distribution.yaml`、`SOUL.md`、`config.yaml`、`mcp.json`、`.env.EXAMPLE`、`skills/`、`mcp-servers/`、`cron/intlsms-runtime-inspection.yaml` 和 `tests/` 并通过 validator |
 | Profile skills allowlist | distribution 的 `skills/` 与 `hermes-devops-agent/skills/profiles/*.yaml` | Platform + SRE | 每个 profile 只加载该入口需要的 L0-L5 skills |
@@ -57,6 +60,19 @@ Hermes profile distribution
 | Git 并发修改 | 单一 checkout 会让多个任务/MR 互相覆盖文件和 checkpoint | 用 profile-owned Git workspace + per-task git worktree 隔离 branch、diff、render、rollback |
 | 审计闭环 | skills 不能保证所有 tool call 都被记录 | 用 plugin `post_tool_call` hook 和 MCP wrapper 统一写 action trail |
 | 可更新 | 手工复制目录无法稳定升级 | 用 `hermes profile update <profile>` 拉取 distribution 更新并保留用户数据 |
+
+### 2.3 当前共享 skills 与 MCP 版图
+
+先盘点，再决定启用到哪个 profile。当前仓库中的共享能力清单固定如下。
+
+| 层级 | 当前清单 | 仓库路径 |
+|---|---|---|
+| L0 basics | Kubernetes、Jenkins、ArgoCD、Prometheus、Loki、Grafana、Alertmanager、阿里云、Codeup | `skills/basics/` |
+| L1 tool contracts | Kubernetes、Prometheus、Loki、ArgoCD、Jenkins、Git-Codeup、Aliyun | `skills/tool-contracts/` |
+| L2 capabilities | observability-health-query、kubernetes-debug、anomaly-detection、capacity-forecast、security-event-detection、release-impact-analysis、service-risk-summary | `skills/capabilities/` |
+| MCP servers | `k8s`、`prometheus`、`loki`、`argocd`、`git-codeup`、`aliyun`、`jenkins` | `mcp-servers/` |
+
+Jenkins 的处理方式与其他项不同：优先复用 Jenkins 实例侧的官方 MCP 插件，仓库只维护接入说明和配置示例；其余项在仓库内维护 Python MCP server。
 
 ## 3. Profile 运行时与入口边界
 

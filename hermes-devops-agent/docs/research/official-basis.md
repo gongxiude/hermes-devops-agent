@@ -34,10 +34,30 @@
 |---|---|---|
 | `kubectl get` | https://kubernetes.io/docs/reference/kubectl/generated/kubectl_get/ | 第一阶段只实现 `kubectl get ... -o json` 的只读路径，禁止 `apply`、`patch`、`delete`、`exec`。 |
 
-## 5. 直接落到当前实现的结论
+## 5. Jenkins / ArgoCD / Grafana / Alertmanager
+
+| 主题 | 官方文档 | 本仓库落点 |
+|---|---|---|
+| Jenkins Remote Access API | https://www.jenkins.io/doc/book/using/remote-access-api/ | `skills/basics/jenkins-basics/`，以及 Jenkins 只读工具契约。 |
+| Jenkins MCP Plugin | https://plugins.jenkins.io/mcp-server/ | `mcp-servers/jenkins/` 使用远端插件接入，而不是仓库内重复封装。 |
+| Argo CD API | https://argo-cd.readthedocs.io/en/stable/developer-guide/api-docs/ | `mcp-servers/argocd/`、`skills/basics/argocd-basics/`。 |
+| Grafana HTTP API | https://grafana.com/docs/grafana/latest/developers/http_api/ | `skills/basics/grafana-basics/`。 |
+| Alertmanager API | https://prometheus.io/docs/alerting/latest/clients/ | `skills/basics/alertmanager-basics/`。 |
+
+## 6. 阿里云 / Codeup
+
+| 主题 | 官方文档 | 本仓库落点 |
+|---|---|---|
+| 阿里云官方 AIOps Skills | https://github.com/aliyun/alibabacloud-aiops-skills | `skills/basics/aliyun-basics/` 和 `mcp-servers/aliyun/` 的实现参考。 |
+| ECS API | https://help.aliyun.com/zh/ecs/developer-reference/api-ecs-2014-05-26-describeinstances | `mcp-servers/aliyun/` 的 ECS 只读工具。 |
+| 云监控 API | https://help.aliyun.com/zh/cms/cloudmonitor-2-0/developer-reference/api-cms-2019-01-01-describemetriclist | `mcp-servers/aliyun/` 的指标只读工具。 |
+| Codeup OpenAPI | https://help.aliyun.com/zh/yunxiao/developer-reference/api-reference-codeup | `skills/basics/codeup-basics/` 和 `mcp-servers/git-codeup/`。 |
+
+## 7. 直接落到当前实现的结论
 
 1. `profile` 是运行时硬边界；`skill` 不是权限边界。
 2. distribution 是 Hermes 可安装交付物；shared skills 是源码层。
 3. 多环境 / 多集群不放进 prompt 推理，放进 L4 domain context 和 profile `.env` 映射。
 4. Prometheus / Loki / Kubernetes 第一阶段全部走只读查询契约。
-5. 定时巡检是 cron 场景，不通过聊天上下文保存状态。
+5. Jenkins 优先复用实例侧 MCP 插件，其余 ArgoCD / Loki / Git-Codeup / Aliyun 在仓库内提供 Python MCP。
+6. 定时巡检是 cron 场景，不通过聊天上下文保存状态。

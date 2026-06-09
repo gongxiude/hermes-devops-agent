@@ -25,3 +25,23 @@ skills:
     allowed_verbs: ["query", "query_range", "label_values"]
     denied_verbs: ["unbounded_query", "raw_sensitive_log_export"]
     depends_on: ["loki-logql-basics"]
+  - name: argocd-query-tool
+    mcp_servers: ["argocd"]
+    allowed_verbs: ["list_applications", "get_application", "get_project", "get_settings", "get_version"]
+    denied_verbs: ["sync", "terminate_op", "delete_application", "update_project"]
+    depends_on: ["argocd-basics"]
+  - name: jenkins-readonly-tool
+    mcp_servers: ["jenkins"]
+    allowed_verbs: ["list_jobs", "get_job", "get_build", "get_console_tail"]
+    denied_verbs: ["trigger_build", "replay_build", "update_job_config", "delete_build"]
+    depends_on: ["jenkins-basics"]
+  - name: git-codeup-readonly-tool
+    mcp_servers: ["git-codeup"]
+    allowed_verbs: ["list_repositories", "list_change_requests", "get_change_request", "list_commits", "local_git_status"]
+    denied_verbs: ["push", "merge_change_request", "create_branch", "force_push"]
+    depends_on: ["codeup-basics"]
+  - name: aliyun-readonly-tool
+    mcp_servers: ["aliyun"]
+    allowed_verbs: ["describe_instances", "describe_instance_types", "describe_metric_last", "describe_metric_list"]
+    denied_verbs: ["start_instance", "stop_instance", "reboot_instance", "modify_instance", "create_scaling_rule"]
+    depends_on: ["aliyun-basics"]
