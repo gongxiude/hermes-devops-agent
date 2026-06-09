@@ -45,5 +45,5 @@ python3 -m pytest tests/
 python3 -m pytest distributions/observability-query/tests/
 python3 tests/validate_skills_catalog.py
 python3 tests/validate_distribution.py
+python3 distributions/observability-query/tests/validate_distribution.py
 ```
-

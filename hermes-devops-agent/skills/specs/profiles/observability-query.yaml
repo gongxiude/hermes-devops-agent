@@ -45,23 +45,20 @@ subagents:
   - governance-reviewer
 mcp_servers:
   - devops-observe
-  - devops-governance
 mcp_runtime:
   devops-observe:
     command: python3
     args:
-      - mcp-servers/devops-observe/devops_observe_mcp.py
+      - mcp-servers/devops-observe/src/server.py
     transport: stdio
 enabled_tools:
-  - devops-observe:intlsms_runtime_inspection
+  - devops-observe:intlsms_inspect
   - devops-observe:readonly_guard_check
   - devops-observe:prometheus_query
-  - devops-observe:prometheus_query_range
   - devops-observe:loki_query_range
-  - devops-observe:k8s_get
-  - devops-observe:k8s_list
-  - devops-governance:policy_decide
-  - devops-governance:audit_emit
+  - devops-observe:k8s_get_workload
+  - devops_policy_decide
+  - devops_audit_emit
 denied_tools:
   - devops-prod-breakglass:prod_restart_workload
   - devops-prod-breakglass:prod_scale_workload

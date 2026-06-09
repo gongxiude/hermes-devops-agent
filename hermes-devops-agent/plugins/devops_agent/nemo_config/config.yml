@@ -1,0 +1,22 @@
+# NeMo Guardrails — DevOps Agent Input Rail
+# ==========================================
+# Zero-LLM-cost configuration: no "models:" section.
+# Only local heuristics (perplexity + regex Colang flows) are used.
+# The main LLM (deepseek-v4-pro / gpt-5.4) is NOT called by these rails.
+#
+# To enable the Random Forest classifier (stronger detection), start the
+# heuristics server separately and uncomment server_endpoint below:
+#
+#   pip install torch transformers uvicorn
+#   python -m nemoguardrails.library.jailbreak_detection.server --port 1337
+
+colang_version: "1.0"
+
+rails:
+  input:
+    flows:
+      # Only dialog-matching flow — NO torch / perplexity dependency.
+      # Jailbreak regex check is enforced in Layer 1 (guardrails.py).
+      # To enable NeMo's perplexity-based heuristics, install torch and
+      # add 'jailbreak detection heuristics' to this list.
+      - check devops off topic

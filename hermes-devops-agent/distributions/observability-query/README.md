@@ -5,7 +5,7 @@ This distribution currently ships the first production-observation slice:
 ```text
 observability-query profile
   -> intlsms-runtime-inspection orchestration skill
-  -> devops-observe:intlsms_runtime_inspection MCP tool
+  -> devops-observe:intlsms_inspect MCP tool
 ```
 
 It is intentionally read-only. It does not enable restart, rollback, scale, sync, apply, patch, delete, or database write operations.
