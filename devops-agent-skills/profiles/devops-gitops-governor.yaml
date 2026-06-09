@@ -1,0 +1,27 @@
+name: devops-gitops-governor
+traffic_sources: ["cli-alias", "codeup-mr-comment", "scheduled-gitops-check"]
+default_users: ["sre", "platform-engineer", "service-owner"]
+default_autonomy: draft
+purpose: "GitOps workspace inspection, Kustomize rendering, config location, and MR-first changes."
+enabled_toolsets: ["skills", "delegation", "memory", "file"]
+file_access: "GitOps workspace only"
+terminal_access: "guarded by pre_tool_call hooks and workspace policy"
+workspace: "profile-owned yuexin-infra checkout"
+mcp_servers: ["devops-observe", "devops-gitops-draft", "devops-governance"]
+entry_skills:
+  - chat-ops-entry
+  - gitops-pr-entry
+  - scheduled-entry
+subagents:
+  - ops-router
+  - gitops-agent
+  - kubernetes-agent
+  - release-agent
+  - observability-agent
+  - governance-reviewer
+denied_actions:
+  - direct_cluster_apply
+  - production_sync_without_approval
+  - force_push
+  - database_write
+  - redis_destructive_command

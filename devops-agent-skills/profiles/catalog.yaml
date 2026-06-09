@@ -1,0 +1,32 @@
+name: devops-profile-layout
+version: 0.2.0
+purpose: "Hermes profile planning for traffic, runtime, workspace, and permission boundaries."
+evidence:
+  - "Local `hermes profile list` shows profile isolation: default, gitops-bot, gitops-governor, researcher."
+  - "Local `hermes profile show` shows each non-default profile has its own path, config, SOUL, env, state, sessions, skills, and gateway state."
+  - "Hermes `tools` CLI enables or disables built-in toolsets and MCP tools using server:tool notation."
+profiles:
+  - observability-query
+  - devops-chatops-readonly
+  - devops-alert-intake
+  - devops-cicd-reviewer
+  - devops-gitops-governor
+  - devops-data-observer
+  - devops-breakglass
+  - devops-researcher
+principles:
+  - "Use profiles for external traffic, gateway, workspace, memory/session, toolset, MCP, and credential boundary."
+  - "Use L5 request-normalization skills inside a profile for request normalization and route selection."
+  - "Use subagents inside a profile for task/domain execution boundary."
+  - "Use MCP servers/tool filters for live-system capability boundary."
+  - "Use credential broker and policy/audit tools for hard authorization."
+  - "Do not silently switch profiles inside a conversation; cross-profile execution must be explicit through external orchestration, approval, or a separate gateway call."
+traffic_routing:
+  intlsms_runtime_inspection: observability-query
+  feishu_cli: devops-chatops-readonly
+  alert_webhook: devops-alert-intake
+  cicd_webhook: devops-cicd-reviewer
+  gitops_workspace_or_mr: devops-gitops-governor
+  datastore_query: devops-data-observer
+  emergency_approved_action: devops-breakglass
+  docs_research: devops-researcher

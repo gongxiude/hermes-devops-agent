@@ -1,0 +1,12 @@
+name: argocd-gitops-basics
+layer: L0
+type: basic-usage
+owner: platform
+status: draft
+sources:
+  - https://argo-cd.readthedocs.io/en/stable/user-guide/projects/
+  - https://argo-cd.readthedocs.io/en/stable/operator-manual/rbac/
+consumed_by:
+  - argocd-readonly-tool
+  - argocd-app-diagnosis
+  - gitops-change-draft

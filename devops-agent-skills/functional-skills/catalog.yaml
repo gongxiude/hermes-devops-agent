@@ -1,0 +1,35 @@
+name: l2-functional-skills
+version: 0.1.0
+layer: L2
+implementation_status: planned
+rules:
+  - "Each L2 skill solves one operational function and calls L1 contracts."
+  - "No L2 skill should embed CLI grammar already covered by L0."
+  - "No L2 skill should call production mutation tools directly."
+skills:
+  - name: observability-health-query
+    depends_on: ["prometheus-query-tool", "loki-query-tool", "k8s-readonly-tool"]
+  - name: kubernetes-debug
+    depends_on: ["k8s-readonly-tool", "prometheus-query-tool", "loki-query-tool"]
+  - name: kubernetes-resource-review
+    depends_on: ["k8s-readonly-tool", "kustomize-render-tool"]
+  - name: argocd-app-diagnosis
+    depends_on: ["argocd-readonly-tool", "kustomize-render-tool"]
+  - name: jenkins-build-diagnosis
+    depends_on: ["jenkins-readonly-tool"]
+  - name: prometheus-slo-analysis
+    depends_on: ["prometheus-query-tool", "grafana-readonly-tool"]
+  - name: loki-error-clustering
+    depends_on: ["loki-query-tool"]
+  - name: gitops-config-locate
+    depends_on: ["kustomize-render-tool", "argocd-readonly-tool"]
+  - name: redis-latency-diagnosis
+    depends_on: ["redis-readonly-tool", "prometheus-query-tool"]
+  - name: postgres-lock-diagnosis
+    depends_on: ["postgres-readonly-tool", "prometheus-query-tool"]
+  - name: alicloud-resource-diagnosis
+    depends_on: ["alicloud-readonly-tool", "prometheus-query-tool"]
+  - name: grafana-alert-review
+    depends_on: ["grafana-readonly-tool", "prometheus-query-tool"]
+  - name: jenkinsfile-review
+    depends_on: ["jenkins-readonly-tool", "kustomize-render-tool"]

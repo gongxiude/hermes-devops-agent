@@ -1,0 +1,64 @@
+name: devops-agent-skills
+version: 0.1.0
+purpose: "Enterprise DevOps AI Agent skill catalog for Hermes Agent and Python runtimes."
+layers:
+  L0:
+    name: basics
+    description: "Tool, CLI, DSL, and configuration usage knowledge. No live operations."
+    path: basics
+  L1:
+    name: safe-tool-wrappers
+    description: "Role-scoped, audited wrappers over tools or MCP tools."
+    path: safe-tool-wrappers
+  L2:
+    name: functional-skills
+    description: "Single-purpose operational capabilities composed from L1."
+    path: functional-skills
+  L3:
+    name: orchestration-skills
+    description: "Scenario workflows that orchestrate L2 skills and subagents."
+    path: orchestration-skills
+  L4:
+    name: domain-governance
+    description: "Service context, policy, approval, audit, redaction, credential scope."
+    path: domain-governance
+  L5:
+    name: entry-skills
+    description: "Channel/request entry normalization before orchestration."
+    path: entry-skills
+subagent_layer:
+  name: subagents
+  description: "Role-scoped execution units that bind selected skills, MCP servers, denied tools, and output schemas."
+  path: subagents
+profile_layer:
+  name: profiles
+  description: "Hermes profile layout for user/channel/runtime boundaries."
+  path: profiles
+basics:
+  - kubectl-basics
+  - kubernetes-object-basics
+  - kustomize-basics
+  - argocd-cli-basics
+  - argocd-gitops-basics
+  - promql-basics
+  - loki-logql-basics
+  - grafana-basics
+  - jenkinsfile-basics
+  - jenkins-api-basics
+  - aliyun-ram-sts-basics
+  - redis-cli-acl-basics
+  - postgresql-privilege-basics
+  - yaml-json-jq-basics
+  - git-gitops-basics
+decision:
+  tools_layer: "MCP-backed safe wrappers"
+  subagents: "Required above skills for domain-bounded work; Hermes delegate_task is the MVP mechanism."
+implementation_status:
+  L0: "implemented"
+  L1: "contract-only pending MCP server contract"
+  L2: "planned"
+  L3: "planned"
+  L4: "planned"
+  L5: "planned"
+  subagents: "spec initialized"
+  profiles: "spec initialized"

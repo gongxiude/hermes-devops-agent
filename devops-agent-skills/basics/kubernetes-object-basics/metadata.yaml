@@ -1,0 +1,13 @@
+name: kubernetes-object-basics
+layer: L0
+type: basic-usage
+owner: platform
+status: draft
+sources:
+  - https://kubernetes.io/docs/concepts/overview/working-with-objects/
+  - https://kubernetes.io/docs/concepts/workloads/controllers/deployment/
+  - https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+consumed_by:
+  - k8s-readonly-tool
+  - kubernetes-debug
+  - kubernetes-resource-review

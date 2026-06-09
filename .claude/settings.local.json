@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rmdir hermes-devops-agent/shared-skills)",
+      "Bash(hermes kanban *)"
+    ]
+  }
+}

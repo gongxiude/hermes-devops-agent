@@ -1,0 +1,22 @@
+name: devops-subagents
+version: 0.1.0
+purpose: "Role-scoped execution units for DevOps AI Agent workflows."
+source_evidence:
+  - "Hermes local delegation toolset and subagent-driven-development skill use delegate_task with fresh task context."
+  - "Hermes native-mcp skill documents MCP tools as first-class Hermes tools."
+  - "Claude Code official subagents docs define subagents as separate-context agents with selected tools, optional model, and optional skills."
+  - "kagent docs define agents with MCP tool references and A2A/MCP integration boundaries."
+rules:
+  - "Main agent classifies, routes, delegates, and aggregates; it does not directly own all domain tools."
+  - "Each subagent gets only the skills and MCP tools needed for its role."
+  - "Subagent output must include evidence, confidence, risk, and next_action."
+  - "Every delegation must carry parent_correlation_id and service/environment scope."
+subagents:
+  - ops-router
+  - observability-agent
+  - kubernetes-agent
+  - gitops-agent
+  - release-agent
+  - datastore-agent
+  - cloud-agent
+  - governance-reviewer

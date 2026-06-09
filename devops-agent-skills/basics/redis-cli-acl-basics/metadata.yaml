@@ -1,0 +1,11 @@
+name: redis-cli-acl-basics
+layer: L0
+type: basic-usage
+owner: data-platform
+status: draft
+sources:
+  - https://redis.io/docs/latest/operate/oss_and_stack/management/security/acl/
+  - https://redis.io/docs/latest/commands/
+consumed_by:
+  - redis-readonly-tool
+  - redis-latency-diagnosis

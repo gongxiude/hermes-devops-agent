@@ -1,0 +1,18 @@
+name: devops-researcher
+traffic_sources: ["cli"]
+default_users: ["platform-engineer", "doc-author"]
+default_autonomy: recommend
+purpose: "Documentation and external research only; no live DevOps system access."
+enabled_toolsets: ["skills", "web", "memory"]
+file_access: "repository docs only"
+terminal_access: "local repository validation only"
+mcp_servers: []
+entry_skills:
+  - chat-ops-entry
+subagents:
+  - ops-router
+denied_actions:
+  - live_system_access
+  - credential_request
+  - runtime_profile_write
+  - production_data_read

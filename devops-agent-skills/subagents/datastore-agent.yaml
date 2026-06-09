@@ -1,0 +1,22 @@
+name: datastore-agent
+role: "Read-only Redis and PostgreSQL diagnosis for latency, locks, memory, connections, and replication."
+allowed_layers: [L0, L1, L2, L3, L4]
+allowed_skills:
+  - redis-cli-acl-basics
+  - postgresql-privilege-basics
+  - redis-readonly-tool
+  - postgres-readonly-tool
+  - redis-latency-diagnosis
+  - postgres-lock-diagnosis
+  - datastore-incident-orchestration
+  - secret-redaction
+  - audit-trail
+mcp_servers:
+  - devops-observe
+denied_tools:
+  - redis_write
+  - redis_flush
+  - redis_config
+  - postgresql_write
+  - postgresql_ddl
+output_schema: datastore_evidence.v1

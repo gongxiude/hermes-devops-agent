@@ -1,0 +1,31 @@
+name: devops-chatops-readonly
+traffic_sources: ["feishu", "cli"]
+default_users: ["developer", "service-owner", "sre"]
+default_autonomy: recommend
+purpose: "Read-only ChatOps diagnosis, explanation, and GitOps/config location."
+enabled_toolsets: ["skills", "delegation", "memory", "messaging"]
+file_access: "disabled by default; optional read-only mounted GitOps workspace"
+terminal_access: "disabled"
+mcp_servers: ["devops-observe", "devops-governance"]
+entry_skills:
+  - chat-ops-entry
+  - ticket-entry
+subagents:
+  - ops-router
+  - observability-agent
+  - kubernetes-agent
+  - release-agent
+  - gitops-agent
+  - datastore-agent
+  - cloud-agent
+  - governance-reviewer
+denied_actions:
+  - write_file
+  - terminal_shell
+  - git_push
+  - kubernetes_mutate
+  - argocd_sync
+  - jenkins_build
+  - redis_write
+  - postgresql_write
+  - alicloud_mutate

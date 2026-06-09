@@ -1,0 +1,11 @@
+name: argocd-cli-basics
+layer: L0
+type: basic-usage
+owner: platform
+status: draft
+sources:
+  - https://argo-cd.readthedocs.io/en/stable/user-guide/commands/argocd/
+  - https://argo-cd.readthedocs.io/en/stable/user-guide/commands/argocd_app/
+consumed_by:
+  - argocd-readonly-tool
+  - argocd-app-diagnosis

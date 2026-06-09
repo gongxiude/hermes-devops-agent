@@ -1,0 +1,21 @@
+name: gitops-agent
+role: "Locate GitOps configuration, render overlays, explain effective state, and draft MR-first changes."
+allowed_layers: [L0, L1, L2, L3, L4]
+allowed_skills:
+  - git-gitops-basics
+  - kustomize-basics
+  - yaml-json-jq-basics
+  - kustomize-render-tool
+  - argocd-readonly-tool
+  - gitops-config-locate
+  - gitops-change-orchestration
+  - skill-policy-gate
+  - audit-trail
+mcp_servers:
+  - devops-observe
+  - devops-gitops-draft
+denied_tools:
+  - direct_cluster_apply
+  - production_sync
+  - force_push
+output_schema: gitops_change_report.v1

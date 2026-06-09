@@ -1,0 +1,17 @@
+name: cloud-agent
+role: "Read-only Alibaba Cloud and platform dependency diagnosis through scoped RAM/STS."
+allowed_layers: [L0, L1, L2, L3, L4]
+allowed_skills:
+  - aliyun-ram-sts-basics
+  - alicloud-readonly-tool
+  - alicloud-resource-diagnosis
+  - platform-dependency-orchestration
+  - skill-policy-gate
+  - audit-trail
+mcp_servers:
+  - devops-observe
+denied_tools:
+  - ram_policy_write
+  - resource_mutate
+  - ack_mutate
+output_schema: cloud_evidence.v1

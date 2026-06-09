@@ -1,0 +1,152 @@
+name: intlsms-runtime-inspection
+version: 0.1.0
+layer: L4
+owner: SRE
+profile: observability-query
+service_domain:
+  name: intlsms
+  display_name: "国际短信"
+  production_cluster: prod-aliyun-sg-intlsms
+  production_namespace: prod
+  gitops_repo: /Users/gongxiude/Documents/my-world/yuexin-infra
+  argo_project: prod-aliyun-sg-intlsms
+allowed_autonomy:
+  - observe
+  - recommend
+denied_actions:
+  - restart
+  - rollback
+  - scale
+  - sync
+  - apply
+  - patch
+  - delete
+  - db_change
+inspection:
+  default_window: 15m
+  max_window: 2h
+  prometheus_step: 60s
+  report_timezone: Asia/Shanghai
+services:
+  - name: gateway
+    workload: gateway
+    kind: Deployment
+    labels:
+      app: gateway
+      category: intlsms
+    gitops_path: workloads/intlsms/gateway/prod
+    critical: true
+  - name: gateway-http
+    workload: gateway-http
+    kind: Deployment
+    labels:
+      app: gateway-http
+      category: intlsms
+    gitops_path: workloads/intlsms/gateway-http/prod
+    critical: true
+  - name: deliver-worker
+    workload: deliver-worker
+    kind: Deployment
+    labels:
+      app: deliver-worker
+      category: intlsms
+    gitops_path: workloads/intlsms/deliver-worker/prod
+    critical: true
+  - name: dispatch-worker
+    workload: dispatch-worker
+    kind: Deployment
+    labels:
+      app: dispatch-worker
+      category: intlsms
+    gitops_path: workloads/intlsms/dispatch-worker/prod
+    critical: true
+  - name: channel-worker
+    workload: channel-worker
+    kind: Deployment
+    labels:
+      app: channel-worker
+      category: intlsms
+    gitops_path: workloads/intlsms/channel-worker/prod
+    critical: true
+  - name: queue-monitor
+    workload: queue-monitor
+    kind: Deployment
+    labels:
+      app: queue-monitor
+      category: intlsms
+    gitops_path: workloads/intlsms/queue-monitor/prod
+    critical: false
+  - name: indicator-reporter
+    workload: indicator-reporter
+    kind: Deployment
+    labels:
+      app: indicator-reporter
+      category: intlsms
+    gitops_path: workloads/intlsms/indicator-reporter/prod
+    critical: false
+queries:
+  prometheus:
+    availability:
+      description: "Service pod availability over the inspection window."
+      promql: 'sum by (pod) (kube_pod_status_ready{namespace="{{namespace}}",condition="true",pod=~"{{workload}}.*"})'
+      severity_if_zero: critical
+    restarts:
+      description: "Container restart increase during the inspection window."
+      promql: 'sum by (pod,container) (increase(kube_pod_container_status_restarts_total{namespace="{{namespace}}",pod=~"{{workload}}.*"}[{{window}}]))'
+      warn_threshold: 1
+      critical_threshold: 3
+    cpu_usage:
+      description: "CPU usage rate by pod."
+      promql: 'sum by (pod) (rate(container_cpu_usage_seconds_total{namespace="{{namespace}}",pod=~"{{workload}}.*",container!="POD",container!=""}[{{window}}]))'
+      warn_threshold: 0.8
+    memory_working_set:
+      description: "Memory working set by pod."
+      promql: 'sum by (pod) (container_memory_working_set_bytes{namespace="{{namespace}}",pod=~"{{workload}}.*",container!="POD",container!=""})'
+      warn_threshold_bytes: 4294967296
+    pod_phase:
+      description: "Non-running pod phase evidence."
+      promql: 'sum by (pod,phase) (kube_pod_status_phase{namespace="{{namespace}}",pod=~"{{workload}}.*",phase!="Running"})'
+      warn_threshold: 1
+  loki:
+    errors:
+      description: "Recent error log samples."
+      logql: '{namespace="{{namespace}}",pod=~"{{workload}}.*"} |= "ERROR"'
+      limit: 20
+      severity_if_present: warning
+    panics:
+      description: "Panic/fatal log samples."
+      logql: '{namespace="{{namespace}}",pod=~"{{workload}}.*"} |~ "(?i)(panic|fatal|exception)"'
+      limit: 20
+      severity_if_present: critical
+  kubernetes:
+    workload_status:
+      verbs:
+        - get
+        - list
+      resources:
+        - deployments
+        - replicasets
+        - pods
+        - events
+      denied_verbs:
+        - create
+        - patch
+        - update
+        - delete
+        - apply
+        - exec
+        - scale
+        - rollout
+report:
+  required_fields:
+    - correlation_id
+    - profile
+    - service_domain
+    - environment
+    - namespace
+    - window
+    - overall_status
+    - evidence
+    - risks
+    - next_actions
+    - audit

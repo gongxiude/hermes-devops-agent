@@ -1,0 +1,11 @@
+name: loki-logql-basics
+layer: L0
+type: basic-usage
+owner: observability
+status: draft
+sources:
+  - https://grafana.com/docs/loki/latest/query/
+  - https://grafana.com/docs/loki/latest/reference/loki-http-api/
+consumed_by:
+  - loki-query-tool
+  - loki-error-clustering

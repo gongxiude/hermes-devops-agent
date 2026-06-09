@@ -1,0 +1,11 @@
+name: aliyun-ram-sts-basics
+layer: L0
+type: basic-usage
+owner: cloud-platform
+status: draft
+sources:
+  - https://www.alibabacloud.com/help/en/resource-management/security-and-compliance/identity-management-for-resource-management
+  - https://www.alibabacloud.com/help/en/ram/user-guide/use-sts-tokens-for-temporary-access-authorization
+consumed_by:
+  - alicloud-readonly-tool
+  - cloud-platform-diagnosis

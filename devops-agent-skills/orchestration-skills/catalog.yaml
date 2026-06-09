@@ -1,0 +1,21 @@
+name: l3-orchestration-skills
+version: 0.1.0
+layer: L3
+implementation_status: planned
+rules:
+  - "L3 skills orchestrate L2 skills and subagents; they do not directly call L0/L1 tool details."
+  - "L3 must call L4 policy gate before evidence collection when the request touches a live system."
+  - "L3 must call audit-trail and secret-redaction before final user-visible output."
+skills:
+  - name: intlsms-runtime-inspection
+    subagents: ["observability-agent", "kubernetes-agent", "governance-reviewer"]
+  - name: incident-orchestration
+    subagents: ["observability-agent", "kubernetes-agent", "release-agent", "governance-reviewer"]
+  - name: release-risk-review
+    subagents: ["release-agent", "kubernetes-agent", "observability-agent", "governance-reviewer"]
+  - name: gitops-change-orchestration
+    subagents: ["gitops-agent", "kubernetes-agent", "release-agent", "governance-reviewer"]
+  - name: datastore-incident-orchestration
+    subagents: ["datastore-agent", "observability-agent", "governance-reviewer"]
+  - name: platform-dependency-orchestration
+    subagents: ["cloud-agent", "kubernetes-agent", "observability-agent", "governance-reviewer"]

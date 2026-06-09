@@ -1,0 +1,27 @@
+name: devops-alert-intake
+traffic_sources: ["alertmanager", "grafana-alerting", "cloud-monitor", "pager-duty-compatible-webhook"]
+default_users: ["system-alert"]
+default_autonomy: observe
+purpose: "Alert-triggered evidence collection and incident summary; no mutation."
+enabled_toolsets: ["skills", "delegation", "memory", "messaging"]
+file_access: "disabled"
+terminal_access: "disabled"
+mcp_servers: ["devops-observe", "devops-governance"]
+entry_skills:
+  - alert-entry
+subagents:
+  - ops-router
+  - observability-agent
+  - kubernetes-agent
+  - cloud-agent
+  - governance-reviewer
+denied_actions:
+  - write_file
+  - terminal_shell
+  - git_push
+  - jenkins_build
+  - argocd_sync
+  - kubernetes_mutate
+  - redis_write
+  - postgresql_write
+  - alicloud_mutate

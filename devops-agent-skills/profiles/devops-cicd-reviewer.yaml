@@ -1,0 +1,25 @@
+name: devops-cicd-reviewer
+traffic_sources: ["jenkins", "aliyun-codeup", "gitlab-ci", "github-actions"]
+default_users: ["ci-system", "developer", "service-owner", "sre"]
+default_autonomy: review
+purpose: "CI/CD event diagnosis, release risk review, and MR/PR feedback."
+enabled_toolsets: ["skills", "delegation", "memory", "messaging"]
+file_access: "read-only CI workspace or MR diff only"
+terminal_access: "disabled by default"
+mcp_servers: ["devops-observe", "devops-governance"]
+entry_skills:
+  - cicd-entry
+  - gitops-pr-entry
+subagents:
+  - ops-router
+  - release-agent
+  - gitops-agent
+  - kubernetes-agent
+  - observability-agent
+  - governance-reviewer
+denied_actions:
+  - jenkins_build_trigger
+  - argocd_sync
+  - direct_deploy
+  - production_mutation
+  - credential_read

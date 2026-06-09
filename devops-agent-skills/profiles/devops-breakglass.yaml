@@ -1,0 +1,20 @@
+name: devops-breakglass
+traffic_sources: ["manual-approved-gateway", "named-cli-alias"]
+default_users: ["named-oncall-sre"]
+default_autonomy: production_gated
+purpose: "Single approved emergency production action with strict audit and TTL."
+enabled_toolsets: ["skills", "delegation", "memory", "messaging"]
+file_access: "approval artifacts only"
+terminal_access: "disabled unless a single approved action requires a guarded tool"
+mcp_servers: ["devops-prod-breakglass", "devops-governance"]
+entry_skills:
+  - ticket-entry
+subagents:
+  - ops-router
+  - governance-reviewer
+denied_actions:
+  - broad_terminal
+  - wildcard_kubernetes_permission
+  - wildcard_cloud_permission
+  - unapproved_second_action
+  - unbounded_followup_action

@@ -1,0 +1,26 @@
+name: devops-data-observer
+traffic_sources: ["approved-chatops-command", "dba-cli", "sre-cli", "ticket"]
+default_users: ["dba", "sre", "platform-engineer"]
+default_autonomy: observe
+purpose: "Redis and PostgreSQL read-only diagnosis with strict redaction."
+enabled_toolsets: ["skills", "delegation", "memory", "messaging"]
+file_access: "disabled"
+terminal_access: "disabled"
+mcp_servers: ["devops-observe", "devops-governance"]
+entry_skills:
+  - chat-ops-entry
+  - ticket-entry
+subagents:
+  - ops-router
+  - datastore-agent
+  - observability-agent
+  - governance-reviewer
+denied_actions:
+  - redis_write
+  - redis_flush
+  - redis_config
+  - postgresql_write
+  - postgresql_ddl
+  - postgresql_grant
+  - superuser_credential
+  - raw_row_data_export

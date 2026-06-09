@@ -1,0 +1,34 @@
+name: l5-entry-skills
+version: 0.1.0
+layer: L5
+implementation_status: planned
+rules:
+  - "Hermes profiles own external traffic source, gateway, workspace, toolsets, MCP scope, and default runtime boundary."
+  - "L5 runs inside an already selected profile and normalizes actor identity, request type, target service, target environment, autonomy ceiling, reply target, and L3 route."
+  - "L5 does not select or switch Hermes profiles."
+  - "L5 routes to L3 orchestration; it must not call live-system L1 tools."
+skills:
+  - name: chat-ops-entry
+    bound_profiles: ["observability-query"]
+    request_shape: "natural-language-chatops-command"
+    default_autonomy: recommend
+  - name: alert-entry
+    bound_profiles: ["devops-alert-intake"]
+    request_shape: "alert-payload"
+    default_autonomy: observe
+  - name: ticket-entry
+    bound_profiles: ["devops-breakglass", "devops-data-observer"]
+    request_shape: "approval-or-ticket-payload"
+    default_autonomy: "derived-from-ticket"
+  - name: cicd-entry
+    bound_profiles: ["devops-cicd-reviewer"]
+    request_shape: "cicd-event-payload"
+    default_autonomy: draft
+  - name: gitops-pr-entry
+    bound_profiles: ["devops-gitops-governor", "devops-cicd-reviewer"]
+    request_shape: "merge-request-event-or-comment"
+    default_autonomy: review
+  - name: scheduled-entry
+    bound_profiles: ["observability-query", "devops-gitops-governor", "devops-alert-intake"]
+    request_shape: "scheduled-job-payload"
+    default_autonomy: observe

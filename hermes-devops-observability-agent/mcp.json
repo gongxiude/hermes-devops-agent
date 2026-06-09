@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "devops-observe": {
+      "transport": "stdio",
+      "command": "python3",
+      "args": [
+        "mcp-servers/devops-observe/devops_observe_mcp.py"
+      ],
+      "env": {
+        "OBSERVE_PROMETHEUS_BASE_URL": "${OBSERVE_PROMETHEUS_BASE_URL}",
+        "OBSERVE_LOKI_BASE_URL": "${OBSERVE_LOKI_BASE_URL}",
+        "KUBECONFIG_READONLY": "${KUBECONFIG_READONLY}"
+      }
+    }
+  }
+}

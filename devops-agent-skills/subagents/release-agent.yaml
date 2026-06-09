@@ -1,0 +1,21 @@
+name: release-agent
+role: "Diagnose Jenkins and ArgoCD release state without directly changing production."
+allowed_layers: [L0, L1, L2, L3, L4]
+allowed_skills:
+  - jenkinsfile-basics
+  - jenkins-api-basics
+  - argocd-cli-basics
+  - argocd-gitops-basics
+  - jenkins-readonly-tool
+  - argocd-readonly-tool
+  - jenkins-build-diagnosis
+  - argocd-app-diagnosis
+  - release-risk-review
+  - audit-trail
+mcp_servers:
+  - devops-observe
+denied_tools:
+  - jenkins_build
+  - argocd_sync
+  - argocd_rollback
+output_schema: release_evidence.v1

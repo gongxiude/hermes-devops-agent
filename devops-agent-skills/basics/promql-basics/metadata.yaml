@@ -1,0 +1,11 @@
+name: promql-basics
+layer: L0
+type: basic-usage
+owner: observability
+status: draft
+sources:
+  - https://prometheus.io/docs/prometheus/latest/querying/basics/
+  - https://prometheus.io/docs/prometheus/latest/querying/functions/
+consumed_by:
+  - prometheus-query-tool
+  - prometheus-slo-analysis

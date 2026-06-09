@@ -1,0 +1,30 @@
+name: l4-domain-governance
+version: 0.1.0
+layer: L4
+implementation_status: planned
+domains:
+  - name: intlsms-runtime-inspection
+    path: domains/intlsms-runtime-inspection.yaml
+    profile: observability-query
+    status: implemented-dry-run
+rules:
+  - "Domain context skills describe services; they do not grant permissions."
+  - "Governance skills are policy/audit/redaction/approval contracts and must be enforced by runtime and MCP, not prompt alone."
+domain_context_template:
+  required_fields:
+    - service
+    - owners
+    - environments
+    - namespaces
+    - argocd_apps
+    - jenkins_jobs
+    - gitops_paths
+    - dashboards
+    - slo_queries
+    - allowed_read_scopes
+governance_skills:
+  - skill-policy-gate
+  - prod-change-approval
+  - breakglass-control
+  - audit-trail
+  - secret-redaction

@@ -1,0 +1,37 @@
+display:
+  skin: slate
+
+hooks_auto_accept: false
+
+plugins:
+  enabled:
+    - devops_agent
+
+terminal:
+  cwd: /Users/gongxiude/Documents/github/infrastructure-agents-guide
+
+tools:
+  default_platform: feishu
+  enabled:
+    feishu:
+      - skills
+      - delegation
+      - memory
+      - devops-observe:intlsms_runtime_inspection
+      - devops-observe:readonly_guard_check
+      - devops-governance:policy_decide
+      - devops-governance:audit_emit
+  disabled:
+    feishu:
+      - devops-prod-breakglass:prod_restart_workload
+      - devops-prod-breakglass:prod_scale_workload
+      - devops-gitops-draft:argocd_sync
+      - devops-gitops-draft:kubectl_apply
+
+observability_query:
+  service_domain: intlsms
+  agent_distribution: hermes-devops-observability-agent
+  default_window: 15m
+  max_window: 2h
+  report_format: markdown
+  readonly: true

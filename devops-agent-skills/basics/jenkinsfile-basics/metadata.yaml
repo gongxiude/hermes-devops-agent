@@ -1,0 +1,11 @@
+name: jenkinsfile-basics
+layer: L0
+type: basic-usage
+owner: cicd
+status: draft
+sources:
+  - https://www.jenkins.io/doc/book/pipeline/jenkinsfile/
+  - https://www.jenkins.io/doc/book/pipeline/syntax/
+consumed_by:
+  - jenkins-build-diagnosis
+  - release-diagnosis

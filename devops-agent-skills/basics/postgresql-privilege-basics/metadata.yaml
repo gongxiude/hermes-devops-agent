@@ -1,0 +1,11 @@
+name: postgresql-privilege-basics
+layer: L0
+type: basic-usage
+owner: data-platform
+status: draft
+sources:
+  - https://www.postgresql.org/docs/current/ddl-priv.html
+  - https://www.postgresql.org/docs/current/user-manag.html
+consumed_by:
+  - postgres-readonly-tool
+  - postgres-lock-diagnosis

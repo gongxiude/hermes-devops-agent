@@ -1,0 +1,11 @@
+name: kubectl-basics
+layer: L0
+type: basic-usage
+owner: platform
+status: draft
+sources:
+  - https://kubernetes.io/docs/reference/kubectl/
+  - https://kubernetes.io/docs/reference/kubectl/quick-reference/
+consumed_by:
+  - k8s-readonly-tool
+  - kubernetes-debug

@@ -1,0 +1,20 @@
+name: ops-router
+role: "Classify entry requests, normalize identity/channel context, and select orchestration route."
+allowed_layers: [L5, L4]
+allowed_skills:
+  - chat-ops-entry
+  - alert-entry
+  - ticket-entry
+  - cicd-entry
+  - gitops-pr-entry
+  - scheduled-entry
+  - skill-policy-gate
+denied_tools:
+  - terminal
+  - file_write
+  - kubernetes_mutate
+  - argocd_sync
+  - jenkins_build
+  - database_write
+mcp_servers: []
+output_schema: route_decision.v1

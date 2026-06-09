@@ -1,0 +1,11 @@
+name: git-gitops-basics
+layer: L0
+type: basic-usage
+owner: devops
+status: draft
+sources:
+  - https://opengitops.dev/
+  - https://argo-cd.readthedocs.io/en/stable/
+consumed_by:
+  - gitops-config-locate
+  - gitops-change-draft

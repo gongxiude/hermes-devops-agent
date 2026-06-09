@@ -1,0 +1,11 @@
+name: yaml-json-jq-basics
+layer: L0
+type: basic-usage
+owner: platform
+status: draft
+sources:
+  - https://jqlang.github.io/jq/manual/
+  - https://yaml.org/spec/
+consumed_by:
+  - kustomize-render-tool
+  - gitops-config-locate
