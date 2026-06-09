@@ -1,0 +1,32 @@
+display:
+  skin: slate
+
+hooks_auto_accept: false
+
+# Orchestrator 只有 kanban + skills，不挂任何 MCP 生产系统
+toolsets:
+  - kanban
+  - skills
+  - memory
+
+kanban:
+  dispatch_in_gateway: true
+  dispatch_interval_seconds: 15
+  max_in_progress: 10
+  max_in_progress_per_profile: 3
+  failure_limit: 2
+  auto_promote_children: true
+  orchestrator_profile: devops-orchestrator
+
+platforms:
+  feishu:
+    enabled: true
+    extra:
+      connection_mode: websocket
+      domain: feishu
+      allow_bots: none
+      require_mention: true
+      default_group_policy: allowlist
+      group_rules:
+        oc_ops_home:
+          policy: allowlist

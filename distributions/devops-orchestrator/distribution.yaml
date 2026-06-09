@@ -1,0 +1,18 @@
+name: hermes-devops-orchestrator
+version: 0.1.0
+description: "DevOps Orchestrator — Feishu gateway, intent parsing, Kanban routing. Never executes ops actions directly."
+hermes_requires: ">=0.12.0"
+author: "Platform Engineering"
+env_requires:
+  - name: FEISHU_APP_ID
+    description: "Feishu App ID for the DevOps Bot"
+    required: true
+  - name: FEISHU_APP_SECRET
+    description: "Feishu App Secret"
+    required: true
+  - name: FEISHU_ALLOWED_USERS
+    description: "Comma-separated list of allowed Feishu open_ids"
+    required: false
+  - name: FEISHU_HOME_CHANNEL
+    description: "Default Feishu chat_id for result notifications"
+    required: false
