@@ -69,6 +69,10 @@ def prometheus_base_url(env: str) -> str | None:
     return os.environ.get(f"OBSERVE_PROMETHEUS_BASE_URL_{validate_environment(env)}", "").strip() or None
 
 
+def prometheus_token(env: str) -> str | None:
+    return os.environ.get(f"OBSERVE_PROMETHEUS_TOKEN_{validate_environment(env)}", "").strip() or None
+
+
 def loki_base_url(env: str) -> str | None:
     return os.environ.get(f"OBSERVE_LOKI_BASE_URL_{validate_environment(env)}", "").strip() or None
 
@@ -92,8 +96,11 @@ def kubeconfig(env: str) -> str | None:
 # HTTP helpers
 # ---------------------------------------------------------------------------
 
-def http_get_json(url: str, timeout: int = Config.REQUEST_TIMEOUT) -> dict[str, Any]:
-    req = urllib.request.Request(url, headers={"Accept": "application/json"})
+def http_get_json(url: str, timeout: int = Config.REQUEST_TIMEOUT, token: str | None = None) -> dict[str, Any]:
+    headers = {"Accept": "application/json"}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    req = urllib.request.Request(url, headers=headers)
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         return json.loads(resp.read().decode("utf-8"))
 

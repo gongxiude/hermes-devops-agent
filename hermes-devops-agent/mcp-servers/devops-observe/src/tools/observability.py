@@ -6,7 +6,7 @@ from typing import Annotated
 
 from fastmcp import FastMCP
 from ..utils import (
-    prometheus_base_url, loki_base_url,
+    prometheus_base_url, prometheus_token, loki_base_url,
     window_to_seconds, build_range_params, http_get_json,
 )
 
@@ -35,10 +35,11 @@ def prometheus_query(
             "data": None,
         }
 
+    token = prometheus_token(environment)
     window_to_seconds(window)  # validate format
     params = {**build_range_params(window), "query": promql}
     url = base.rstrip("/") + "/api/v1/query_range?" + urllib.parse.urlencode(params)
-    payload = http_get_json(url, timeout=timeout)
+    payload = http_get_json(url, timeout=timeout, token=token)
     if payload.get("status") != "success":
         raise RuntimeError(f"prometheus error: {payload.get('error') or payload}")
     return {
