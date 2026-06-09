@@ -1,0 +1,78 @@
+name: observability-query
+version: 0.1.0
+domain_agent: Observability Agent
+runtime_boundary:
+  traffic:
+    - feishu_chatops
+    - cli
+    - cron
+  autonomy:
+    - observe
+    - recommend
+  workspace: none
+  secrets:
+    - OBSERVE_PROMETHEUS_BASE_URL_PROD
+    - OBSERVE_LOKI_BASE_URL_PROD
+    - KUBECONFIG_READONLY_PROD
+    - OBSERVE_PROMETHEUS_BASE_URL_TEST
+    - OBSERVE_LOKI_BASE_URL_TEST
+    - KUBECONFIG_READONLY_TEST
+allowed_skills:
+  L0:
+    - promql-basics
+    - loki-logql-basics
+    - kubectl-basics
+    - kubernetes-object-basics
+  L1:
+    - prometheus-query-tool
+    - loki-query-tool
+    - k8s-readonly-tool
+  L2:
+    - observability-health-query
+    - kubernetes-debug
+  L3:
+    - intlsms-runtime-inspection
+  L4:
+    - skill-policy-gate
+    - audit-trail
+    - secret-redaction
+  L5:
+    - chat-ops-entry
+    - scheduled-entry
+subagents:
+  - observability-agent
+  - kubernetes-agent
+  - governance-reviewer
+mcp_servers:
+  - devops-observe
+  - devops-governance
+mcp_runtime:
+  devops-observe:
+    command: python3
+    args:
+      - mcp-servers/devops-observe/devops_observe_mcp.py
+    transport: stdio
+enabled_tools:
+  - devops-observe:intlsms_runtime_inspection
+  - devops-observe:readonly_guard_check
+  - devops-observe:prometheus_query
+  - devops-observe:prometheus_query_range
+  - devops-observe:loki_query_range
+  - devops-observe:k8s_get
+  - devops-observe:k8s_list
+  - devops-governance:policy_decide
+  - devops-governance:audit_emit
+denied_tools:
+  - devops-prod-breakglass:prod_restart_workload
+  - devops-prod-breakglass:prod_scale_workload
+  - devops-gitops-draft:argocd_sync
+  - devops-gitops-draft:kubectl_apply
+entry_rules:
+  no_profile_switch: true
+  no_mutation: true
+  require_audit: true
+  require_redaction: true
+acceptance:
+  - "hermes profile use observability-query"
+  - "hermes tools list --platform feishu must not show devops-prod-breakglass tools"
+  - "dry-run intlsms runtime inspection returns report and audit event"

@@ -1,0 +1,24 @@
+name: hermes-devops-observability-query
+version: 0.1.0
+description: "Read-only observability agent for international SMS runtime inspection and health queries."
+hermes_requires: ">=0.12.0"
+author: "Platform Engineering"
+env_requires:
+  - name: OBSERVE_PROMETHEUS_BASE_URL_PROD
+    description: "Prometheus base URL for production"
+    required: true
+  - name: OBSERVE_LOKI_BASE_URL_PROD
+    description: "Loki base URL for production"
+    required: true
+  - name: KUBECONFIG_READONLY_PROD
+    description: "Read-only kubeconfig path for production cluster"
+    required: true
+  - name: OBSERVE_PROMETHEUS_BASE_URL_TEST
+    description: "Prometheus base URL for test environment"
+    required: false
+  - name: OBSERVE_LOKI_BASE_URL_TEST
+    description: "Loki base URL for test environment"
+    required: false
+  - name: KUBECONFIG_READONLY_TEST
+    description: "Read-only kubeconfig path for test cluster"
+    required: false

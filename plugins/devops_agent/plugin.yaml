@@ -1,0 +1,4 @@
+name: devops_agent
+version: 0.1.0
+status: planned
+purpose: Hermes DevOps plugin surface for policy, audit, redaction, commands, and bundled skill registration.
