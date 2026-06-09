@@ -322,13 +322,52 @@ FEISHU_HOME_CHANNEL=oc_xxxxxxxxxxxxxxxx
 
 ### 交互式卡片
 
-命令审批、更新确认均通过交互式卡片实现。需要在飞书开发者控制台完成三项配置：
+#### 用途
 
-1. **事件订阅** → 添加 `card.action.trigger`。
-2. **应用功能 → 机器人** → 开启 **交互式卡片** 开关。
-3. **（仅 Webhook 模式）** → **应用功能 → 机器人 → 消息卡片请求网址** → 填写与事件 webhook 相同的 URL。
+交互式卡片是 Hermes 与用户进行确认交互的主要方式，覆盖以下场景：
 
-> 缺少任一步骤时，卡片可以正常发送，但用户点击按钮会返回错误 **200340**。
+| 场景 | 说明 |
+|---|---|
+| **命令审批** | Agent 执行危险命令前发送卡片，用户点击「允许一次 / 本次会话 / 始终允许 / 拒绝」 |
+| **更新确认** | `hermes update --gateway` 需要用户确认时发送 Yes / No 卡片 |
+| **自定义按钮** | 用户点击卡片按钮触发 `/card button {"key":"value"}` 命令，流经标准命令管道 |
+
+卡片操作在 **15 分钟**窗口内自动去重，防止重复触发。
+
+#### 飞书开发者控制台必须完成的三项配置
+
+缺少任意一项，卡片可以正常发送，但用户**点击按钮时会返回错误 200340**，且卡片外观完全正常，错误只在交互时才暴露。
+
+**第一步：订阅卡片操作事件**
+
+进入 **事件订阅** → **添加事件**，搜索并订阅：
+
+```
+card.action.trigger
+```
+
+**第二步：开启交互式卡片能力**
+
+进入 **应用功能 → 机器人**，找到 **交互式卡片** 开关，确认已开启。
+
+> 此开关告知飞书平台你的应用可以接收卡片操作回调。即使已订阅事件，不开启此开关仍会报错 200340。
+
+**第三步：配置卡片请求 URL（仅 Webhook 模式）**
+
+WebSocket 模式下 SDK 自动处理，**无需此步**。
+
+Webhook 模式下进入 **应用功能 → 机器人 → 消息卡片请求网址**，填写与事件 webhook 相同的地址：
+
+```
+https://your-server:8765/feishu/webhook
+```
+
+#### 配置完成后验证
+
+1. 在飞书向机器人发送任意消息，触发 Agent 运行。
+2. Agent 执行需要确认的操作时，会自动发送带按钮的卡片。
+3. 点击卡片按钮，确认没有报错 200340。
+4. 日志中应出现 `type=card_action` 的入站事件记录。
 
 ### 文档评论智能回复
 
@@ -387,7 +426,7 @@ FEISHU_ALLOW_BOTS=mentions   # 仅响应 @提及 Hermes 的对端机器人
 | `Unable to hydrate bot name` | 缺少 `admin:app.info:readonly` 权限 | 在飞书控制台授权，或手动设置 `FEISHU_BOT_NAME` |
 | `No user allowlists configured` 警告 | `GATEWAY_ALLOW_ALL_USERS` 写在 profile `.env` 而非全局 | 将 `GATEWAY_ALLOW_ALL_USERS=true` 移到 `~/.hermes/.env` |
 | 群聊中不响应 | 未被 @提及 / 策略限制 / 用户不在白名单 | 确认 @提及、检查 `FEISHU_GROUP_POLICY`、验证 `FEISHU_ALLOWED_USERS` |
-| 点击卡片按钮报错 200340 | 交互式卡片未完整配置 | 订阅 `card.action.trigger` + 开启交互式卡片开关 |
+| 点击卡片按钮报错 200340 | 三项配置缺一：①未订阅 `card.action.trigger` ②未开启交互式卡片开关 ③Webhook 模式未配置卡片请求 URL | 按第 9 节「交互式卡片」三步逐一检查，发布新版本后重试 |
 | 图片/文件收不到 | 缺少 `im:message` 或 `im:resource` 权限 | 在飞书控制台授权后重新发布版本 |
 | `lark-oapi not installed` | Python SDK 缺失 | `pip install lark-oapi websockets` |
 | Webhook 签名验证失败 | `FEISHU_ENCRYPT_KEY` 与飞书控制台不一致 | 从飞书事件订阅页面重新复制密钥 |
