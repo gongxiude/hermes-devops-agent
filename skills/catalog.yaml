@@ -13,6 +13,18 @@ layers:
         path: basics/kubectl-basics/SKILL.md
       - name: kubernetes-object-basics
         path: basics/kubernetes-object-basics/SKILL.md
+      - name: jenkins-basics
+        path: basics/jenkins-basics/SKILL.md
+      - name: argocd-basics
+        path: basics/argocd-basics/SKILL.md
+      - name: grafana-basics
+        path: basics/grafana-basics/SKILL.md
+      - name: alertmanager-basics
+        path: basics/alertmanager-basics/SKILL.md
+      - name: aliyun-basics
+        path: basics/aliyun-basics/SKILL.md
+      - name: codeup-basics
+        path: basics/codeup-basics/SKILL.md
   L1:
     description: "MCP tool contracts — schema、allow/deny、audit。"
     skills:
@@ -22,6 +34,14 @@ layers:
         path: tool-contracts/loki-query-tool/SKILL.md
       - name: k8s-readonly-tool
         path: tool-contracts/k8s-readonly-tool/SKILL.md
+      - name: argocd-query-tool
+        path: tool-contracts/argocd-query-tool/SKILL.md
+      - name: jenkins-readonly-tool
+        path: tool-contracts/jenkins-readonly-tool/SKILL.md
+      - name: git-codeup-readonly-tool
+        path: tool-contracts/git-codeup-readonly-tool/SKILL.md
+      - name: aliyun-readonly-tool
+        path: tool-contracts/aliyun-readonly-tool/SKILL.md
     catalogs:
       - path: tool-contracts/catalog.yaml
   L2:
@@ -31,6 +51,16 @@ layers:
         path: capabilities/observability-health-query/SKILL.md
       - name: kubernetes-debug
         path: capabilities/kubernetes-debug/SKILL.md
+      - name: anomaly-detection
+        path: capabilities/anomaly-detection/SKILL.md
+      - name: capacity-forecast
+        path: capabilities/capacity-forecast/SKILL.md
+      - name: security-event-detection
+        path: capabilities/security-event-detection/SKILL.md
+      - name: release-impact-analysis
+        path: capabilities/release-impact-analysis/SKILL.md
+      - name: service-risk-summary
+        path: capabilities/service-risk-summary/SKILL.md
   L3:
     description: "场景编排 skills。"
     skills:

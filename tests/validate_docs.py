@@ -44,7 +44,18 @@ def main() -> int:
             "## 2. Prometheus",
             "## 3. Loki",
             "## 4. Kubernetes",
-            "## 5. 直接落到当前实现的结论",
+            "## 5. Jenkins / ArgoCD / Grafana / Alertmanager",
+            "## 6. 阿里云 / Codeup",
+            "## 7. 直接落到当前实现的结论",
+        ],
+    )
+    require_sections(
+        ROOT / "docs/research/devops-mcp-skill-landscape.md",
+        [
+            "## 1. 基础知识 skills 补全范围",
+            "## 2. MCP 参考实现与采用结论",
+            "## 3. 能力清单新增项",
+            "## 4. 本次不采用的方式",
         ],
     )
     print("docs_ok")
