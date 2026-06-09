@@ -21,6 +21,8 @@ class Config:
     LOG_LEVEL       = os.getenv("MCP_LOG_LEVEL", "INFO")
     KUBECONFIG      = os.getenv("KUBECONFIG", "")
     KUBECTL_BIN     = os.getenv("KUBECTL_BIN", "kubectl")
+    K8S_CONTEXT     = os.getenv("K8S_CONTEXT", "")
+    K8S_NAMESPACE   = os.getenv("K8S_NAMESPACE", "")
     READ_ONLY       = os.getenv("K8S_READ_ONLY", "true").lower() == "true"
     REQUEST_TIMEOUT = int(os.getenv("MCP_REQUEST_TIMEOUT", "30"))
 
@@ -72,10 +74,14 @@ def validate_command(command: str) -> str:
 # ---------------------------------------------------------------------------
 
 def run_kubectl(*args: str, timeout: int = Config.REQUEST_TIMEOUT) -> str:
-    """Run kubectl with the configured kubeconfig, return stdout as string."""
+    """Run kubectl with the configured kubeconfig, context, namespace; return stdout as string."""
     cmd = [Config.KUBECTL_BIN]
     if Config.KUBECONFIG:
         cmd += ["--kubeconfig", Config.KUBECONFIG]
+    if Config.K8S_CONTEXT:
+        cmd += ["--context", Config.K8S_CONTEXT]
+    if Config.K8S_NAMESPACE:
+        cmd += ["--namespace", Config.K8S_NAMESPACE]
     cmd += list(args)
     result = subprocess.run(
         cmd, text=True,
