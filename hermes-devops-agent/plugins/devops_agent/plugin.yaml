@@ -1,4 +1,11 @@
 name: devops_agent
-version: 0.1.0
-status: planned
-purpose: Hermes DevOps plugin surface for policy, audit, redaction, commands, and bundled skill registration.
+version: 0.2.0
+description: >
+  DevOps Agent plugin for Hermes. Provides policy gate (pre_tool_call),
+  audit trail (post_tool_call), secret redaction (transform_tool_result),
+  two governance tools (devops_policy_decide, devops_audit_emit),
+  two slash commands (/devops_status, /devops_audit), and one CLI command
+  (hermes devops).
+author: Platform Engineering
+requires: ">=0.12.0"
+entry: __init__.py
