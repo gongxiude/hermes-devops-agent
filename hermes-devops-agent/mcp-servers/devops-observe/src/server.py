@@ -63,17 +63,10 @@ mcp.resource("info://server")(server_info)
 mcp.resource("observe://env/{env}/status")(environment_status)
 
 # ---------------------------------------------------------------------------
-# Lifecycle hooks
+# Lifecycle
 # ---------------------------------------------------------------------------
 
-@mcp.on_startup
-async def on_startup():
-    logger.info("devops-observe MCP server started (tools=%d)", 5)
-
-
-@mcp.on_shutdown
-async def on_shutdown():
-    logger.info("devops-observe MCP server stopped")
+logger.info("devops-observe MCP server loaded (tools=5)")
 
 # ---------------------------------------------------------------------------
 # Entry point
