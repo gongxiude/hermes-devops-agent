@@ -232,8 +232,8 @@ def test_minimal_mcp_tools_list_and_call() -> None:
                     "id": 4,
                     "method": "tools/call",
                     "params": {
-                        "name": "intlsms_runtime_inspection",
-                        "arguments": {"actor": "pytest", "environment": "prod", "dry_run": True},
+                        "name": "prometheus_query",
+                        "arguments": {"promql": "up", "environment": "prod", "window": "5m"},
                     },
                 }
             ),
@@ -251,10 +251,17 @@ def test_minimal_mcp_tools_list_and_call() -> None:
     )
     assert result.returncode == 0, result.stderr
     responses = [json.loads(line) for line in result.stdout.splitlines()]
-    assert responses[1]["result"]["tools"][0]["name"] == "intlsms_runtime_inspection"
+
+    # tools/list should expose the four generic tools
+    tool_names = {t["name"] for t in responses[1]["result"]["tools"]}
+    assert tool_names == {"prometheus_query", "loki_query_range", "k8s_get_workload", "readonly_guard_check"}
+
+    # readonly_guard_check rejects mutation
     guard = responses[2]["result"]["structuredContent"]
     assert guard["allowed"] is False
     assert guard["policy_decision"] == "deny_mutation"
-    report = responses[3]["result"]["structuredContent"]
-    assert report["profile"] == "observability-query"
-    assert report["audit"]["policy_decision"] == "allow_readonly"
+
+    # prometheus_query with no endpoint set returns status=unknown (not an error)
+    prom = responses[3]["result"]["structuredContent"]
+    assert prom["status"] == "unknown"
+    assert "OBSERVE_PROMETHEUS_BASE_URL_PROD" in prom["reason"]
