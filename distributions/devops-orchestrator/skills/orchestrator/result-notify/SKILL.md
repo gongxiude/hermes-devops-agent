@@ -17,7 +17,13 @@ Kanban task 达到以下任一终态时触发：
 |---|---|
 | `done` | 任务正常完成 |
 | `failed` | 任务执行失败 |
-| `blocked` | 依赖未满足或人工介入挂起 |
+| `blocked` | 依赖未满足或需人工介入 |
+
+**多任务请求（fan-out / pipeline）等待所有叶子任务终态后统一汇总**，不在中间任务完成时提前发送。
+
+## reply_target 来源
+
+从 Kanban task body 的 `reply_target` 字段读取飞书 `chat_id`。不使用其他来源，不从内存或上下文猜测 chat_id。
 
 ## 回传消息格式
 
@@ -67,15 +73,23 @@ Kanban task 达到以下任一终态时触发：
 ## 内容规则
 
 - 不转发 specialist 的完整原始输出，只提取结论和关键证据。
-- 包含敏感数据（密钥、token、内网 IP）时，替换为 `[REDACTED]`。
-- 回传内容长度不超过 4000 字符；超出时截断并附「完整报告已存入 Kanban task #<id>」。
+- 包含敏感数据（密钥、token、内网 IP、环境变量值）时，替换为 `[REDACTED]`。
+- 不改写 specialist 的风险等级结论。
+- 回传内容长度不超过 4000 字符；超出时截断并附：「完整报告已存入 Kanban task #<id>」。
 
-## reply_target 来源
+## Worker 结果读取方式
 
-从 Kanban task body 的 `reply_target` 字段读取飞书 `chat_id`，不使用其他来源。
+通过 `kanban_show <task_id>` 读取 specialist 的 `summary` 和 `metadata`：
+
+```python
+result = kanban_show(task_id)
+summary  = result["summary"]   # worker 的 kanban_complete(summary=...) 输出
+metadata = result["metadata"]  # 结构化字段，如 risk_level、elapsed、findings
+```
 
 ## 禁止行为
 
 - 不在回传消息中附带凭证或环境变量值
 - 不改写 specialist 的风险等级结论
-- 不在任务未终态时发送最终汇总（等待所有子任务完成）
+- 不在任务未到终态时发送最终汇总
+- 不从 body 之外的来源读取 `reply_target`
