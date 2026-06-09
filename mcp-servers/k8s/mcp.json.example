@@ -1,0 +1,43 @@
+{
+  "mcpServers": {
+    "k8s-prod": {
+      "command": "python",
+      "args": ["-m", "src.server"],
+      "env": {
+        "MCP_SERVER_NAME": "k8s-prod",
+        "K8S_CONTEXT": "prod-cluster",
+        "K8S_NAMESPACE": "production",
+        "KUBECONFIG": "/etc/k8s/prod.kubeconfig",
+        "K8S_READ_ONLY": "false",
+        "MCP_LOG_LEVEL": "INFO",
+        "MCP_REQUEST_TIMEOUT": "30"
+      }
+    },
+    "k8s-staging": {
+      "command": "python",
+      "args": ["-m", "src.server"],
+      "env": {
+        "MCP_SERVER_NAME": "k8s-staging",
+        "K8S_CONTEXT": "staging-cluster",
+        "K8S_NAMESPACE": "staging",
+        "KUBECONFIG": "/etc/k8s/staging.kubeconfig",
+        "K8S_READ_ONLY": "false",
+        "MCP_LOG_LEVEL": "INFO",
+        "MCP_REQUEST_TIMEOUT": "30"
+      }
+    },
+    "k8s-dev": {
+      "command": "python",
+      "args": ["-m", "src.server"],
+      "env": {
+        "MCP_SERVER_NAME": "k8s-dev",
+        "K8S_CONTEXT": "dev-cluster",
+        "K8S_NAMESPACE": "development",
+        "KUBECONFIG": "~/.kube/config",
+        "K8S_READ_ONLY": "true",
+        "MCP_LOG_LEVEL": "DEBUG",
+        "MCP_REQUEST_TIMEOUT": "30"
+      }
+    }
+  }
+}
