@@ -1,0 +1,53 @@
+display:
+  skin: slate
+
+hooks_auto_accept: false
+
+plugins:
+  enabled:
+    - devops_agent
+
+terminal:
+  cwd: /Users/gongxiude/Documents/github/infrastructure-agents-guide
+
+# MCP servers — 运行时实际读取此配置（mcp.json 仅为 distribution 交付格式）
+mcp_servers:
+  devops-observe:
+    command: "python3"
+    args: ["mcp-servers/devops-observe/devops_observe_mcp.py"]
+    env:
+      OBSERVE_PROMETHEUS_BASE_URL_PROD: "${OBSERVE_PROMETHEUS_BASE_URL_PROD}"
+      OBSERVE_LOKI_BASE_URL_PROD: "${OBSERVE_LOKI_BASE_URL_PROD}"
+      KUBECONFIG_READONLY_PROD: "${KUBECONFIG_READONLY_PROD}"
+      KUBECTL_BIN_PROD: "${KUBECTL_BIN_PROD}"
+      OBSERVE_PROMETHEUS_BASE_URL_TEST: "${OBSERVE_PROMETHEUS_BASE_URL_TEST}"
+      OBSERVE_LOKI_BASE_URL_TEST: "${OBSERVE_LOKI_BASE_URL_TEST}"
+      KUBECONFIG_READONLY_TEST: "${KUBECONFIG_READONLY_TEST}"
+      KUBECTL_BIN_TEST: "${KUBECTL_BIN_TEST}"
+    tools:
+      include:
+        - intlsms_runtime_inspection
+        - readonly_guard_check
+        - prometheus_query
+        - loki_query
+        - k8s_readonly_get_workload
+  devops-governance:
+    command: "python3"
+    args: ["mcp-servers/devops-governance/devops_governance_mcp.py"]
+    tools:
+      include:
+        - policy_decide
+        - audit_emit
+
+# Profile-specific settings
+observability_query:
+  service_domain: intlsms
+  agent_distribution: hermes-devops-agent
+  supported_environments:
+    - prod
+    - test
+  default_environment: prod
+  default_window: 15m
+  max_window: 2h
+  report_format: markdown
+  readonly: true

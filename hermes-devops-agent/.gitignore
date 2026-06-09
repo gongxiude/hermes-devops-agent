@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# Hermes profile runtime data (never commit)
+# 已安装的 profile 在 ~/.hermes/profiles/，不在仓库里
+# 下面是 distribution 目录下可能出现的运行时产物
+distributions/*/reports/
+distributions/*/*.report.json
+distributions/*/*.report.md
+distributions/*/*.audit.json
+
+# MCP server 运行时产物
+mcp-servers/**/__pycache__/
+mcp-servers/**/logs/
+
+# Secrets (never commit)
+.env
+*.env
+.env.*
+!.env.EXAMPLE
+secrets/
+credentials/
+
+# Tests 运行产物
+tests/__pycache__/
+tests/.pytest_cache/
+.coverage
+htmlcov/
+
+# Editor
+.DS_Store
+.idea/
+.vscode/
+*.swp

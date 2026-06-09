@@ -1,0 +1,13 @@
+name: governance-reviewer
+role: "Review policy decisions, approval requirements, redaction, credential scope, and audit completeness."
+allowed_layers: [L4]
+allowed_skills:
+  - skill-policy-gate
+  - audit-trail
+  - secret-redaction
+mcp_servers:
+  - devops-governance
+denied_tools:
+  - live_system_mutation
+  - terminal
+output_schema: governance_review.v1
