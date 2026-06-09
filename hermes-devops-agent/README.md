@@ -1,21 +1,19 @@
 # Hermes DevOps Agent
 
-This directory is the new long-term Hermes DevOps Agent repository layout.
+This directory is the Hermes DevOps Agent repository.
 
-It separates:
+- `skills/` — reusable L0-L5 skill sources (basics, tool-contracts, capabilities, orchestration, governance, entry, specs)
+- `mcp-servers/` — MCP server implementations
+- `plugins/` — Hermes plugin integration points
+- `distributions/` — installable Hermes profile distributions (one per profile)
+- `docs/` — implementation and research documents
+- `tests/` — repository-level validation
 
-- `shared-skills/` for reusable L0-L5 skill sources
-- `mcp-servers/` for shared MCP implementations
-- `plugins/` for Hermes plugin integration points
-- `distributions/` for installable Hermes profile distributions
-- `docs/` for human-readable implementation documents
-- `tests/` for repository-level validation
+Key anchors:
 
-Key repository anchors:
-
-- `shared-skills/devops/catalog.yaml`: shared layered skill catalog
-- `docs/research/official-basis.md`: official-source basis for the current design
-- `docs/implementation/observability-query-intlsms-runtime-inspection.md`: phase-1 landing doc
+- `skills/catalog.yaml` — shared layered skill catalog
+- `docs/research/official-basis.md` — official-source basis for the current design
+- `docs/implementation/observability-query-intlsms-runtime-inspection.md` — phase-1 landing doc
 
 Phase 1 ships one installable distribution:
 
@@ -26,19 +24,24 @@ distributions/observability-query
   -> supports environment mapping for prod/test
 ```
 
-Install smoke:
+Install:
 
 ```bash
-hermes profile install ./hermes-devops-agent/distributions/observability-query --name observability-query --alias -y
+hermes profile install ./distributions/observability-query --name observability-query -y
+```
+
+Dry-run inspection (no live credentials needed):
+
+```bash
+python3 mcp-servers/devops-observe/intlsms_runner.py --dry-run --environment test --format markdown
 ```
 
 Validation:
 
 ```bash
-python3 hermes-devops-agent/tests/validate_skills_catalog.py
-python3 hermes-devops-agent/tests/validate_docs.py
-python3 hermes-devops-agent/tests/validate_distribution.py
-python3 hermes-devops-agent/distributions/observability-query/tests/validate_distribution.py
-python3 -m pytest hermes-devops-agent/tests
-python3 -m pytest hermes-devops-agent/distributions/observability-query/tests
+python3 -m pytest tests/
+python3 -m pytest distributions/observability-query/tests/
+python3 tests/validate_skills_catalog.py
+python3 tests/validate_distribution.py
 ```
+
