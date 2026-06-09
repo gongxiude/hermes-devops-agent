@@ -46,54 +46,41 @@ raw_request: <原始请求完整文本>
 urgency: <normal|urgent>
 ```
 
-## ⚠️ kanban_create 禁止传递的参数
+## Step 4：kanban_create 调用规范
 
-**绝对不要传 `max_runtime_seconds`**（包括 0）。该参数未传时默认 `NULL`，允许任务无限运行直到完成。
-- `max_runtime_seconds=0` 等于立即超时，任务会在首次 LLM 调用前就被杀死。
-- 仅当用户明确要求限时时才设置，且值必须 > 60。
+### ⚠️ 强制规则：参数 JSON 只含 3 个 key（pipeline 时 4 个）
 
-```python
-# ✅ 正确
-task = kanban_create(title="...", assignee="...", body=envelope)
+调用 kanban_create 时，参数 JSON **必须且只能**使用下面的精确格式：
 
-# ❌ 错误 — 会导致任务立即超时
-task = kanban_create(title="...", assignee="...", body=envelope, max_runtime_seconds=0)
+**单任务（3 个 key）：**
+
+```json
+{"title": "...", "assignee": "...", "body": "..."}
 ```
 
-## Step 4：选择编排模式
+**带依赖（4 个 key）：**
 
-### 单任务（Single）
-
-适用于单一 request_type 的简单请求。
-
-```python
-task = kanban_create(title="<简短标题>", assignee="<profile>", body=envelope)
+```json
+{"title": "...", "assignee": "...", "body": "...", "parents": ["t_xxxx"]}
 ```
+
+提交 tool call 前，验证参数 JSON 的 key 数量：单任务=3，带依赖=4。如有多余 key 删除之。
 
 ### 扇出（Fan-out）
 
-适用于同一请求需要多个 specialist **并行**处理。独立任务之间不设 parent 链接，dispatcher 可以同时认领。
-
-```python
-t1 = kanban_create(title="检查核心指标", assignee="observability-query", body=envelope)
-t2 = kanban_create(title="排查错误日志", assignee="observability-query", body=envelope)
-t3 = kanban_create(title="检查依赖链路", assignee="observability-query", body=envelope)
-# 汇总任务等待所有并行任务完成
-summary = kanban_create(title="汇总结论", assignee="observability-query",
-                         body=envelope, parents=[t1["task_id"], t2["task_id"], t3["task_id"]])
+```json
+{"title": "检查核心指标", "assignee": "observability-query", "body": "..."}
+{"title": "排查错误日志", "assignee": "observability-query", "body": "..."}
+{"title": "汇总结论", "assignee": "observability-query", "body": "...", "parents": ["t_1", "t_2"]}
 ```
 
-**parent 链接在 `kanban_create` 时传入，不得事后补链**——先创建全部 card 再补 link 会导致 dispatcher 提前认领子任务。
+**parent 链接在创建时传入，不得事后补链。**
 
 ### 流水线（Pipeline）
 
-适用于有严格依赖顺序的多步请求，子任务在父任务 `done` 后自动 promote 到 `ready`。
-
-```python
-parent = kanban_create(title="生产健康检查", assignee="observability-query", body=envelope)
-child  = kanban_create(title="诊断报告（依赖健康检查结果）",
-                        assignee="observability-query", body=envelope,
-                        parents=[parent["task_id"]])
+```json
+{"title": "生产健康检查", "assignee": "observability-query", "body": "..."}
+{"title": "诊断报告", "assignee": "observability-query", "body": "...", "parents": ["t_parent"]}
 ```
 
 ## Step 5：回复用户
