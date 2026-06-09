@@ -3,6 +3,15 @@ display:
 
 hooks_auto_accept: false
 
+# Model — 使用 custom provider 指向内部 LLM relay
+# 安装后在 profile config.yaml 中填入真实 base_url / api_key
+model:
+  provider: custom
+  model: gpt-5.4
+  base_url: "${LLM_RELAY_BASE_URL}"
+  api_key: "${LLM_RELAY_API_KEY}"
+  api_mode: chat_completions
+
 # Orchestrator 只有 kanban + skills，不挂任何 MCP 生产系统
 toolsets:
   - kanban
@@ -26,7 +35,5 @@ platforms:
       domain: feishu
       allow_bots: none
       require_mention: true
-      default_group_policy: allowlist
-      group_rules:
-        oc_ops_home:
-          policy: allowlist
+      # default_group_policy: allowlist  # 改为 open 则所有群组均可访问
+      default_group_policy: open
