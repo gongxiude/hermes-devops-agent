@@ -4,7 +4,7 @@
       "transport": "stdio",
       "command": "python3",
       "args": [
-        "mcp-servers/devops-observe/devops_observe_mcp.py"
+        "mcp-servers/devops-observe/src/server.py"
       ],
       "env": {
         "OBSERVE_PROMETHEUS_BASE_URL_PROD": "${OBSERVE_PROMETHEUS_BASE_URL_PROD}",
