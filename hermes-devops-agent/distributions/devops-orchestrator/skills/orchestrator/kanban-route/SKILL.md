@@ -27,7 +27,7 @@ hermes profile list
 | request_type | assignee |
 |---|---|
 | `observability_query` | `observability-query` |
-| `gitops_query` | `software-delivery-draft` |
+| `gitops_query` | `software-delivery-readonly` |
 | `gitops_draft` | `software-delivery-draft` |
 | `incident_triage` | `observability-query` |
 | `data_query` | `observability-query` |
@@ -103,7 +103,7 @@ urgency: <normal|urgent>
 
 ## 紧急请求处理（urgency = urgent）
 
-1. 先调用 `delegate_task`（`toolsets=["mcp-devops-observe"]`）发起即时响应。
+1. 先调用 `delegate_task` 发起即时响应，`toolsets` 必须按目标环境显式选择独立 MCP，例如生产国际短信使用 `["mcp-prometheus-intlsms-prod", "mcp-loki-intlsms-prod", "mcp-k8s-intlsms-prod"]`。
 2. **同时**创建 Kanban 任务做审计记录（不可跳过）。
 
 ## 禁止行为

@@ -1,28 +1,126 @@
 {
   "mcpServers": {
-    "devops-observe": {
+    "prometheus-intlsms-prod": {
       "transport": "stdio",
       "command": "python3",
       "args": [
-        "mcp-servers/devops-observe/src/server.py"
+        "/Users/gongxiude/Documents/github/infrastructure-agents-guide/hermes-devops-agent/mcp-servers/prometheus/src/server.py"
       ],
       "env": {
-        "OBSERVE_PROMETHEUS_BASE_URL_PROD": "${OBSERVE_PROMETHEUS_BASE_URL_PROD}",
-        "OBSERVE_LOKI_BASE_URL_PROD": "${OBSERVE_LOKI_BASE_URL_PROD}",
-        "KUBECONFIG_READONLY_PROD": "${KUBECONFIG_READONLY_PROD}",
-        "KUBECTL_BIN_PROD": "${KUBECTL_BIN_PROD}",
-        "OBSERVE_PROMETHEUS_BASE_URL_TEST": "${OBSERVE_PROMETHEUS_BASE_URL_TEST}",
-        "OBSERVE_LOKI_BASE_URL_TEST": "${OBSERVE_LOKI_BASE_URL_TEST}",
-        "KUBECONFIG_READONLY_TEST": "${KUBECONFIG_READONLY_TEST}",
-        "KUBECTL_BIN_TEST": "${KUBECTL_BIN_TEST}"
+        "MCP_SERVER_NAME": "prometheus-intlsms-prod",
+        "PROMETHEUS_URL": "${OBSERVE_PROMETHEUS_BASE_URL_PROD}",
+        "PROMETHEUS_TOKEN": "${OBSERVE_PROMETHEUS_TOKEN_PROD}",
+        "ENABLE_DISCOVERY_TOOLS": "false",
+        "ENABLE_INFO_TOOLS": "false",
+        "ENABLE_QUERY_TOOLS": "true",
+        "MCP_LOG_LEVEL": "INFO"
+      },
+      "tools": {
+        "include": ["prometheus_query", "prometheus_query_range"]
+      }
+    },
+    "prometheus-intlsms-test": {
+      "transport": "stdio",
+      "command": "python3",
+      "args": [
+        "/Users/gongxiude/Documents/github/infrastructure-agents-guide/hermes-devops-agent/mcp-servers/prometheus/src/server.py"
+      ],
+      "env": {
+        "MCP_SERVER_NAME": "prometheus-intlsms-test",
+        "PROMETHEUS_URL": "${OBSERVE_PROMETHEUS_BASE_URL_TEST}",
+        "PROMETHEUS_TOKEN": "${OBSERVE_PROMETHEUS_TOKEN_TEST}",
+        "ENABLE_DISCOVERY_TOOLS": "false",
+        "ENABLE_INFO_TOOLS": "false",
+        "ENABLE_QUERY_TOOLS": "true",
+        "MCP_LOG_LEVEL": "INFO"
+      },
+      "tools": {
+        "include": ["prometheus_query", "prometheus_query_range"]
+      }
+    },
+    "loki-intlsms-prod": {
+      "transport": "stdio",
+      "command": "python3",
+      "args": [
+        "/Users/gongxiude/Documents/github/infrastructure-agents-guide/hermes-devops-agent/mcp-servers/loki/src/server.py"
+      ],
+      "env": {
+        "MCP_SERVER_NAME": "loki-intlsms-prod",
+        "LOKI_URL": "${OBSERVE_LOKI_BASE_URL_PROD}",
+        "LOKI_TOKEN": "${OBSERVE_LOKI_TOKEN_PROD}",
+        "MCP_LOG_LEVEL": "INFO"
+      },
+      "tools": {
+        "include": ["loki_backend_health", "loki_query_range", "loki_labels", "loki_label_values", "loki_series"]
+      }
+    },
+    "loki-intlsms-test": {
+      "transport": "stdio",
+      "command": "python3",
+      "args": [
+        "/Users/gongxiude/Documents/github/infrastructure-agents-guide/hermes-devops-agent/mcp-servers/loki/src/server.py"
+      ],
+      "env": {
+        "MCP_SERVER_NAME": "loki-intlsms-test",
+        "LOKI_URL": "${OBSERVE_LOKI_BASE_URL_TEST}",
+        "LOKI_TOKEN": "${OBSERVE_LOKI_TOKEN_TEST}",
+        "MCP_LOG_LEVEL": "INFO"
+      },
+      "tools": {
+        "include": ["loki_backend_health", "loki_query_range", "loki_labels", "loki_label_values", "loki_series"]
+      }
+    },
+    "k8s-intlsms-prod": {
+      "transport": "stdio",
+      "command": "python3",
+      "args": [
+        "/Users/gongxiude/Documents/github/infrastructure-agents-guide/hermes-devops-agent/mcp-servers/k8s/src/server.py"
+      ],
+      "env": {
+        "MCP_SERVER_NAME": "k8s-intlsms-prod",
+        "K8S_CONTEXT": "${K8S_CONTEXT_PROD}",
+        "K8S_NAMESPACE": "${K8S_NAMESPACE_PROD}",
+        "KUBECONFIG": "${KUBECONFIG_READONLY_PROD}",
+        "KUBECTL_BIN": "${KUBECTL_BIN_PROD}",
+        "K8S_READ_ONLY": "true",
+        "MCP_LOG_LEVEL": "INFO"
       },
       "tools": {
         "include": [
-          "prometheus_query",
-          "loki_query_range",
-          "k8s_get_workload",
-          "readonly_guard_check",
-          "intlsms_inspect"
+          "k8s_get_resources",
+          "k8s_get_pod_logs",
+          "k8s_get_events",
+          "k8s_get_available_api_resources",
+          "k8s_get_cluster_configuration",
+          "k8s_get_resource_yaml",
+          "k8s_describe_resource"
+        ]
+      }
+    },
+    "k8s-intlsms-test": {
+      "transport": "stdio",
+      "command": "python3",
+      "args": [
+        "/Users/gongxiude/Documents/github/infrastructure-agents-guide/hermes-devops-agent/mcp-servers/k8s/src/server.py"
+      ],
+      "env": {
+        "MCP_SERVER_NAME": "k8s-intlsms-test",
+        "K8S_CONTEXT": "${K8S_CONTEXT_TEST}",
+        "K8S_NAMESPACE": "intl-test",
+        "KUBECONFIG": "${KUBECONFIG_READONLY_TEST}",
+        "KUBECTL_BIN": "${KUBECTL_BIN_TEST}",
+        "K8S_READ_ONLY": "true",
+        "MCP_LOG_LEVEL": "INFO"
+      },
+      "tools": {
+        "include": [
+          "k8s_get_resources",
+          "k8s_get_pod_logs",
+          "k8s_get_events",
+          "k8s_get_available_api_resources",
+          "k8s_get_cluster_configuration",
+          "k8s_get_resource_yaml",
+          "k8s_describe_resource"
         ]
       }
     }

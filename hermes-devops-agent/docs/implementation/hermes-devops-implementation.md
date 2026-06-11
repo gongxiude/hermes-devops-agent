@@ -388,7 +388,9 @@ hermes-devops-agent/
       commands/
       bundled_skills/
   mcp-servers/
-    devops-observe/
+    prometheus/
+    loki/
+    k8s/
     devops-gitops-draft/
     devops-governance/
     devops-prod-breakglass/
@@ -527,13 +529,31 @@ Distribution 中的 `mcp.json`（交付格式）：
 ```json
 {
   "mcpServers": {
-    "devops-observe": {
+    "prometheus-intlsms-prod": {
       "transport": "stdio",
       "command": "python3",
-      "args": ["mcp-servers/devops-observe/devops_observe_mcp.py"],
+      "args": ["mcp-servers/prometheus/src/server.py"],
       "env": {
-        "OBSERVE_PROMETHEUS_BASE_URL_PROD": "${OBSERVE_PROMETHEUS_BASE_URL_PROD}",
-        "OBSERVE_LOKI_BASE_URL_PROD": "${OBSERVE_LOKI_BASE_URL_PROD}"
+        "PROMETHEUS_BASE_URL": "${INTLSMS_PROD_PROMETHEUS_BASE_URL}",
+        "PROMETHEUS_BEARER_TOKEN": "${INTLSMS_PROD_PROMETHEUS_BEARER_TOKEN}"
+      }
+    },
+    "loki-intlsms-prod": {
+      "transport": "stdio",
+      "command": "python3",
+      "args": ["mcp-servers/loki/src/server.py"],
+      "env": {
+        "LOKI_BASE_URL": "${INTLSMS_PROD_LOKI_BASE_URL}",
+        "LOKI_BEARER_TOKEN": "${INTLSMS_PROD_LOKI_BEARER_TOKEN}"
+      }
+    },
+    "k8s-intlsms-prod": {
+      "transport": "stdio",
+      "command": "python3",
+      "args": ["mcp-servers/k8s/src/server.py"],
+      "env": {
+        "KUBECONFIG": "${INTLSMS_PROD_KUBECONFIG}",
+        "K8S_NAMESPACE_ALLOWLIST": "intl-prod"
       }
     },
     "devops-governance": {
@@ -549,19 +569,33 @@ Distribution 中的 `mcp.json`（交付格式）：
 
 ```yaml
 mcp_servers:
-  devops-observe:
+  prometheus-intlsms-prod:
     command: "python3"
-    args: ["mcp-servers/devops-observe/devops_observe_mcp.py"]
+    args: ["mcp-servers/prometheus/src/server.py"]
     env:
-      OBSERVE_PROMETHEUS_BASE_URL_PROD: "${OBSERVE_PROMETHEUS_BASE_URL_PROD}"
-      OBSERVE_LOKI_BASE_URL_PROD: "${OBSERVE_LOKI_BASE_URL_PROD}"
+      PROMETHEUS_BASE_URL: "${INTLSMS_PROD_PROMETHEUS_BASE_URL}"
+      PROMETHEUS_BEARER_TOKEN: "${INTLSMS_PROD_PROMETHEUS_BEARER_TOKEN}"
     tools:
       include:
-        - intlsms_runtime_inspection
-        - readonly_guard_check
         - prometheus_query
-        - loki_query
-        - k8s_readonly_get_workload
+  loki-intlsms-prod:
+    command: "python3"
+    args: ["mcp-servers/loki/src/server.py"]
+    env:
+      LOKI_BASE_URL: "${INTLSMS_PROD_LOKI_BASE_URL}"
+      LOKI_BEARER_TOKEN: "${INTLSMS_PROD_LOKI_BEARER_TOKEN}"
+    tools:
+      include:
+        - loki_query_range
+  k8s-intlsms-prod:
+    command: "python3"
+    args: ["mcp-servers/k8s/src/server.py"]
+    env:
+      KUBECONFIG: "${INTLSMS_PROD_KUBECONFIG}"
+      K8S_NAMESPACE_ALLOWLIST: "intl-prod"
+    tools:
+      include:
+        - k8s_get_resources
   devops-governance:
     command: "python3"
     args: ["mcp-servers/devops-governance/devops_governance_mcp.py"]
@@ -573,7 +607,7 @@ mcp_servers:
         - approval_check    # 仅 governance-breakglass profile 开放
 ```
 
-**MCP tool 命名规则**：Hermes 运行时将 MCP tool 注册为 `mcp_<server>_<tool>` 格式。例如 `devops-observe` server 的 `prometheus_query` tool 在运行时注册为 `mcp_devops_observe_prometheus_query`（dashes 转为 underscores）。
+**MCP tool 命名规则**：Hermes 运行时将 MCP tool 注册为 `mcp_<server>_<tool>` 格式。例如 `prometheus-intlsms-prod` server 的 `prometheus_query` tool 在运行时注册为 `mcp_prometheus_intlsms_prod_prometheus_query`（dashes 转为 underscores）。全局 `devops-observe` MCP 已废弃，禁止在新 profile 和新 skill 中引用。
 
 **Tool filtering**：
 - `tools.include`：白名单，仅列出的 tool 对模型可见
@@ -1010,7 +1044,7 @@ metadata:
   hermes:
     category: devops
     tags: [observability, prometheus, metrics]
-    requires_toolsets: [mcp-devops-observe]
+    requires_toolsets: [mcp-prometheus-intlsms-prod]
 ---
 
 # PromQL Basics
@@ -1137,7 +1171,7 @@ shared skills 必须通过下面三类校验：
 |---|---|
 | `goal` | subagent 需要完成的任务描述 |
 | `context` | 所有相关上下文（file paths、error messages、actor/service/environment 等） |
-| `toolsets` | 控制 subagent 可用的 toolset 数组（如 `["terminal", "file", "mcp-devops-observe"]`） |
+| `toolsets` | 控制 subagent 可用的 toolset 数组（如 `["terminal", "file", "mcp-prometheus-intlsms-prod"]`） |
 | `max_iterations` | 每个 subagent 的 turn 上限（默认 50） |
 | `role` | `"leaf"`（默认）或 `"orchestrator"`（允许嵌套 delegation） |
 
@@ -1161,7 +1195,7 @@ L3 orchestration skill 指导 Agent 调用 delegate_task：
 delegate_task(
   goal="查询国际短信服务的 SLO、错误率、日志聚类",
   context="actor=ou_sre_1, service=intlsms, environment=prod, correlation_id=cr-xxx, window=15m",
-  toolsets=["mcp-devops-observe"],    # 运行时 toolset 名 = "mcp-" + server name
+  toolsets=["mcp-prometheus-intlsms-prod", "mcp-loki-intlsms-prod", "mcp-k8s-intlsms-prod"],
   max_iterations=20
 )
 ```
@@ -1175,12 +1209,12 @@ delegate_task(
 
 | Subagent | 处理内容 | 允许的 toolsets | 禁止 |
 |---|---|---|---|
-| `observability-agent` | 指标、日志、Grafana 诊断 | `["mcp-devops-observe"]` | terminal、file write |
-| `kubernetes-agent` | Kubernetes 状态、资源、事件 | `["mcp-devops-observe"]` | restart、scale、delete |
+| `observability-agent` | 指标、日志、Grafana 诊断 | `["mcp-prometheus-<service>-<env>", "mcp-loki-<service>-<env>"]` | terminal、file write |
+| `kubernetes-agent` | Kubernetes 状态、资源、事件 | `["mcp-k8s-<service>-<env>"]` | restart、scale、delete |
 | `gitops-agent` | GitOps 配置定位、渲染、MR 草稿 | `["terminal", "file", "mcp-devops-gitops-draft"]` | push main、skip render |
-| `release-agent` | Jenkins/ArgoCD 发布诊断 | `["mcp-devops-observe"]` | trigger build、sync |
+| `release-agent` | Jenkins/ArgoCD 发布诊断 | `["mcp-jenkins-<service>-<env>", "mcp-argocd-<service>-<env>"]` | trigger build、sync |
 | `datastore-agent` | Redis/PostgreSQL 诊断 | `["mcp-devops-data-observe"]` | DML/DDL、keys scan |
-| `cloud-agent` | 阿里云与平台依赖诊断 | `["mcp-devops-observe"]` | 修改云资源 |
+| `cloud-agent` | 阿里云与平台依赖诊断 | `["mcp-aliyun-<account>-<env>"]` | 修改云资源 |
 | `governance-reviewer` | 权限、审批、审计、脱敏复核 | `["mcp-devops-governance"]` | 业务写操作 |
 
 Subagent 调用规则：
@@ -1280,11 +1314,13 @@ hermes tools list --platform feishu
 
 ### 7.6 MCP safe tools
 
-**命名规则**：Hermes 运行时将 MCP server 的 tools 注册为 `mcp_<server>_<tool>` 格式（所有 dashes 和 dots 转为 underscores）。每个 MCP server 自动生成一个 toolset，命名为 `mcp-<server>`（如 `mcp-devops-observe`），可用于 delegation 的 `toolsets` 参数。
+**命名规则**：Hermes 运行时将 MCP server 的 tools 注册为 `mcp_<server>_<tool>` 格式（所有 dashes 和 dots 转为 underscores）。每个 MCP server 自动生成一个 toolset，命名为 `mcp-<server>`（如 `mcp-prometheus-intlsms-prod`），可用于 delegation 的 `toolsets` 参数。
 
 | MCP server | 运行时 toolset 名 | 工具范围 | 默认权限 | 禁止项 |
 |---|---|---|---|---|
-| `devops-observe` | `mcp-devops-observe` | Prometheus、Loki、Grafana、Kubernetes、ArgoCD、Jenkins 只读 | Observe | mutation、sync、rollback、restart |
+| `prometheus-<service>-<env>` | `mcp-prometheus-<service>-<env>` | 单服务单环境 Prometheus 查询 | Observe | 写告警规则、跨环境查询、mutation |
+| `loki-<service>-<env>` | `mcp-loki-<service>-<env>` | 单服务单环境 Loki 查询 | Observe | 跨环境日志查询、未脱敏输出、mutation |
+| `k8s-<service>-<env>` | `mcp-k8s-<service>-<env>` | 单服务单环境 Kubernetes 只读查询 | Observe | exec、apply、patch、delete、restart、scale |
 | `devops-gitops-draft` | `mcp-devops-gitops-draft` | Git branch、diff、Kustomize render、policy check、Codeup MR draft | Draft | 直接写主干、跳过 render、跳过 review |
 | `devops-data-observe` | `mcp-devops-data-observe` | Redis/PostgreSQL 诊断查询 | Observe | generic SQL、写命令、keys 全量扫描、未脱敏输出 |
 | `devops-governance` | `mcp-devops-governance` | policy decision、approval request、audit event、redaction | Governance | 返回长期 secret |
@@ -1296,15 +1332,24 @@ hermes tools list --platform feishu
 
 ```yaml
 mcp_servers:
-  devops-observe:
+  prometheus-intlsms-prod:
     command: "python3"
-    args: ["mcp-servers/devops-observe/devops_observe_mcp.py"]
+    args: ["mcp-servers/prometheus/src/server.py"]
     tools:
       include:
-        - intlsms_runtime_inspection
         - prometheus_query
-        - loki_query
-        - k8s_readonly_get_workload
+  loki-intlsms-prod:
+    command: "python3"
+    args: ["mcp-servers/loki/src/server.py"]
+    tools:
+      include:
+        - loki_query_range
+  k8s-intlsms-prod:
+    command: "python3"
+    args: ["mcp-servers/k8s/src/server.py"]
+    tools:
+      include:
+        - k8s_get_resources
   devops-governance:
     command: "python3"
     args: ["mcp-servers/devops-governance/devops_governance_mcp.py"]
@@ -1340,7 +1385,7 @@ mcp_servers:
 ```bash
 # 安装后在会话中验证 tool 可见性
 hermes -p observability-query chat -q "/tools list"
-# 预期：只有 mcp_devops_observe_* 和 mcp_devops_governance_* 中 include 的 tools
+# 预期：只有 mcp_prometheus_intlsms_prod_*、mcp_loki_intlsms_prod_*、mcp_k8s_intlsms_prod_* 和 mcp_devops_governance_* 中 include 的 tools
 # 不应出现 mcp_devops_prod_breakglass_*
 
 # 或使用交互式 TUI
@@ -1530,7 +1575,7 @@ Orchestrator 使用 `kanban_list(status="done")` 定期检查已完成任务，�
   ├─ 普通查询（可接受 15-30s 延迟）
   │    → kanban_create → dispatcher spawn → worker 执行 → 回传
   └─ 紧急诊断（需要即时响应）
-       → delegate_task(toolsets=["mcp-devops-observe"], ...) 即时响应
+       → delegate_task(toolsets=["mcp-prometheus-intlsms-prod", "mcp-loki-intlsms-prod", "mcp-k8s-intlsms-prod"], ...) 即时响应
        → 同时 kanban_create 做审计记录
 ```
 
@@ -1766,7 +1811,7 @@ sequenceDiagram
     Orch->>User: 收到，正在紧急诊断...
     
     Note over Orch: 混合策略：即时 delegate_task + Kanban 审计
-    Orch->>Orch: delegate_task(goal="快速查询 intlsms SLO/错误率",<br/>toolsets=["mcp-devops-observe"], max_iterations=10)
+    Orch->>Orch: delegate_task(goal="快速查询 intlsms SLO/错误率",<br/>toolsets=["mcp-prometheus-intlsms-prod","mcp-loki-intlsms-prod","mcp-k8s-intlsms-prod"], max_iterations=10)
     Orch->>User: 【快速摘要】错误率 45%，近 5min 503 激增
     
     Orch->>Board: kanban_create(title="intlsms P0 故障深度诊断",<br/>assignee="incident-triage", priority=1)
@@ -2035,7 +2080,7 @@ L4 governance
 | [Hermes MCP](https://hermes-agent.nousresearch.com/docs/user-guide/features/mcp/) | MCP servers 配置在 `config.yaml` → `mcp_servers`；tool 注册为 `mcp_<server>_<tool>`；支持 `tools.include/exclude` filter | 修正 tool 命名规则，config 中用 include/exclude 声明式控制 |
 | [Hermes Plugins](https://hermes-agent.nousresearch.com/docs/user-guide/features/plugins/) | plugins 可添加 custom tools、hooks（`pre_tool_call`/`post_tool_call`/`pre_gateway_dispatch` 等）、slash commands、CLI commands、bundled skills；不修改 core | DevOps plugin 承载 policy/audit/redaction；`pre_gateway_dispatch` hook 实现群 ACL |
 | [Hermes Delegation](https://hermes-agent.nousresearch.com/docs/user-guide/features/delegation/) | `delegate_task` tool 创建 subagent；参数为 `goal`/`context`/`toolsets`/`max_iterations`/`role`；leaf 禁止 delegation/clarify/memory/code_execution/send_message；默认并发 3 | subagent YAML 为设计规约，运行时靠 `delegate_task` + `toolsets` 数组 |
-| [Hermes Toolsets Reference](https://hermes-agent.nousresearch.com/docs/reference/toolsets-reference/) | MCP server 自动生成 `mcp-<server>` toolset；custom toolsets 可在 config 中定义 | delegation 中传递 `mcp-devops-observe` 等 toolset 名 |
+| [Hermes Toolsets Reference](https://hermes-agent.nousresearch.com/docs/reference/toolsets-reference/) | MCP server 自动生成 `mcp-<server>` toolset；custom toolsets 可在 config 中定义 | delegation 中传递 `mcp-prometheus-intlsms-prod`、`mcp-loki-intlsms-prod`、`mcp-k8s-intlsms-prod` 等独立 toolset 名 |
 | [Hermes Git Worktrees](https://hermes-agent.nousresearch.com/docs/user-guide/git-worktrees) | `-w` 创建临时 worktree（`.worktrees/` 下）；每个 worktree 独立 branch 和 checkpoint | per-task worktree 隔离 GitOps draft |
 | [Hermes Secrets](https://hermes-agent.nousresearch.com/docs/user-guide/secrets/) | 支持 Bitwarden Secrets Manager（`bws` CLI）在进程启动时加载密钥；运行时 credential broker 非内建 | 长期密钥进 Bitwarden；运行时 credential broker 需自建为 MCP server |
 | [Hermes Kanban](https://hermes-agent.nousresearch.com/docs/user-guide/features/kanban) | SQLite-backed 持久化任务板 + 多 Agent 调度器；dispatcher 嵌入 gateway；assignee → profile spawn；断路器 + crash 恢复 + 依赖图 | 用 Kanban 作为飞书端统一入口，orchestrator 路由任务到 specialist profiles |

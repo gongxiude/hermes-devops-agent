@@ -210,7 +210,7 @@ KUBECTL_BIN_PROD=kubectl
 KUBECTL_BIN_TEST=kubectl
 
 # Server config（可选）
-MCP_SERVER_NAME=devops-observe
+MCP_SERVER_NAME=prometheus-intlsms-test
 MCP_LOG_LEVEL=INFO
 MCP_REQUEST_TIMEOUT=10
 ```
@@ -229,18 +229,11 @@ Distribution 和 profile 的 `mcp.json` 均指向 `src/server.py`：
       "command": "python3",
       "args": ["mcp-servers/<server-name>/src/server.py"],
       "env": {
-        "OBSERVE_PROMETHEUS_BASE_URL_PROD": "${OBSERVE_PROMETHEUS_BASE_URL_PROD}",
-        "OBSERVE_LOKI_BASE_URL_PROD": "${OBSERVE_LOKI_BASE_URL_PROD}",
-        "KUBECONFIG_READONLY_PROD": "${KUBECONFIG_READONLY_PROD}",
-        "KUBECTL_BIN_PROD": "${KUBECTL_BIN_PROD}",
-        "OBSERVE_PROMETHEUS_BASE_URL_TEST": "${OBSERVE_PROMETHEUS_BASE_URL_TEST}",
-        "OBSERVE_LOKI_BASE_URL_TEST": "${OBSERVE_LOKI_BASE_URL_TEST}",
-        "KUBECONFIG_READONLY_TEST": "${KUBECONFIG_READONLY_TEST}",
-        "KUBECTL_BIN_TEST": "${KUBECTL_BIN_TEST}"
+        "MCP_SERVER_NAME": "<server-name>",
+        "PROMETHEUS_URL": "${OBSERVE_PROMETHEUS_BASE_URL_TEST}"
       },
       "tools": {
-        "include": ["prometheus_query", "loki_query_range", "k8s_get_workload",
-                    "readonly_guard_check", "intlsms_inspect"]
+        "include": ["prometheus_query", "prometheus_query_range"]
       }
     }
   }
@@ -273,4 +266,4 @@ pytest tests/
 - 不允许在 `src/tools/` 子模块之间相互导入，共享逻辑必须放 `utils.py`
 - 不允许在 tool 函数中直接读取 `os.environ`，统一通过 `Config` 或 `utils` 中的 resolver 函数
 - 不允许在 tool 中执行写操作（非只读 kubectl、非只读 API），写操作放入独立的 governance server
-- 不允许将 `devops_observe_mcp.py`（旧实现）作为 `mcp.json` 的入口，始终使用 `src/server.py`
+- 不允许再创建 `devops-observe` 这类跨系统全局 MCP；Prometheus、Loki、Kubernetes 必须拆成独立 MCP server，并由 profile 分环境启用。

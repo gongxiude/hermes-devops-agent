@@ -11,7 +11,10 @@ allowed_skills:
   - secret-redaction
   - audit-trail
 mcp_servers:
-  - devops-observe
+  - prometheus-intlsms-prod
+  - prometheus-intlsms-test
+  - loki-intlsms-prod
+  - loki-intlsms-test
 denied_tools:
   - terminal
   - file_write

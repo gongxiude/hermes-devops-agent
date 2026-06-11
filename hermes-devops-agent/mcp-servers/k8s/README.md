@@ -125,7 +125,7 @@ pytest tests/
 
 ### 代码规范
 
-遵循 [docs/mcp-setup.md](../devops-observe/docs/mcp-setup.md) 中的 MCP 开发规范。
+遵循仓库 `docs/mcp-setup.md` 中的 MCP 开发规范。
 
 ## 许可证
 

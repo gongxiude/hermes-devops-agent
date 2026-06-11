@@ -1,0 +1,36 @@
+name: hermes-devops-software-delivery-readonly
+version: 0.1.0
+description: "Read-only Software Delivery agent for Jenkins, ArgoCD, Codeup, yuexin-infra, and jenkins-pipeline evidence."
+hermes_requires: ">=0.12.0"
+author: "Platform Engineering"
+env_requires:
+  - name: LLM_RELAY_BASE_URL
+    description: "OpenAI-compatible LLM relay base URL"
+    required: true
+  - name: LLM_RELAY_API_KEY
+    description: "LLM relay API key"
+    required: true
+  - name: CODEUP_BASE_URL
+    description: "Codeup OpenAPI base URL"
+    required: true
+  - name: CODEUP_ACCESS_TOKEN
+    description: "Read-only Codeup access token"
+    required: true
+  - name: CODEUP_ORGANIZATION_ID
+    description: "Codeup organization id"
+    required: true
+  - name: SOFTWARE_DELIVERY_LOCAL_GIT_ROOT
+    description: "Local root containing readonly checkouts for git_repo_status"
+    required: false
+  - name: ARGOCD_API_URL
+    description: "ArgoCD API URL"
+    required: false
+  - name: ARGOCD_AUTH_TOKEN
+    description: "Read-only ArgoCD token"
+    required: false
+  - name: JENKINS_MCP_URL
+    description: "Jenkins MCP streamable HTTP URL"
+    required: false
+  - name: JENKINS_MCP_TOKEN
+    description: "Read-only Jenkins MCP token"
+    required: false

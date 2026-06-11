@@ -1,0 +1,80 @@
+display:
+  skin: slate
+
+hooks_auto_accept: false
+
+model:
+  provider: custom
+  model: gpt-5.4
+  base_url: "${LLM_RELAY_BASE_URL}"
+  api_key: "${LLM_RELAY_API_KEY}"
+  api_mode: chat_completions
+
+plugins:
+  enabled:
+    - devops_agent
+
+toolsets:
+  - kanban
+  - skills
+  - memory
+
+mcp_servers:
+  git-codeup:
+    command: python3
+    args:
+      - /Users/gongxiude/Documents/github/infrastructure-agents-guide/hermes-devops-agent/mcp-servers/git-codeup/src/server.py
+    env:
+      MCP_SERVER_NAME: git-codeup
+      CODEUP_BASE_URL: "${CODEUP_BASE_URL}"
+      CODEUP_ACCESS_TOKEN: "${CODEUP_ACCESS_TOKEN}"
+      CODEUP_ORGANIZATION_ID: "${CODEUP_ORGANIZATION_ID}"
+      LOCAL_GIT_ROOT: "${SOFTWARE_DELIVERY_LOCAL_GIT_ROOT}"
+      MCP_LOG_LEVEL: INFO
+    tools:
+      include:
+        - codeup_list_repositories
+        - codeup_list_change_requests
+        - codeup_get_change_request
+        - codeup_list_commits
+        - git_repo_status
+  argocd:
+    command: python3
+    args:
+      - /Users/gongxiude/Documents/github/infrastructure-agents-guide/hermes-devops-agent/mcp-servers/argocd/src/server.py
+    env:
+      MCP_SERVER_NAME: argocd
+      ARGOCD_API_URL: "${ARGOCD_API_URL}"
+      ARGOCD_AUTH_TOKEN: "${ARGOCD_AUTH_TOKEN}"
+      ARGOCD_VERIFY_TLS: "${ARGOCD_VERIFY_TLS}"
+      MCP_LOG_LEVEL: INFO
+    tools:
+      include:
+        - argocd_get_version
+        - argocd_list_applications
+        - argocd_get_application
+        - argocd_get_project
+        - argocd_get_settings
+  jenkins:
+    transport: streamable_http
+    url: "${JENKINS_MCP_URL}"
+    headers:
+      Authorization: "Bearer ${JENKINS_MCP_TOKEN}"
+
+software_delivery:
+  profile: software-delivery-readonly
+  autonomy:
+    - observe
+    - recommend
+  repositories:
+    jenkins-pipeline:
+      prefix: jenkins-pipeline
+      remote: git@codeup.aliyun.com:6316fd51cb9d00684879aa3a/devops/jenkins-pipeline.git
+      branch: master
+      kind: jenkins-shared-library
+    yuexin-infra:
+      prefix: yuexin-infra
+      remote: git@codeup.aliyun.com:6316fd51cb9d00684879aa3a/devops/yuexin-infra.git
+      branch: master
+      kind: gitops-kubernetes-infra
+  readonly: true

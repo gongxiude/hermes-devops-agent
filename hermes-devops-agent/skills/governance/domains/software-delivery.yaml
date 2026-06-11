@@ -1,0 +1,60 @@
+domain: software-delivery
+environments:
+  prod:
+    release_policy: gated
+  test:
+    release_policy: gated
+profiles:
+  readonly: software-delivery-readonly
+  draft: software-delivery-draft
+  release_gated: software-delivery-release-gated
+repositories:
+  jenkins-pipeline:
+    prefix: jenkins-pipeline
+    remote: git@codeup.aliyun.com:6316fd51cb9d00684879aa3a/devops/jenkins-pipeline.git
+    branch: master
+    kind: jenkins-shared-library
+    allowed_profiles:
+      - software-delivery-readonly
+      - software-delivery-draft
+      - software-delivery-release-gated
+  yuexin-infra:
+    prefix: yuexin-infra
+    remote: git@codeup.aliyun.com:6316fd51cb9d00684879aa3a/devops/yuexin-infra.git
+    branch: master
+    kind: gitops-kubernetes-infra
+    allowed_profiles:
+      - software-delivery-readonly
+      - software-delivery-draft
+      - software-delivery-release-gated
+allowed_autonomy:
+  software-delivery-readonly:
+    - observe
+    - recommend
+  software-delivery-draft:
+    - observe
+    - recommend
+    - draft
+  software-delivery-release-gated:
+    - gated_execute
+denied_actions:
+  common:
+    - direct_push_master
+    - force_push
+    - merge_change_request
+    - argocd_sync
+    - jenkins_trigger_build
+    - kubectl_apply
+    - kubectl_patch
+    - kubectl_delete
+    - rollout_restart
+    - scale
+validation:
+  yuexin-infra:
+    required_before_mr:
+      - git_workspace_diff
+      - git_workspace_run_checks
+  jenkins-pipeline:
+    required_before_mr:
+      - git_workspace_diff
+      - git_workspace_run_checks

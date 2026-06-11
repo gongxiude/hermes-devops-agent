@@ -1,0 +1,73 @@
+display:
+  skin: slate
+
+hooks_auto_accept: false
+
+model:
+  provider: custom
+  model: gpt-5.4
+  base_url: "${LLM_RELAY_BASE_URL}"
+  api_key: "${LLM_RELAY_API_KEY}"
+  api_mode: chat_completions
+
+plugins:
+  enabled:
+    - devops_agent
+
+toolsets:
+  - kanban
+  - skills
+  - memory
+
+mcp_servers:
+  release-gate:
+    command: python3
+    args:
+      - /Users/gongxiude/Documents/github/infrastructure-agents-guide/hermes-devops-agent/mcp-servers/release-gate/src/server.py
+    env:
+      MCP_SERVER_NAME: release-gate
+      RELEASE_GATE_REQUIRE_APPROVAL: "true"
+      MCP_LOG_LEVEL: INFO
+    tools:
+      include:
+        - release_gate_required_fields
+        - release_gate_decide
+  release-executor:
+    command: python3
+    args:
+      - /Users/gongxiude/Documents/github/infrastructure-agents-guide/hermes-devops-agent/mcp-servers/release-executor/src/server.py
+    env:
+      MCP_SERVER_NAME: release-executor
+      RELEASE_GATE_REQUIRE_APPROVAL: "true"
+      RELEASE_EXECUTION_ENABLED: "${RELEASE_EXECUTION_ENABLED}"
+      JENKINS_BASE_URL: "${JENKINS_BASE_URL}"
+      JENKINS_USER: "${JENKINS_USER}"
+      JENKINS_API_TOKEN: "${JENKINS_API_TOKEN}"
+      ARGOCD_API_URL: "${ARGOCD_API_URL}"
+      ARGOCD_AUTH_TOKEN: "${ARGOCD_AUTH_TOKEN}"
+      MCP_LOG_LEVEL: INFO
+    tools:
+      include:
+        - release_execute_required_fields
+        - release_execute_jenkins_build
+        - release_execute_argocd_sync
+        - release_execute_argocd_rollback
+
+software_delivery:
+  profile: software-delivery-release-gated
+  autonomy:
+    - gated_execute
+  repositories:
+    jenkins-pipeline:
+      prefix: jenkins-pipeline
+      remote: git@codeup.aliyun.com:6316fd51cb9d00684879aa3a/devops/jenkins-pipeline.git
+      branch: master
+      kind: jenkins-shared-library
+    yuexin-infra:
+      prefix: yuexin-infra
+      remote: git@codeup.aliyun.com:6316fd51cb9d00684879aa3a/devops/yuexin-infra.git
+      branch: master
+      kind: gitops-kubernetes-infra
+  decision_tools_enabled: true
+  execution_tools_enabled: true
+  approval_required: true

@@ -25,7 +25,7 @@
 | request_type | assignee |
 |---|---|
 | observability_query（指标/日志/SLO 查询） | `observability-query` |
-| gitops_query（配置/资源定义查询） | `software-delivery-draft` |
+| gitops_query（配置/资源定义查询） | `software-delivery-readonly` |
 | gitops_draft（生成 MR 草稿） | `software-delivery-draft` |
 | incident_triage（故障诊断） | `observability-query` |
 | data_query（Redis/PostgreSQL 诊断） | `observability-query` |
@@ -58,7 +58,7 @@ task2 = kanban_create(title="诊断报告（仅在异常时执行）", assignee=
 
 包含以下关键词时视为紧急：故障 / P0 / P1 / 紧急 / 服务不可用 / 告警
 
-紧急请求：先用 `delegate_task` 即时响应（toolsets=["mcp-devops-observe"]），同时创建 Kanban task 做审计记录。
+紧急请求：先用 `delegate_task` 即时响应，toolsets 必须按目标环境显式传入独立 MCP，例如生产国际短信使用 `["mcp-prometheus-intlsms-prod", "mcp-loki-intlsms-prod", "mcp-k8s-intlsms-prod"]`；同时创建 Kanban task 做审计记录。
 
 ## 禁止行为
 

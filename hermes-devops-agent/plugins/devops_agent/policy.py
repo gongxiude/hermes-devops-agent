@@ -31,10 +31,10 @@ _PROD_ENVIRONMENTS = {"prod", "production"}
 _READONLY_TOOL_PREFIXES = {
     "mcp_k8s_intlsms_test_",
     "mcp_prometheus_intlsms_test_",
-    "mcp_devops_observe_prometheus_query",
-    "mcp_devops_observe_loki_query_range",
-    "mcp_devops_observe_k8s_get_workload",
-    "mcp_devops_observe_readonly_guard_check",
+    "mcp_loki_intlsms_test_",
+    "mcp_k8s_intlsms_prod_",
+    "mcp_prometheus_intlsms_prod_",
+    "mcp_loki_intlsms_prod_",
 }
 
 

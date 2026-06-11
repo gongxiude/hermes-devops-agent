@@ -1,6 +1,6 @@
 {
   "mcpServers": {
-    "k8s-prod": {
+    "prod-aliyun-sg-intlsms": {
       "command": "python",
       "args": ["-m", "src.server"],
       "env": {
@@ -13,7 +13,7 @@
         "MCP_REQUEST_TIMEOUT": "30"
       }
     },
-    "k8s-staging": {
+    "prod-aliyun-sh-datacenter": {
       "command": "python",
       "args": ["-m", "src.server"],
       "env": {
@@ -26,7 +26,7 @@
         "MCP_REQUEST_TIMEOUT": "30"
       }
     },
-    "k8s-dev": {
+    "prod-aliyun-sh-platform": {
       "command": "python",
       "args": ["-m", "src.server"],
       "env": {
