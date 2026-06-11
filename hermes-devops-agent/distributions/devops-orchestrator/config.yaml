@@ -20,11 +20,12 @@ toolsets:
 
 kanban:
   dispatch_in_gateway: true
-  dispatch_interval_seconds: 15
+  dispatch_interval_seconds: 3     # 降低调度延迟（原 15s）
   max_in_progress: 10
   max_in_progress_per_profile: 3
   failure_limit: 2
   auto_promote_children: true
+  auto_decompose: false             # 关闭自动任务拆解，减少调度噪音
   orchestrator_profile: devops-orchestrator
 
 platforms:

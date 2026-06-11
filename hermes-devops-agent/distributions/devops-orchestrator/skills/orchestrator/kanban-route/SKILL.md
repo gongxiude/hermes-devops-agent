@@ -12,17 +12,9 @@ description: Route a parsed Request Envelope to the correct specialist profile v
 ## 前置条件
 
 - `intent-parse` 已产出完整 Request Envelope（`service != null`、`request_type != unknown`）。
-- **必须先调用 `hermes profile list` 确认 assignee 存在**，再调用 `kanban_create`。dispatcher 对未知 assignee 静默丢弃——任务永远停在 `ready` 不会被执行。
+- assignee 直接从下方路由表中取。**不需要每次调用 `hermes profile list`**——路由表已固化已知 profile，仅在路由表外出现未知 assignee 时才调用一次验证。
 
-## Step 1：确认 profile 可用
-
-```bash
-hermes profile list
-```
-
-将实际存在的 profile 名与下方路由表对照。如果目标 assignee 不在列表中，**告知用户并停止**，不得创建任务。
-
-## Step 2：Assignee 路由表
+## Step 1：Assignee 路由表
 
 | request_type | assignee |
 |---|---|
@@ -83,7 +75,7 @@ urgency: <normal|urgent>
 {"title": "诊断报告", "assignee": "observability-query", "body": "...", "parents": ["t_parent"]}
 ```
 
-## Step 5：回复用户
+## Step 5：回复用户并等待结果
 
 任务创建成功后，**立即**在飞书回复确认消息：
 
@@ -97,9 +89,21 @@ urgency: <normal|urgent>
 已创建任务：
 - #<t1> 检查核心指标
 - #<t2> 排查错误日志
-- #<t3> 检查依赖链路
 - #<summary>（汇总，等待上述任务完成后执行）
 ```
+
+### 等待任务完成（CLI 同步模式）
+
+若在 CLI 同步模式下需要等待结果，**使用 `kanban_show` 轮询，禁止使用 `sleep`**：
+
+```
+kanban_show → 状态 = running/ready → 等 5 秒后再次 kanban_show
+kanban_show → 状态 = done → 读取结果，结束
+```
+
+- 每次 `kanban_show` 后如任务未完成，**固定等 5 秒**，不得递增
+- 最多轮询 20 次（共约 100 秒），超时则告知用户"任务仍在执行"
+- **飞书 gateway 模式下不需要轮询**：任务完成时 `kanban_reply` 插件会自动推送结果到飞书
 
 ## 紧急请求处理（urgency = urgent）
 
@@ -108,7 +112,9 @@ urgency: <normal|urgent>
 
 ## 禁止行为
 
-- 不猜测 assignee（必须先 `profile list` 验证存在）
+- 不猜测路由表外的 assignee（路由表内的 profile 无需每次验证）
+- 不使用 `sleep` 等待任务完成（改用 `kanban_show` 固定 5 秒间隔轮询）
+- 不重复调用 `kanban_create`（任务只创建一次，不因等待超时而重建）
 - 不跳过 Kanban 审计记录（即使紧急响应也需创建）
 - 不传递凭证或敏感环境变量给 assignee profile
 - 不处理生产变更（restart / rollback / scale / sync / apply）→ 转告 `governance-breakglass` 入口
