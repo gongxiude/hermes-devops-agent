@@ -11,17 +11,17 @@ contract_rules:
   - "Do not place credentials, shell scripts, or production secrets in SKILL.md."
 skills:
   - name: k8s-readonly-tool
-    mcp_servers: ["devops-observe"]
+    mcp_servers: ["k8s-intlsms-prod", "k8s-intlsms-test"]
     allowed_verbs: ["get", "list"]
     denied_verbs: ["create", "patch", "update", "delete", "apply", "exec_write", "scale", "rollout_restart"]
     depends_on: ["kubectl-basics", "kubernetes-object-basics"]
   - name: prometheus-query-tool
-    mcp_servers: ["devops-observe"]
+    mcp_servers: ["prometheus-intlsms-prod", "prometheus-intlsms-test"]
     allowed_verbs: ["query", "query_range", "series_metadata"]
     denied_verbs: ["admin_api", "unbounded_query"]
     depends_on: ["promql-basics"]
   - name: loki-query-tool
-    mcp_servers: ["devops-observe"]
+    mcp_servers: ["loki-intlsms-prod", "loki-intlsms-test"]
     allowed_verbs: ["query", "query_range", "label_values"]
     denied_verbs: ["unbounded_query", "raw_sensitive_log_export"]
     depends_on: ["loki-logql-basics"]

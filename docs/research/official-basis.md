@@ -19,14 +19,14 @@
 | 主题 | 官方文档 | 本仓库落点 |
 |---|---|---|
 | PromQL 基础 | https://prometheus.io/docs/prometheus/latest/querying/basics/ | L0 `promql-basics/SKILL.md` 和 L4 domain query 模板。 |
-| HTTP API | https://prometheus.io/docs/prometheus/latest/querying/api/ | `mcp-servers/devops-observe/intlsms_runner.py` 使用 `/api/v1/query`，按 JSON envelope 解析 `status` 和 `data.result`。 |
+| HTTP API | https://prometheus.io/docs/prometheus/latest/querying/api/ | `mcp-servers/prometheus/src/server.py` 使用 Prometheus `/api/v1/query` 和 `/api/v1/query_range`，profile 通过 `prometheus-intlsms-prod/test` 分环境注册。 |
 
 ## 3. Loki
 
 | 主题 | 官方文档 | 本仓库落点 |
 |---|---|---|
 | LogQL / Query | https://grafana.com/docs/loki/latest/query/ | L0 `loki-logql-basics/SKILL.md` 与 L4 domain query 模板。 |
-| Loki HTTP API | https://grafana.com/docs/loki/latest/reference/loki-http-api/ | runner 使用 `/loki/api/v1/query_range`，解析 `data.result[].values` 进行命中统计。 |
+| Loki HTTP API | https://grafana.com/docs/loki/latest/reference/loki-http-api/ | `mcp-servers/loki/src/server.py` 使用 `/loki/api/v1/query_range`，profile 通过 `loki-intlsms-prod/test` 分环境注册。 |
 
 ## 4. Kubernetes
 

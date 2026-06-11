@@ -38,6 +38,18 @@ def codeup_get(path: str, params: dict[str, str] | None = None) -> Any:
         return json.loads(resp.read().decode("utf-8"))
 
 
+def codeup_post(path: str, body: dict[str, Any]) -> Any:
+    if not Config.CODEUP_BASE_URL:
+        raise RuntimeError("CODEUP_BASE_URL is not set")
+    url = f"{Config.CODEUP_BASE_URL}{path}"
+    headers = _headers()
+    headers["Content-Type"] = "application/json"
+    req = urllib.request.Request(url, data=json.dumps(body).encode("utf-8"), headers=headers, method="POST")
+    with urllib.request.urlopen(req, timeout=Config.REQUEST_TIMEOUT) as resp:
+        payload = resp.read().decode("utf-8")
+        return json.loads(payload) if payload.strip() else {}
+
+
 def safe_repo_path(repo_path: str) -> Path:
     if not Config.LOCAL_GIT_ROOT:
         raise RuntimeError("LOCAL_GIT_ROOT is not set")

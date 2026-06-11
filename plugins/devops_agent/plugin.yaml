@@ -1,12 +1,13 @@
 name: devops_agent
-version: 0.3.0
+version: 0.4.0
 description: >
   DevOps Agent plugin for Hermes. Provides NeMo Guardrails input rail
   (pre_gateway_dispatch: jailbreak/injection detection with regex fallback),
   policy gate (pre_tool_call), audit trail (post_tool_call), secret redaction
-  (transform_tool_result), two governance tools (devops_policy_decide,
-  devops_audit_emit), two slash commands (/devops_status, /devops_audit),
-  and one CLI command (hermes devops).
+  (transform_tool_result), kanban→feishu reply auto-subscription
+  (post_tool_call hook on kanban_create), two governance tools
+  (devops_policy_decide, devops_audit_emit), two slash commands
+  (/devops_status, /devops_audit), and one CLI command (hermes devops).
 requires_packages:
   - nemoguardrails>=0.9.0
 author: Platform Engineering

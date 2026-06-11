@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import urllib.error
 import urllib.parse
 import urllib.request
 from typing import Any
@@ -39,6 +40,19 @@ def _request(path: str, params: dict[str, str] | None = None) -> Any:
         auth = f"{Config.LOKI_USERNAME}:{Config.LOKI_PASSWORD}".encode("utf-8")
         import base64
         req.add_header("Authorization", "Basic " + base64.b64encode(auth).decode("ascii"))
-    with urllib.request.urlopen(req, timeout=Config.REQUEST_TIMEOUT) as resp:
-        body = json.loads(resp.read().decode("utf-8"))
+    try:
+        with urllib.request.urlopen(req, timeout=Config.REQUEST_TIMEOUT) as resp:
+            content_type = resp.headers.get("Content-Type", "")
+            raw = resp.read().decode("utf-8", errors="replace")
+    except urllib.error.HTTPError as e:
+        raise RuntimeError(f"HTTP {e.code} from Loki at {path}: {e.reason}") from e
+
+    try:
+        body = json.loads(raw)
+    except json.JSONDecodeError as e:
+        snippet = raw[:120].replace("\n", " ").strip()
+        hint = ""
+        if "text/html" in content_type or "/login" in raw or "<html" in raw.lower():
+            hint = " The configured LOKI_URL looks like a Grafana/UI endpoint; use the native Loki HTTP API base URL."
+        raise RuntimeError(f"Non-JSON response from Loki at {path}.{hint} response={snippet!r}") from e
     return body

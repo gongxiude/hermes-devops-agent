@@ -10,7 +10,8 @@ allowed_skills:
   - secret-redaction
   - audit-trail
 mcp_servers:
-  - devops-observe
+  - k8s-intlsms-prod
+  - k8s-intlsms-test
 denied_tools:
   - kubectl_patch
   - kubectl_delete

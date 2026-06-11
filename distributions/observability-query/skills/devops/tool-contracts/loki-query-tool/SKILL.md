@@ -11,7 +11,8 @@ This skill defines the L1 safe wrapper contract for Loki access in `observabilit
 
 ## Allow
 
-- `devops-observe:loki_query_range`
+- `loki-intlsms-<env>:loki_backend_health`
+- `loki-intlsms-<env>:loki_query_range`
 
 ## Deny
 

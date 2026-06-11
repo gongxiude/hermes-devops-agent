@@ -41,12 +41,13 @@
 - MCP server 可跨 profile 复用
 - tool 必须由 profile 独立启用
 - shared skill 不授予工具权限
-- 当前分布只启用：
-  - `devops-observe:intlsms_inspect`
-  - `devops-observe:readonly_guard_check`
-  - `devops-observe:prometheus_query`
-  - `devops-observe:loki_query_range`
-  - `devops-observe:k8s_get_workload`
+- 当前分布只启用按环境拆分的独立 MCP：
+  - `prometheus-intlsms-prod`
+  - `prometheus-intlsms-test`
+  - `loki-intlsms-prod`
+  - `loki-intlsms-test`
+  - `k8s-intlsms-prod`
+  - `k8s-intlsms-test`
   - `devops_policy_decide`
   - `devops_audit_emit`
 
@@ -85,7 +86,7 @@
 | domain context | environment、cluster、namespace、path_environment、credential_ref、endpoint_env 名称 |
 | profile config | 支持哪些 environment、默认 environment、默认 window、禁用哪些 tools |
 | secret / credential | `OBSERVE_PROMETHEUS_BASE_URL_<ENV>`、`OBSERVE_LOKI_BASE_URL_<ENV>`、`KUBECONFIG_READONLY_<ENV>` |
-| runtime logic | `intlsms_runner.py` 中的 `resolve_environment`、`resolve_observability_url`、`resolve_kubeconfig` |
+| runtime logic | profile `config.yaml` 中按 prod/test 拆分的 Prometheus、Loki、Kubernetes MCP server |
 
 ## secret / credential 选择逻辑
 
@@ -218,7 +219,7 @@ runner 输出两种报告：
 ## 配置路径
 
 - 仓库根：`hermes-devops-agent/`
-- 共享 MCP：`mcp-servers/devops-observe/`
+- 独立 MCP：`mcp-servers/prometheus/`、`mcp-servers/loki/`、`mcp-servers/k8s/`
 - installable distribution：`distributions/observability-query/`
 - distribution config：`distributions/observability-query/config.yaml`
 - distribution cron：`distributions/observability-query/cron/intlsms-runtime-inspection.yaml`
@@ -234,7 +235,7 @@ Feishu / CLI / Cron
   -> L3 intlsms-runtime-inspection
   -> L2 observability health query
   -> L1 safe MCP contract
-  -> devops-observe MCP tools
+  -> environment-specific Prometheus / Loki / K8s MCP tools
   -> audit report
 ```
 

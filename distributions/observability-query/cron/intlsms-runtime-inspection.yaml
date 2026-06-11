@@ -5,14 +5,13 @@ schedule: "*/15 * * * *"
 timezone: Asia/Shanghai
 enabled: true
 command:
-  - python3
-  - mcp-servers/devops-observe/intlsms_runner.py
-  - --environment
-  - prod
-  - --format
-  - markdown
-  - --output-dir
-  - reports
+  - hermes
+  - -p
+  - observability-query
+  - chat
+  - -q
+  - "执行国际短信生产环境巡检。只允许使用 prometheus-intlsms-prod、loki-intlsms-prod、k8s-intlsms-prod 独立 MCP；禁止调用 mcp_devops_observe_*；输出短巡检报告和风险项。"
+  - -Q
 output:
   type: report
   audit_required: true

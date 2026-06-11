@@ -44,19 +44,56 @@ subagents:
   - kubernetes-agent
   - governance-reviewer
 mcp_servers:
-  - devops-observe
+  - prometheus-intlsms-prod
+  - prometheus-intlsms-test
+  - loki-intlsms-prod
+  - loki-intlsms-test
+  - k8s-intlsms-prod
+  - k8s-intlsms-test
 mcp_runtime:
-  devops-observe:
+  prometheus-intlsms-prod:
     command: python3
     args:
-      - mcp-servers/devops-observe/src/server.py
+      - mcp-servers/prometheus/src/server.py
+    transport: stdio
+  prometheus-intlsms-test:
+    command: python3
+    args:
+      - mcp-servers/prometheus/src/server.py
+    transport: stdio
+  loki-intlsms-prod:
+    command: python3
+    args:
+      - mcp-servers/loki/src/server.py
+    transport: stdio
+  loki-intlsms-test:
+    command: python3
+    args:
+      - mcp-servers/loki/src/server.py
+    transport: stdio
+  k8s-intlsms-prod:
+    command: python3
+    args:
+      - mcp-servers/k8s/src/server.py
+    transport: stdio
+  k8s-intlsms-test:
+    command: python3
+    args:
+      - mcp-servers/k8s/src/server.py
     transport: stdio
 enabled_tools:
-  - devops-observe:intlsms_inspect
-  - devops-observe:readonly_guard_check
-  - devops-observe:prometheus_query
-  - devops-observe:loki_query_range
-  - devops-observe:k8s_get_workload
+  - prometheus-intlsms-prod:prometheus_query
+  - prometheus-intlsms-prod:prometheus_query_range
+  - prometheus-intlsms-test:prometheus_query
+  - prometheus-intlsms-test:prometheus_query_range
+  - loki-intlsms-prod:loki_query_range
+  - loki-intlsms-test:loki_query_range
+  - k8s-intlsms-prod:k8s_get_resources
+  - k8s-intlsms-prod:k8s_get_events
+  - k8s-intlsms-prod:k8s_describe_resource
+  - k8s-intlsms-test:k8s_get_resources
+  - k8s-intlsms-test:k8s_get_events
+  - k8s-intlsms-test:k8s_describe_resource
   - devops_policy_decide
   - devops_audit_emit
 denied_tools:

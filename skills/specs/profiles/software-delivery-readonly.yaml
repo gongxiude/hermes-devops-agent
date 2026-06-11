@@ -1,0 +1,54 @@
+name: software-delivery-readonly
+version: 0.1.0
+domain_agent: Software Delivery Agent
+runtime_boundary:
+  traffic:
+    - kanban_worker
+    - cli
+  autonomy:
+    - observe
+    - recommend
+  repositories:
+    - jenkins-pipeline
+    - yuexin-infra
+allowed_skills:
+  L0:
+    - jenkins-basics
+    - argocd-basics
+    - codeup-basics
+  L1:
+    - jenkins-readonly-tool
+    - argocd-query-tool
+    - git-codeup-readonly-tool
+  L2:
+    - gitops-config-query
+    - jenkins-library-query
+    - release-impact-analysis
+  L3:
+    - software-delivery-query
+  L4:
+    - skill-policy-gate
+    - audit-trail
+    - secret-redaction
+  L5:
+    - chat-ops-entry
+    - scheduled-entry
+subagents:
+  - gitops-agent
+  - release-agent
+toolsets:
+  - kanban
+  - skills
+  - memory
+mcp_servers:
+  - git-codeup
+  - argocd
+  - jenkins
+denied_tools:
+  - git-workspace:git_workspace_create_worktree
+  - git-workspace:git_workspace_run_checks
+  - argocd:sync
+  - jenkins:triggerBuild
+acceptance:
+  - software-delivery-readonly can query Codeup, ArgoCD, and Jenkins read-only tools.
+  - software-delivery-readonly cannot create worktrees or drafts.

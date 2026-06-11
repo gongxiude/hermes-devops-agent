@@ -11,17 +11,17 @@ contract_rules:
   - "Do not place credentials, shell scripts, or production secrets in SKILL.md."
 skills:
   - name: k8s-readonly-tool
-    mcp_servers: ["devops-observe"]
+    mcp_servers: ["k8s-intlsms-prod", "k8s-intlsms-test"]
     allowed_verbs: ["get", "list"]
     denied_verbs: ["create", "patch", "update", "delete", "apply", "exec_write", "scale", "rollout_restart"]
     depends_on: ["kubectl-basics", "kubernetes-object-basics"]
   - name: prometheus-query-tool
-    mcp_servers: ["devops-observe"]
+    mcp_servers: ["prometheus-intlsms-prod", "prometheus-intlsms-test"]
     allowed_verbs: ["query", "query_range", "series_metadata"]
     denied_verbs: ["admin_api", "unbounded_query"]
     depends_on: ["promql-basics"]
   - name: loki-query-tool
-    mcp_servers: ["devops-observe"]
+    mcp_servers: ["loki-intlsms-prod", "loki-intlsms-test"]
     allowed_verbs: ["query", "query_range", "label_values"]
     denied_verbs: ["unbounded_query", "raw_sensitive_log_export"]
     depends_on: ["loki-logql-basics"]
@@ -40,6 +40,21 @@ skills:
     allowed_verbs: ["list_repositories", "list_change_requests", "get_change_request", "list_commits", "local_git_status"]
     denied_verbs: ["push", "merge_change_request", "create_branch", "force_push"]
     depends_on: ["codeup-basics"]
+  - name: git-workspace-draft-tool
+    mcp_servers: ["git-workspace"]
+    allowed_verbs: ["list_repos", "ensure_mirror", "create_worktree", "status", "diff", "run_checks", "cleanup_worktree"]
+    denied_verbs: ["push", "merge", "force_push", "direct_master_write", "argocd_sync", "jenkins_trigger_build"]
+    depends_on: ["codeup-basics"]
+  - name: release-gate-tool
+    mcp_servers: ["release-gate"]
+    allowed_verbs: ["required_fields", "decide"]
+    denied_verbs: ["jenkins_trigger_build", "argocd_sync", "argocd_rollback", "git_push", "git_merge", "kubectl_apply"]
+    depends_on: ["jenkins-basics", "argocd-basics", "codeup-basics"]
+  - name: release-executor-tool
+    mcp_servers: ["release-executor"]
+    allowed_verbs: ["jenkins_trigger_build", "argocd_sync", "argocd_rollback"]
+    denied_verbs: ["git_push", "git_merge", "kubectl_apply", "kubectl_patch", "kubectl_delete", "rollout_restart", "scale"]
+    depends_on: ["release-gate-tool", "jenkins-basics", "argocd-basics", "codeup-basics"]
   - name: aliyun-readonly-tool
     mcp_servers: ["aliyun"]
     allowed_verbs: ["describe_instances", "describe_instance_types", "describe_metric_last", "describe_metric_list"]

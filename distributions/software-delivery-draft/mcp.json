@@ -1,0 +1,56 @@
+{
+  "mcpServers": {
+    "git-codeup": {
+      "transport": "stdio",
+      "command": "python3",
+      "args": [
+        "/Users/gongxiude/Documents/github/infrastructure-agents-guide/hermes-devops-agent/mcp-servers/git-codeup/src/server.py"
+      ],
+      "env": {
+        "MCP_SERVER_NAME": "git-codeup",
+        "CODEUP_BASE_URL": "${CODEUP_BASE_URL}",
+        "CODEUP_ACCESS_TOKEN": "${CODEUP_ACCESS_TOKEN}",
+        "CODEUP_ORGANIZATION_ID": "${CODEUP_ORGANIZATION_ID}",
+        "LOCAL_GIT_ROOT": "${SOFTWARE_DELIVERY_WORKSPACE_ROOT}/worktrees",
+        "MCP_LOG_LEVEL": "INFO"
+      },
+      "tools": {
+        "include": [
+          "codeup_list_repositories",
+          "codeup_list_change_requests",
+          "codeup_get_change_request",
+          "codeup_list_commits",
+          "codeup_create_change_request",
+          "git_repo_status"
+        ]
+      }
+    },
+    "git-workspace": {
+      "transport": "stdio",
+      "command": "python3",
+      "args": [
+        "/Users/gongxiude/Documents/github/infrastructure-agents-guide/hermes-devops-agent/mcp-servers/git-workspace/src/server.py"
+      ],
+      "env": {
+        "MCP_SERVER_NAME": "git-workspace",
+        "GIT_WORKSPACE_ROOT": "${SOFTWARE_DELIVERY_WORKSPACE_ROOT}",
+        "GIT_WORKSPACE_REPOS_JSON": "{\"jenkins-pipeline\":{\"remote\":\"git@codeup.aliyun.com:6316fd51cb9d00684879aa3a/devops/jenkins-pipeline.git\",\"branch\":\"master\",\"kind\":\"jenkins-shared-library\"},\"yuexin-infra\":{\"remote\":\"git@codeup.aliyun.com:6316fd51cb9d00684879aa3a/devops/yuexin-infra.git\",\"branch\":\"master\",\"kind\":\"gitops-kubernetes-infra\"}}",
+        "GIT_WORKSPACE_CHECK_COMMANDS": "{\"jenkins-pipeline\":[],\"yuexin-infra\":[\"make validate\"]}",
+        "GIT_WORKSPACE_ENABLE_PUSH": "${GIT_WORKSPACE_ENABLE_PUSH}",
+        "MCP_LOG_LEVEL": "INFO"
+      },
+      "tools": {
+        "include": [
+          "git_workspace_list_repos",
+          "git_workspace_ensure_mirror",
+          "git_workspace_create_worktree",
+          "git_workspace_status",
+          "git_workspace_diff",
+          "git_workspace_run_checks",
+          "git_workspace_push_branch",
+          "git_workspace_cleanup_worktree"
+        ]
+      }
+    }
+  }
+}

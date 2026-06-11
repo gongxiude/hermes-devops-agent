@@ -30,6 +30,7 @@ from typing import Any, Optional
 
 from . import audit as _audit
 from . import guardrails as _guardrails
+from . import kanban_reply as _kanban_reply
 from . import policy as _policy
 from . import redaction as _redaction
 from .commands import (
@@ -95,6 +96,14 @@ def _post_tool_call(
     """Write one audit event after every tool call."""
     args = args or {}
     profile = os.environ.get("HERMES_PROFILE", "")
+
+    # Auto-register feishu reply sub when orchestrator creates a task.
+    # Runs before the audit short-circuit so it still fires for kanban_create.
+    if tool_name == "kanban_create":
+        try:
+            _kanban_reply.on_tool_call(tool_name, args, result)
+        except Exception as exc:
+            logger.warning("kanban_reply hook failed: %s", exc)
 
     # Skip trivial / internal tools to keep log clean
     _SKIP = {"kanban_heartbeat", "skill_view", "clarify"}

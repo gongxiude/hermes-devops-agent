@@ -6,7 +6,7 @@ from typing import Annotated
 
 from fastmcp import FastMCP
 
-from utils import Config, codeup_get, run_git
+from utils import Config, codeup_get, codeup_post, run_git
 
 logging.basicConfig(
     level=getattr(logging, Config.LOG_LEVEL),
@@ -80,6 +80,35 @@ def git_repo_status(
     return {"status": status["stdout"], "recent_commits": recent["stdout"]}
 
 
+@mcp.tool
+def codeup_create_change_request(
+    repository_id: Annotated[str, "Repository id or URL-encoded full path accepted by Codeup OpenAPI"],
+    source_branch: Annotated[str, "Source branch that already exists on Codeup"],
+    target_branch: Annotated[str, "Target branch, normally master"],
+    title: Annotated[str, "Change request title"],
+    source_project_id: Annotated[int, "Source project id required by Codeup"],
+    target_project_id: Annotated[int, "Target project id required by Codeup"],
+    description: Annotated[str, "Change request description"] = "",
+) -> dict:
+    if target_branch not in {"master", "main"}:
+        raise RuntimeError("target_branch must be master or main")
+    if source_branch in {"master", "main"} or source_branch.startswith("refs/"):
+        raise RuntimeError(f"source_branch is not allowed: {source_branch}")
+    body = {
+        "sourceBranch": source_branch,
+        "targetBranch": target_branch,
+        "sourceProjectId": source_project_id,
+        "targetProjectId": target_project_id,
+        "title": title,
+        "description": description,
+    }
+    result = codeup_post(
+        f"/oapi/v1/codeup/organizations/{Config.CODEUP_ORGANIZATION_ID}/repositories/{repository_id}/changeRequests",
+        body,
+    )
+    return {"repository_id": repository_id, "source_branch": source_branch, "target_branch": target_branch, "result": result}
+
+
 if __name__ == "__main__":
     import argparse
     import sys
@@ -91,7 +120,7 @@ if __name__ == "__main__":
         print(f"Server : {Config.SERVER_NAME} v{Config.SERVER_VERSION}")
         print(f"URL    : {Config.CODEUP_BASE_URL or '(not set)'}")
         print(f"Root   : {Config.LOCAL_GIT_ROOT or '(not set)'}")
-        print("Tools  : 5")
+        print("Tools  : 6")
         print("Status : OK")
         sys.exit(0)
     mcp.run()

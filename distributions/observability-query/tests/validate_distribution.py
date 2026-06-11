@@ -35,23 +35,31 @@ def main() -> int:
 
     config = load_yaml(PROFILE / "config.yaml")
     assert config["observability_query"]["supported_environments"] == ["prod", "test"]
-    include = config["mcp_servers"]["devops-observe"]["tools"]["include"]
-    assert "intlsms_inspect" in include
-    assert "readonly_guard_check" in include
-    assert "k8s_get_workload" in include
+    assert set(config["mcp_servers"]) == {
+        "prometheus-intlsms-prod",
+        "prometheus-intlsms-test",
+        "loki-intlsms-prod",
+        "loki-intlsms-test",
+        "k8s-intlsms-prod",
+        "k8s-intlsms-test",
+    }
+    assert "devops-observe" not in config["mcp_servers"]
+    assert config["mcp_servers"]["prometheus-intlsms-test"]["tools"]["include"] == [
+        "prometheus_query",
+        "prometheus_query_range",
+    ]
+    assert "k8s_get_resources" in config["mcp_servers"]["k8s-intlsms-test"]["tools"]["include"]
 
     mcp = json.loads((PROFILE / "mcp.json").read_text(encoding="utf-8"))
-    server = mcp["mcpServers"]["devops-observe"]
+    assert set(mcp["mcpServers"]) == set(config["mcp_servers"])
+    assert "devops-observe" not in mcp["mcpServers"]
+    server = mcp["mcpServers"]["prometheus-intlsms-test"]
     assert server["transport"] == "stdio"
     assert server["command"] == "python3"
-    assert server["args"] == ["mcp-servers/devops-observe/src/server.py"]
-    assert "OBSERVE_PROMETHEUS_BASE_URL_PROD" in server["env"]
-    assert "OBSERVE_PROMETHEUS_BASE_URL_TEST" in server["env"]
+    assert server["env"]["PROMETHEUS_URL"] == "${OBSERVE_PROMETHEUS_BASE_URL_TEST}"
 
     cron = load_yaml(PROFILE / "cron/intlsms-runtime-inspection.yaml")
     assert cron["profile"] == "observability-query"
-    assert cron["command"][1] == "mcp-servers/devops-observe/intlsms_runner.py"
-    assert cron["command"][3] == "prod"
     assert cron["policy"]["autonomy"] == ["observe", "recommend"]
     assert "restart" in cron["policy"]["denied_actions"]
 

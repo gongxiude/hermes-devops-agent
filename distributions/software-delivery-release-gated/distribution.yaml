@@ -1,0 +1,33 @@
+name: hermes-devops-software-delivery-release-gated
+version: 0.1.0
+description: "Gated Software Delivery release profile with approval decision and fail-closed execution tools."
+hermes_requires: ">=0.12.0"
+author: "Platform Engineering"
+env_requires:
+  - name: LLM_RELAY_BASE_URL
+    description: "OpenAI-compatible LLM relay base URL"
+    required: true
+  - name: LLM_RELAY_API_KEY
+    description: "LLM relay API key"
+    required: true
+  - name: RELEASE_APPROVAL_PROVIDER
+    description: "Approval provider name"
+    required: false
+  - name: RELEASE_EXECUTION_ENABLED
+    description: "Must be true before release-executor performs approved actions"
+    required: true
+  - name: JENKINS_BASE_URL
+    description: "Jenkins base URL for approved build triggers"
+    required: false
+  - name: JENKINS_USER
+    description: "Jenkins user for approved build triggers"
+    required: false
+  - name: JENKINS_API_TOKEN
+    description: "Jenkins API token for approved build triggers"
+    required: false
+  - name: ARGOCD_API_URL
+    description: "ArgoCD API URL for approved sync or rollback"
+    required: false
+  - name: ARGOCD_AUTH_TOKEN
+    description: "ArgoCD token for approved sync or rollback"
+    required: false

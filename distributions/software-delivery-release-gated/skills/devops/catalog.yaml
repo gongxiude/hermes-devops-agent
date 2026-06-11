@@ -1,0 +1,49 @@
+name: software-delivery-release-gated-skills
+version: 0.1.0
+layers:
+  L0:
+    skills:
+      - name: jenkins-basics
+        path: basics/jenkins-basics/SKILL.md
+      - name: argocd-basics
+        path: basics/argocd-basics/SKILL.md
+      - name: codeup-basics
+        path: basics/codeup-basics/SKILL.md
+  L1:
+    skills:
+      - name: jenkins-readonly-tool
+        path: tool-contracts/jenkins-readonly-tool/SKILL.md
+      - name: argocd-query-tool
+        path: tool-contracts/argocd-query-tool/SKILL.md
+      - name: git-codeup-readonly-tool
+        path: tool-contracts/git-codeup-readonly-tool/SKILL.md
+      - name: release-gate-tool
+        path: tool-contracts/release-gate-tool/SKILL.md
+      - name: release-executor-tool
+        path: tool-contracts/release-executor-tool/SKILL.md
+  L2:
+    skills:
+      - name: release-impact-analysis
+        path: capabilities/release-impact-analysis/SKILL.md
+  L4:
+    skills:
+      - name: skill-policy-gate
+        path: governance/skill-policy-gate/SKILL.md
+      - name: audit-trail
+        path: governance/audit-trail/SKILL.md
+      - name: secret-redaction
+        path: governance/secret-redaction/SKILL.md
+    domains:
+      - name: software-delivery
+        path: governance/domains/software-delivery.yaml
+  L5:
+    skills:
+      - name: chat-ops-entry
+        path: entry/chat-ops-entry/SKILL.md
+specs:
+  profiles:
+    - name: software-delivery-release-gated
+      path: specs/profiles/software-delivery-release-gated.yaml
+  subagents:
+    - name: release-agent
+      path: specs/subagents/release-agent.yaml

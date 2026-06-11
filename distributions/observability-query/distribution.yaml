@@ -16,9 +16,6 @@ env_requires:
   - name: OBSERVE_PROMETHEUS_BASE_URL_TEST
     description: "Prometheus base URL for test environment"
     required: false
-  - name: OBSERVE_LOKI_BASE_URL_TEST
-    description: "Loki base URL for test environment"
-    required: false
   - name: KUBECONFIG_READONLY_TEST
     description: "Read-only kubeconfig path for test cluster"
     required: false

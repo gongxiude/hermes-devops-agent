@@ -5,7 +5,9 @@ This distribution currently ships the first production-observation slice:
 ```text
 observability-query profile
   -> intlsms-runtime-inspection orchestration skill
-  -> devops-observe:intlsms_inspect MCP tool
+  -> prometheus-intlsms-<env> MCP
+  -> loki-intlsms-<env> MCP
+  -> k8s-intlsms-<env> MCP
 ```
 
 It is intentionally read-only. It does not enable restart, rollback, scale, sync, apply, patch, delete, or database write operations.

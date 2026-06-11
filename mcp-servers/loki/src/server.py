@@ -17,6 +17,17 @@ mcp = FastMCP(name=Config.SERVER_NAME, version=Config.SERVER_VERSION)
 
 
 @mcp.tool
+def loki_backend_health() -> dict:
+    """Validate that LOKI_URL points to native Loki HTTP API."""
+    body = _request("/loki/api/v1/status/buildinfo")
+    return {
+        "backend": "loki",
+        "status": "ok",
+        "buildinfo": body,
+    }
+
+
+@mcp.tool
 def loki_query_range(
     logql: Annotated[str, "LogQL expression"],
     start: Annotated[str, "RFC3339 or ns timestamp"] = "",
@@ -67,7 +78,7 @@ if __name__ == "__main__":
     if args.test:
         print(f"Server : {Config.SERVER_NAME} v{Config.SERVER_VERSION}")
         print(f"URL    : {Config.LOKI_URL or '(not set)'}")
-        print("Tools  : 4")
+        print("Tools  : 5")
         print("Status : OK")
         sys.exit(0)
     mcp.run()

@@ -32,10 +32,12 @@ Install:
 hermes profile install ./distributions/observability-query --name observability-query -y
 ```
 
-Dry-run inspection (no live credentials needed):
+MCP smoke checks:
 
 ```bash
-python3 mcp-servers/devops-observe/intlsms_runner.py --dry-run --environment test --format markdown
+HERMES_PROFILE=observability-query hermes mcp test prometheus-intlsms-test
+HERMES_PROFILE=observability-query hermes mcp test loki-intlsms-test
+HERMES_PROFILE=observability-query hermes mcp test k8s-intlsms-test
 ```
 
 Validation:

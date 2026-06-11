@@ -11,8 +11,9 @@ This skill defines the L1 safe wrapper contract for Kubernetes workload inspecti
 
 ## Allow
 
-- `devops-observe:k8s_get`
-- `devops-observe:k8s_list`
+- `k8s-intlsms-<env>:k8s_get_resources`
+- `k8s-intlsms-<env>:k8s_describe_resource`
+- `k8s-intlsms-<env>:k8s_get_events`
 
 ## Deny
 

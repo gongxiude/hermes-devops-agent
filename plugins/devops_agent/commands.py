@@ -66,6 +66,19 @@ def handle_devops_status(raw_args: str) -> str:
         lines.append("")
         lines.append("  Guardrails  : (unavailable)")
 
+    # ── Reply Hook status ─────────────────────────────────────────────
+    try:
+        from . import kanban_reply as _kanban_reply
+        rs = _kanban_reply.reply_hook_status()
+        if rs.get("error"):
+            lines.append(f"  Reply Hook  : ⚠️ {rs['error']}")
+        else:
+            lines.append("  Reply Hook  : ✅ kanban_create → auto-register feishu sub")
+            scope = rs.get("profile") or "(all profiles)"
+            lines.append(f"    ↳ subs    : {rs.get('subs_count', 0)}  (scope: {scope})")
+    except Exception as exc:
+        lines.append(f"  Reply Hook  : ⚠️ unavailable ({str(exc)[:50]})")
+
     lines.append("╰─────────────────────────────────────────────────────────╯")
     return "\n".join(lines)
 

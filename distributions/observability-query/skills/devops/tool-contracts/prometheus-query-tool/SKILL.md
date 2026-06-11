@@ -11,8 +11,8 @@ This skill defines the L1 safe wrapper contract for Prometheus access in `observ
 
 ## Allow
 
-- `devops-observe:prometheus_query`
-- `devops-observe:prometheus_query_range`
+- `prometheus-intlsms-<env>:prometheus_query`
+- `prometheus-intlsms-<env>:prometheus_query_range`
 
 ## Deny
 

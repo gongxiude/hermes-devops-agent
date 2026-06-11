@@ -1,0 +1,22 @@
+name: gitops-agent
+role: GitOps configuration query and MR draft preparation
+allowed_skills:
+  - codeup-basics
+  - argocd-basics
+  - git-codeup-readonly-tool
+  - argocd-query-tool
+  - git-workspace-draft-tool
+  - gitops-config-query
+  - gitops-mr-draft
+  - skill-policy-gate
+  - audit-trail
+denied_actions:
+  - argocd_sync
+  - kubectl_apply
+  - direct_push_master
+output_schema:
+  required:
+    - repo_prefix
+    - evidence
+    - changed_files
+    - validation_result

@@ -1,0 +1,55 @@
+name: software-delivery-draft-skills
+version: 0.1.0
+layers:
+  L0:
+    skills:
+      - name: jenkins-basics
+        path: basics/jenkins-basics/SKILL.md
+      - name: argocd-basics
+        path: basics/argocd-basics/SKILL.md
+      - name: codeup-basics
+        path: basics/codeup-basics/SKILL.md
+  L1:
+    skills:
+      - name: git-codeup-readonly-tool
+        path: tool-contracts/git-codeup-readonly-tool/SKILL.md
+      - name: git-workspace-draft-tool
+        path: tool-contracts/git-workspace-draft-tool/SKILL.md
+  L2:
+    skills:
+      - name: gitops-config-query
+        path: capabilities/gitops-config-query/SKILL.md
+      - name: jenkins-library-query
+        path: capabilities/jenkins-library-query/SKILL.md
+      - name: gitops-mr-draft
+        path: capabilities/gitops-mr-draft/SKILL.md
+      - name: jenkins-library-mr-draft
+        path: capabilities/jenkins-library-mr-draft/SKILL.md
+      - name: release-impact-analysis
+        path: capabilities/release-impact-analysis/SKILL.md
+  L3:
+    skills:
+      - name: software-delivery-draft
+        path: orchestration/software-delivery-draft/SKILL.md
+  L4:
+    skills:
+      - name: skill-policy-gate
+        path: governance/skill-policy-gate/SKILL.md
+      - name: audit-trail
+        path: governance/audit-trail/SKILL.md
+      - name: secret-redaction
+        path: governance/secret-redaction/SKILL.md
+    domains:
+      - name: software-delivery
+        path: governance/domains/software-delivery.yaml
+  L5:
+    skills:
+      - name: chat-ops-entry
+        path: entry/chat-ops-entry/SKILL.md
+specs:
+  profiles:
+    - name: software-delivery-draft
+      path: specs/profiles/software-delivery-draft.yaml
+  subagents:
+    - name: gitops-agent
+      path: specs/subagents/gitops-agent.yaml
