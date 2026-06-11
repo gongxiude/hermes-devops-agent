@@ -21,8 +21,10 @@ class Config:
     # Must NOT include /api/v1
     PROMETHEUS_URL  = os.getenv("PROMETHEUS_URL", "").rstrip("/")
 
-    # Optional Bearer token (for ARMS / SLS managed Prometheus)
-    PROMETHEUS_TOKEN = os.getenv("PROMETHEUS_TOKEN", "").strip()
+    # Optional auth token (for ARMS / SLS managed Prometheus)
+    PROMETHEUS_TOKEN       = os.getenv("PROMETHEUS_TOKEN", "").strip()
+    # Auth scheme: "Bearer" (default) or "Basic" (required by SLS-hosted Prometheus)
+    PROMETHEUS_AUTH_SCHEME = os.getenv("PROMETHEUS_AUTH_SCHEME", "Bearer").strip()
 
     # Feature toggles (mirror the TS original)
     ENABLE_DISCOVERY_TOOLS = os.getenv("ENABLE_DISCOVERY_TOOLS", "true").lower() == "true"
@@ -36,7 +38,7 @@ class Config:
 def _build_headers() -> dict[str, str]:
     headers: dict[str, str] = {"Accept": "application/json"}
     if Config.PROMETHEUS_TOKEN:
-        headers["Authorization"] = f"Bearer {Config.PROMETHEUS_TOKEN}"
+        headers["Authorization"] = f"{Config.PROMETHEUS_AUTH_SCHEME} {Config.PROMETHEUS_TOKEN}"
     return headers
 
 

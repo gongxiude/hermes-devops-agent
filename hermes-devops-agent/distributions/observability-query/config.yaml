@@ -20,6 +20,7 @@ mcp_servers:
       MCP_SERVER_NAME: prometheus-intlsms-prod
       PROMETHEUS_URL: "${OBSERVE_PROMETHEUS_BASE_URL_PROD}"
       PROMETHEUS_TOKEN: "${OBSERVE_PROMETHEUS_TOKEN_PROD}"
+      PROMETHEUS_AUTH_SCHEME: "Basic"
       ENABLE_DISCOVERY_TOOLS: "false"
       ENABLE_INFO_TOOLS: "false"
       ENABLE_QUERY_TOOLS: "true"
@@ -51,7 +52,8 @@ mcp_servers:
     env:
       MCP_SERVER_NAME: loki-intlsms-prod
       LOKI_URL: "${OBSERVE_LOKI_BASE_URL_PROD}"
-      LOKI_TOKEN: "${OBSERVE_LOKI_TOKEN_PROD}"
+      LOKI_USERNAME: "${OBSERVE_LOKI_USERNAME_PROD}"
+      LOKI_PASSWORD: "${OBSERVE_LOKI_PASSWORD_PROD}"
       MCP_LOG_LEVEL: INFO
     tools:
       include:

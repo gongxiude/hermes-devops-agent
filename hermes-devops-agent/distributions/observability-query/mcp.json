@@ -16,7 +16,10 @@
         "MCP_LOG_LEVEL": "INFO"
       },
       "tools": {
-        "include": ["prometheus_query", "prometheus_query_range"]
+        "include": [
+          "prometheus_query",
+          "prometheus_query_range"
+        ]
       }
     },
     "prometheus-intlsms-test": {
@@ -35,7 +38,10 @@
         "MCP_LOG_LEVEL": "INFO"
       },
       "tools": {
-        "include": ["prometheus_query", "prometheus_query_range"]
+        "include": [
+          "prometheus_query",
+          "prometheus_query_range"
+        ]
       }
     },
     "loki-intlsms-prod": {
@@ -51,23 +57,13 @@
         "MCP_LOG_LEVEL": "INFO"
       },
       "tools": {
-        "include": ["loki_backend_health", "loki_query_range", "loki_labels", "loki_label_values", "loki_series"]
-      }
-    },
-    "loki-intlsms-test": {
-      "transport": "stdio",
-      "command": "python3",
-      "args": [
-        "/Users/gongxiude/Documents/github/infrastructure-agents-guide/hermes-devops-agent/mcp-servers/loki/src/server.py"
-      ],
-      "env": {
-        "MCP_SERVER_NAME": "loki-intlsms-test",
-        "LOKI_URL": "${OBSERVE_LOKI_BASE_URL_TEST}",
-        "LOKI_TOKEN": "${OBSERVE_LOKI_TOKEN_TEST}",
-        "MCP_LOG_LEVEL": "INFO"
-      },
-      "tools": {
-        "include": ["loki_backend_health", "loki_query_range", "loki_labels", "loki_label_values", "loki_series"]
+        "include": [
+          "loki_backend_health",
+          "loki_query_range",
+          "loki_labels",
+          "loki_label_values",
+          "loki_series"
+        ]
       }
     },
     "k8s-intlsms-prod": {
