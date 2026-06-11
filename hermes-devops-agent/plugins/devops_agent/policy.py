@@ -1,4 +1,25 @@
-"""DevOps policy engine — evaluates actor/profile/tool/environment combinations."""
+"""DevOps policy engine — Tier 0-4 autonomy model.
+
+Tier 0  OBSERVE        Read-only. Summarize, analyze.
+Tier 1  RECOMMEND      Suggest changes. No execution.
+Tier 2  DRAFT          Create PRs / MR drafts. No merge/apply.
+Tier 3  SANDBOX EXEC   Non-prod write operations only.
+Tier 4  PROD GATED     Production changes with explicit approval.
+
+Profile → max allowed Tier:
+  observability-query          → 0
+  software-delivery-readonly   → 0
+  software-delivery-draft      → 2
+  software-delivery-release-gated → 4 (gated by release-gate MCP)
+  governance-breakglass        → 4
+
+Tool → minimum required Tier (anything not listed = Tier 0, read-only):
+  Tier 1+: no execution tools defined yet
+  Tier 2:  git write ops (branch/commit/push to non-main), worktree create
+  Tier 3:  non-prod k8s write, non-prod Jenkins trigger, non-prod ArgoCD sync
+  Tier 4:  prod k8s write, prod Jenkins trigger, prod ArgoCD sync/rollback,
+           any delete/patch/apply/exec on prod, breakglass tools
+"""
 from __future__ import annotations
 
 import os
@@ -6,45 +27,77 @@ import re
 from typing import Any
 
 # ---------------------------------------------------------------------------
-# Deny lists
+# Profile → max Tier
 # ---------------------------------------------------------------------------
 
-# MCP tool name patterns that are always denied for non-breakglass profiles
-_PROD_WRITE_PATTERNS = [
-    re.compile(r"mcp_devops_prod_breakglass_"),
-    re.compile(r"_scale$"),
-    re.compile(r"_delete_"),
-    re.compile(r"_apply_manifest"),
-    re.compile(r"_create_resource"),
-    re.compile(r"_patch_resource"),
-    re.compile(r"_rollout"),
-    re.compile(r"_execute_command"),
+_PROFILE_TIERS: dict[str, int] = {
+    "observability-query":            0,
+    "software-delivery-readonly":     0,
+    "software-delivery-draft":        2,
+    "software-delivery-release-gated": 4,
+    "governance-breakglass":          4,
+}
+
+# Default: unknown profiles get Tier 0 (safest)
+_DEFAULT_TIER = 0
+
+# ---------------------------------------------------------------------------
+# Tool → minimum required Tier
+# Patterns checked in order; first match wins.
+# ---------------------------------------------------------------------------
+
+_TOOL_TIER_RULES: list[tuple[int, re.Pattern]] = [
+    # --- Tier 4: prod write / destructive (must come before Tier 3 rules) ---
+    (4, re.compile(r"mcp_devops_prod_breakglass_")),           # explicit breakglass
+    (4, re.compile(r"mcp_.*_prod_.*_(delete|patch|apply|exec|scale|rollout|restart)")),
+    (4, re.compile(r"mcp_.*_prod_.*_(create|update|put|post)_")),
+    (4, re.compile(r"mcp_release_executor_")),                 # prod release executor
+    (4, re.compile(r"mcp_argocd_.*_(sync|terminate|delete)")), # ArgoCD write
+    (4, re.compile(r"_(delete|patch|apply|exec|scale|rollout).*prod")),
+
+    # --- Tier 3: non-prod write ---
+    (3, re.compile(r"mcp_.*_test_.*_(delete|patch|apply|exec|scale|rollout|restart)")),
+    (3, re.compile(r"mcp_.*_test_.*_(create|update|put|post)_")),
+    (3, re.compile(r"mcp_jenkins_.*_trigger")),                # Jenkins build trigger
+
+    # --- Tier 2: draft / git write (non-main) ---
+    # All git-workspace ops are draft-level by design (no direct push/merge to main)
+    (2, re.compile(r"mcp_git_workspace_")),
+    (2, re.compile(r"mcp_git_codeup_.*_(push|merge|create_branch|force_push)")),
+
+    # --- Catch-all write verbs at Tier 3 (when not matched above) ---
+    # Use (?:^|_) / (?:_|$) as boundaries since _ is a word char and \b won't split it
+    (3, re.compile(
+        r"(?:^|_)(delete|patch|apply|exec|scale|rollout|restart|update|create|put|post)(?:_|$)",
+        re.IGNORECASE,
+    )),
 ]
 
-# Profiles that ARE allowed to call production write tools
-_BREAKGLASS_PROFILES = {"governance-breakglass"}
+# Profiles that bypass Tier checks entirely (breakglass)
+_BYPASS_PROFILES: frozenset[str] = frozenset({"governance-breakglass"})
 
-# Environments that are considered "production" — require elevated profile
-_PROD_ENVIRONMENTS = {"prod", "production"}
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
-# Tool categories that are always read-only
-_READONLY_TOOL_PREFIXES = {
-    "mcp_k8s_intlsms_test_",
-    "mcp_prometheus_intlsms_test_",
-    "mcp_loki_intlsms_test_",
-    "mcp_k8s_intlsms_prod_",
-    "mcp_prometheus_intlsms_prod_",
-    "mcp_loki_intlsms_prod_",
-}
+def _profile_tier(profile: str) -> int:
+    return _PROFILE_TIERS.get(profile, _DEFAULT_TIER)
+
+
+def _tool_required_tier(tool_name: str) -> int:
+    for tier, pattern in _TOOL_TIER_RULES:
+        if pattern.search(tool_name):
+            return tier
+    return 0  # not matched = read-only, Tier 0
 
 
 def _current_profile() -> str:
     return os.environ.get("HERMES_PROFILE", "")
 
 
-def _is_prod_write_tool(tool_name: str) -> bool:
-    return any(p.search(tool_name) for p in _PROD_WRITE_PATTERNS)
-
+# ---------------------------------------------------------------------------
+# Public API
+# ---------------------------------------------------------------------------
 
 def decide(
     tool_name: str,
@@ -55,21 +108,36 @@ def decide(
     """Return a policy decision dict.
 
     Returns:
-        {"allow": True}                              — permitted
-        {"allow": False, "reason": "..."}            — denied
+        {"allow": True,  "tier": N}                        — permitted
+        {"allow": False, "tier": N, "reason": "..."}       — denied
     """
     profile = profile or _current_profile()
 
-    # Production write tools: only allowed for breakglass profile
-    if _is_prod_write_tool(tool_name):
-        if profile not in _BREAKGLASS_PROFILES:
-            return {
-                "allow": False,
-                "reason": (
-                    f"Tool '{tool_name}' is a production write operation. "
-                    f"Profile '{profile}' is not authorized. "
-                    "Use governance-breakglass with explicit approval."
-                ),
-            }
+    # Breakglass bypass
+    if profile in _BYPASS_PROFILES:
+        return {"allow": True, "tier": 4, "bypass": "breakglass"}
 
-    return {"allow": True}
+    max_tier   = _profile_tier(profile)
+    req_tier   = _tool_required_tier(tool_name)
+
+    if req_tier > max_tier:
+        tier_names = {
+            0: "OBSERVE (read-only)",
+            1: "RECOMMEND (no execution)",
+            2: "DRAFT (non-main git write)",
+            3: "SANDBOX EXECUTE (non-prod write)",
+            4: "PROD GATED (prod write + approval)",
+        }
+        return {
+            "allow": False,
+            "tier": req_tier,
+            "reason": (
+                f"Tool '{tool_name}' requires Tier {req_tier} "
+                f"({tier_names.get(req_tier, '')}) "
+                f"but profile '{profile}' is capped at "
+                f"Tier {max_tier} ({tier_names.get(max_tier, '')}). "
+                "Use the appropriate gated profile."
+            ),
+        }
+
+    return {"allow": True, "tier": req_tier}
