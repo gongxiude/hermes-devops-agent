@@ -6,37 +6,6 @@
 
 ## 一、全局视图
 
-我们基于 Hermes Agent 框架设计了一套 **可治理的 DevOps Agent 平台**。当前仓库已落地五个 profile distribution：`devops-orchestrator`、`observability-query`、`software-delivery-readonly`、`software-delivery-draft`、`software-delivery-release-gated`。
-
-基础设施 agent system 不只是“一个带 tools 的 LLM”。它是一个 distributed system，其中不受信任的 language model output 会驱动高权限的基础设施操作。架构做对了，它就是生产力放大器。做错了，它就是 incident generator。
-
-关键设计决策：
-
-| 决策 | 结论 | 原因 |
-|---|---|---|
-| Agent 运行时边界 | Hermes Profile | 隔离入口、凭证、工具、workspace、审计 |
-| 交付方式 | Profile Distribution (Git 仓库) | 可安装、可更新、可审计、不覆盖用户数据 |
-| 能力扩展 | DevOps Plugin + MCP Safe Tools | 不改 Hermes core，扩展能力可治理 |
-| 权限模型 | Profile tool scope + MCP include list + Policy gate | prompt 不作为安全边界 |
-| 高风险动作 | 目标为独立 gated profile + 审批 + 短 TTL 凭证 + 审计 | 当前未开放生产写动作，后续单独评审 |
-
----
-
-## 二、技术架构全景
-
-### 2.1 分层架构
-
-这套架构按“入口接入、运行隔离、能力编排、工具执行、治理审计”五层拆分。当前已落地的入口模型是：普通飞书 ChatOps 先进入 `devops-orchestrator`，由它解析请求并创建 Kanban task；worker profile 再按 assignee 执行自己的只读或专用任务。profile 负责运行时隔离，限定当前请求可使用的配置、凭证、workspace、skills 和 MCP scope；能力编排层负责把请求标准化、拆解任务、选择功能 skill 或 subagent；工具执行层只通过 typed MCP tools 访问真实系统；治理层通过 plugin hook、tool contract、MCP server 只读模式和输出脱敏控制风险。
-
-分层的核心目的是把“理解请求”和“执行动作”分开，把“能力复用”和“权限控制”分开。Skills 负责沉淀流程和作业规范，但不授予权限；MCP tools 才是真实系统访问入口，并由 profile tool scope、MCP include list、MCP server 自身模式和 policy gate 控制可见性与执行边界。生产写动作当前不开放；目标架构要求进入独立 gated profile，并绑定审批、工单、短 TTL 凭证、post-check 和审计回放。
-
-当前实现状态需要按三类阅读：
-
-| 类型 | 含义 | 当前示例 |
-|---|---|---|
-| 当前已落地 | 仓库已有配置、代码或 validator，可作为现有实现审查 | `devops-orchestrator`、`observability-query`、`software-delivery-readonly`、`software-delivery-draft`、`software-delivery-release-gated`、Prometheus/Loki/K8s/Git workspace MCP、DevOps plugin 代码 |
-| 已有代码，需运行时验证 | 仓库已有实现，但还没有在真实 Hermes runtime 或真实飞书链路中完成闭环验证 | plugin hooks、Kanban 回传订阅、policy/audit/redaction |
-| 目标架构 | 作为后续评审和建设方向，当前仓库没有可安装 distribution 或独立服务 | `incident-triage`、`governance-breakglass`、Credential Broker、生产发布执行工具 |
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
@@ -61,7 +30,6 @@
                              │
 ┌────────────────────────────▼────────────────────────────────┐
 │                     工具执行层                                │
-│   L1 MCP Safe Wrappers (typed tools + schema + audit)       │
 │   Hermes Tools / MCP Servers                                │
 │   L0 Basics (CLI/DSL/配置规范)                               │
 └────────────────────────────┬────────────────────────────────┘
@@ -69,10 +37,15 @@
 ┌────────────────────────────▼────────────────────────────────┐
 │                      治理层                                   │
 │   当前：Policy Hook │ Audit Trail │ Redaction               │
-│   目标：Credential Broker │ Approval │ Break-glass          │
 │   DevOps Plugin (hooks: pre_tool_call / post_tool_call)     │
 └─────────────────────────────────────────────────────────────┘
 ```
+
+
+
+### 2.2.1 
+
+
 
 ### 2.2 核心组件关系
 

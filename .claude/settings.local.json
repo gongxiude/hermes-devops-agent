@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "Bash(rmdir hermes-devops-agent/shared-skills)",
-      "Bash(hermes kanban *)"
+      "Bash(hermes kanban *)",
+      "Bash(hermes gateway *)",
+      "Read(//Users/gongxiude/.hermes/profiles/hermes-devops-orchestrator/**)",
+      "Bash([ -f \"$DST/kanban-route/references/devops-policy-tier.md\" ])"
     ]
   }
 }

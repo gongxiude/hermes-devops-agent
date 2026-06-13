@@ -2,20 +2,49 @@
 
 本文用于指导平台工程、SRE、安全和服务 owner 在 Hermes Agent 体系内落地 DevOps 运维 Agent。正文只放执行内容：交付什么、放在哪里、如何安装、如何接入、如何验收。分层模型、官方依据和审计记录放在附录。
 
-## 1. 目标与最终产物
 
-本章交付一个可复制、可更新、可审计的 Hermes DevOps Agent 工作台。实现路径固定为：
+## 一、全局视图
 
-```text
-Hermes profile distribution
-  -> 安装出隔离 profile
-  -> 启用 DevOps plugin
-  -> 加载 Skills
-  -> 绑定 subagent allowlist
-  -> 连接 MCP safe tools
-  -> 接入飞书 / CLI / Webhook
-  -> 输出可审计的 DevOps 结果
+我们基于 Hermes Agent 框架设计了一套 **可治理的 DevOps Agent 平台**。
+
 ```
+┌─────────────────────────────────────────────────────────────┐
+│                      外部入口层                               │
+│ 飞书 ChatOps │ Webhook │ Schedules │ Alert Event |  API calls│
+└────────────────────────────┬────────────────────────────────┘
+                             │
+┌────────────────────────────▼────────────────────────────────┐
+│                    Profile 运行时层                           │
+│   Gateway → Profile(config + SOUL + .env + workspace)       │
+│   每个 profile = 独立的 Agent 运行单元                        │
+│   隔离：入口、凭证、tools、MCP scope、memory、session        │
+└────────────────────────────┬────────────────────────────────┘
+                             │
+┌────────────────────────────▼────────────────────────────────┐
+│                     能力编排层                                │
+│   L5 Entry Skill (请求标准化)                                │
+│   L3 Orchestration Skill (场景流程编排)                       │
+│   Subagents (领域隔离执行)                                   │
+│   L2 Functional Skill (单一运维能力)                          │
+└────────────────────────────┬────────────────────────────────┘
+                             │
+┌────────────────────────────▼────────────────────────────────┐
+│                     工具执行层                                │
+│   L1 MCP Safe Wrappers (typed tools + schema + audit)       │
+│   Hermes Tools / MCP Servers                                │
+│   L0 Basics (CLI/DSL/配置规范)                               │
+└────────────────────────────┬────────────────────────────────┘
+                             │
+┌────────────────────────────▼────────────────────────────────┐
+│                      治理层                                   │
+│   当前：Policy Hook │ Audit Trail │ Redaction               │
+│   目标：Credential Broker │ Approval │ Break-glass          │
+│   DevOps Plugin (hooks: pre_tool_call / post_tool_call)     │
+└─────────────────────────────────────────────────────────────┘
+
+```
+
+
 
 | 产物 | 路径 / 位置 | 负责人 | 验收标准 |
 |---|---|---|---|
