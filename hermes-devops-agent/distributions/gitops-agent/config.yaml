@@ -1,0 +1,88 @@
+display:
+  skin: slate
+
+hooks_auto_accept: false
+
+model:
+  provider: custom
+  model: gpt-5.4
+  base_url: "${LLM_RELAY_BASE_URL}"
+  api_key: "${LLM_RELAY_API_KEY}"
+  api_mode: chat_completions
+
+plugins:
+  enabled:
+    - devops_agent
+
+toolsets:
+  - kanban
+  - skills
+  - memory
+  - terminal
+  - delegation
+
+terminal:
+  cwd: "${SOFTWARE_DELIVERY_WORKSPACE_ROOT}"
+
+mcp_servers:
+  git-codeup:
+    command: python3
+    args:
+      - /Users/gongxiude/Documents/github/infrastructure-agents-guide/hermes-devops-agent/mcp-servers/git-codeup/src/server.py
+    env:
+      MCP_SERVER_NAME: git-codeup
+      CODEUP_BASE_URL: "${CODEUP_BASE_URL}"
+      CODEUP_ACCESS_TOKEN: "${CODEUP_ACCESS_TOKEN}"
+      CODEUP_ORGANIZATION_ID: "${CODEUP_ORGANIZATION_ID}"
+      MCP_LOG_LEVEL: INFO
+    tools:
+      include:
+        - codeup_list_projects
+        - codeup_get_file
+        - codeup_list_branches
+        - codeup_get_merge_request
+        - codeup_list_merge_requests
+  git-workspace:
+    command: python3
+    args:
+      - /Users/gongxiude/Documents/github/infrastructure-agents-guide/hermes-devops-agent/mcp-servers/git-workspace/src/server.py
+    env:
+      MCP_SERVER_NAME: git-workspace
+      GIT_WORKSPACE_ROOT: "${SOFTWARE_DELIVERY_WORKSPACE_ROOT}"
+      GIT_WORKSPACE_ENABLE_PUSH: "${GIT_WORKSPACE_ENABLE_PUSH}"
+      MCP_LOG_LEVEL: INFO
+    tools:
+      include:
+        - git_workspace_create_worktree
+        - git_workspace_cleanup_worktree
+        - git_workspace_list_worktrees
+  argocd:
+    command: python3
+    args:
+      - /Users/gongxiude/Documents/github/infrastructure-agents-guide/hermes-devops-agent/mcp-servers/argocd/src/server.py
+    env:
+      MCP_SERVER_NAME: argocd
+      ARGOCD_SERVER: "${ARGOCD_SERVER}"
+      ARGOCD_TOKEN: "${ARGOCD_TOKEN}"
+      MCP_LOG_LEVEL: INFO
+    tools:
+      include:
+        - argocd_get_version
+        - argocd_list_applications
+        - argocd_get_application
+        - argocd_get_recent_syncs
+
+kanban:
+  dispatch_in_gateway: false
+
+gitops_agent:
+  profile: gitops-agent
+  service_domain: software-delivery
+  autonomy:
+    - observe
+    - recommend
+    - draft
+  repositories:
+    - yuexin-infra
+    - jenkins-pipeline
+  readonly_in_production: true

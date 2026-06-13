@@ -1,0 +1,84 @@
+display:
+  skin: slate
+
+hooks_auto_accept: false
+
+model:
+  provider: custom
+  model: gpt-5.4
+  base_url: "${LLM_RELAY_BASE_URL}"
+  api_key: "${LLM_RELAY_API_KEY}"
+  api_mode: chat_completions
+
+plugins:
+  enabled:
+    - devops_agent
+
+toolsets:
+  - kanban
+  - skills
+  - memory
+  - terminal
+  - delegation
+
+terminal:
+  cwd: /Users/gongxiude/Documents/github/infrastructure-agents-guide
+
+mcp_servers:
+  aliyun:
+    command: python3
+    args:
+      - /Users/gongxiude/Documents/github/infrastructure-agents-guide/hermes-devops-agent/mcp-servers/aliyun/src/server.py
+    env:
+      MCP_SERVER_NAME: aliyun
+      ALIYUN_ACCESS_KEY_ID: "${ALIYUN_ACCESS_KEY_ID}"
+      ALIYUN_ACCESS_KEY_SECRET: "${ALIYUN_ACCESS_KEY_SECRET}"
+      ALIYUN_REGION: "${ALIYUN_REGION}"
+      MCP_LOG_LEVEL: INFO
+    tools:
+      include:
+        - aliyun_ecs_describe_instances
+        - aliyun_rds_describe_instances
+        - aliyun_vpc_describe_vpcs
+        - aliyun_oss_list_buckets
+        - aliyun_ram_list_users
+        - aliyun_ram_list_roles
+        - aliyun_actiontrail_lookup_events
+        - aliyun_bss_query_bill
+        - aliyun_slb_describe_load_balancers
+        - aliyun_cen_describe_cens
+  k8s-readonly:
+    command: python3
+    args:
+      - /Users/gongxiude/Documents/github/infrastructure-agents-guide/hermes-devops-agent/mcp-servers/k8s/src/server.py
+    env:
+      MCP_SERVER_NAME: k8s-readonly
+      K8S_CONTEXT: "${K8S_CONTEXT}"
+      KUBECONFIG: "${KUBECONFIG_READONLY}"
+      KUBECTL_BIN: "${KUBECTL_BIN}"
+      K8S_READ_ONLY: "true"
+      MCP_LOG_LEVEL: INFO
+    tools:
+      include:
+        - k8s_get_resources
+        - k8s_get_pod_logs
+        - k8s_get_events
+        - k8s_get_available_api_resources
+        - k8s_get_cluster_configuration
+        - k8s_get_resource_yaml
+        - k8s_describe_resource
+
+kanban:
+  dispatch_in_gateway: false
+
+infra_agent:
+  profile: infra-agent
+  service_domain: alicloud
+  autonomy:
+    - observe
+    - recommend
+  default_region: cn-hangzhou
+  supported_environments:
+    - prod
+  readonly: true
+  report_format: markdown

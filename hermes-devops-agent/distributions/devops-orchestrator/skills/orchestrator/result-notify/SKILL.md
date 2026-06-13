@@ -1,6 +1,13 @@
 ---
 name: result-notify
 description: Aggregate completed Kanban task results and post a structured summary back to the originating Feishu chat. Use after one or more Kanban tasks reach a terminal state (done / failed / blocked).
+version: 1.0.0
+platforms: [linux, macos, windows]
+environments: [kanban]
+metadata:
+  hermes:
+    tags: [kanban, result, notify, feishu, aggregation, summary]
+    related_skills: [kanban-route, intent-parse]
 ---
 
 # Result Notify

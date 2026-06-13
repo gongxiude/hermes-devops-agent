@@ -1,0 +1,33 @@
+name: hermes-devops-gitops-agent
+version: 0.1.0
+description: "GitOps agent for CI/CD pipeline inspection, ArgoCD sync status, and GitOps config drafting. Consolidates software-delivery-draft, readonly, and release-gated into one profile with 3 domain subagents."
+hermes_requires: ">=0.12.0"
+author: "Platform Engineering"
+env_requires:
+  - name: LLM_RELAY_BASE_URL
+    description: "OpenAI-compatible LLM relay base URL"
+    required: true
+  - name: LLM_RELAY_API_KEY
+    description: "LLM relay API key"
+    required: true
+  - name: CODEUP_BASE_URL
+    description: "Codeup OpenAPI base URL"
+    required: true
+  - name: CODEUP_ACCESS_TOKEN
+    description: "Codeup access token for read evidence"
+    required: true
+  - name: CODEUP_ORGANIZATION_ID
+    description: "Codeup organization id"
+    required: true
+  - name: SOFTWARE_DELIVERY_WORKSPACE_ROOT
+    description: "Root for mirrors and task worktrees"
+    required: true
+  - name: GIT_WORKSPACE_ENABLE_PUSH
+    description: "Must be true before git-workspace can push draft branches"
+    required: false
+  - name: ARGOCD_SERVER
+    description: "ArgoCD API server URL"
+    required: false
+  - name: ARGOCD_TOKEN
+    description: "ArgoCD API token"
+    required: false

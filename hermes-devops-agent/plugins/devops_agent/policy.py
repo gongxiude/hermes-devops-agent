@@ -12,6 +12,7 @@ Profile → max allowed Tier:
   software-delivery-draft      → 2
   software-delivery-release-gated → 4 (gated by release-gate MCP)
   governance-breakglass        → 4
+  hermes-devops-orchestrator   → 3
 
 Tool → minimum required Tier (anything not listed = Tier 0, read-only):
   Tier 1+: no execution tools defined yet
@@ -32,10 +33,14 @@ from typing import Any
 
 _PROFILE_TIERS: dict[str, int] = {
     "observability-query":            0,
+    "observability":                  0,
     "software-delivery-readonly":     0,
     "software-delivery-draft":        2,
     "software-delivery-release-gated": 4,
+    "gitops-agent":                   2,
+    "infra-agent":                    0,
     "governance-breakglass":          4,
+    "hermes-devops-orchestrator":     3,
 }
 
 # Default: unknown profiles get Tier 0 (safest)
@@ -92,7 +97,15 @@ def _tool_required_tier(tool_name: str) -> int:
 
 
 def _current_profile() -> str:
-    return os.environ.get("HERMES_PROFILE", "")
+    profile = os.environ.get("HERMES_PROFILE", "")
+    if profile:
+        return profile
+    # Fallback: detect from HERMES_HOME path (e.g. .../profiles/hermes-devops-orchestrator)
+    hermes_home = os.environ.get("HERMES_HOME", "")
+    if "/profiles/" in hermes_home:
+        profile = hermes_home.split("/profiles/")[-1].rstrip("/")
+        return profile
+    return ""
 
 
 # ---------------------------------------------------------------------------

@@ -1,6 +1,13 @@
 ---
 name: intent-parse
 description: Parse an incoming Feishu message into a structured DevOps request envelope. Use at the entry point of every Feishu message before any routing or Kanban operation.
+version: 1.0.0
+platforms: [linux, macos, windows]
+environments: [kanban]
+metadata:
+  hermes:
+    tags: [intent, parse, feishu, entry, normalization, request-envelope]
+    related_skills: [kanban-route, result-notify]
 ---
 
 # Intent Parse
