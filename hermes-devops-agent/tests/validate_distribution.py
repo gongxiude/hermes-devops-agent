@@ -2,8 +2,17 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import yaml
+
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def load_yaml(path: Path) -> dict:
+    data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        raise AssertionError(f"{path} must contain a YAML mapping")
+    return data
 
 
 def main() -> int:
@@ -11,12 +20,7 @@ def main() -> int:
         ROOT / "docs",
         ROOT / "docs/implementation",
         ROOT / "docs/research",
-        ROOT / "skills/basics",
-        ROOT / "skills/tool-contracts",
-        ROOT / "skills/capabilities",
-        ROOT / "skills/orchestration",
-        ROOT / "skills/governance/domains",
-        ROOT / "skills/entry",
+        ROOT / "skills",
         ROOT / "skills/specs/subagents",
         ROOT / "skills/specs/profiles",
         ROOT / "mcp-servers/prometheus",
@@ -37,6 +41,7 @@ def main() -> int:
         ROOT / "distributions/software-delivery-release-gated",
         ROOT / "distributions/infra-agent",
         ROOT / "distributions/gitops-agent",
+        ROOT / "distributions/devops-orchestrator",
         ROOT / "tests",
     ]
     for path in required_dirs:
@@ -67,17 +72,35 @@ def main() -> int:
         ROOT / "distributions/software-delivery-draft/distribution.yaml",
         ROOT / "distributions/software-delivery-release-gated/distribution.yaml",
         ROOT / "distributions/infra-agent/distribution.yaml",
-        ROOT / "skills/entry/alert-entry/SKILL.md",
-        ROOT / "skills/entry/webhook-entry/SKILL.md",
+        ROOT / "distributions/gitops-agent/distribution.yaml",
+        ROOT / "distributions/gitops-agent/config.yaml",
+        ROOT / "distributions/devops-orchestrator/distribution.yaml",
+        ROOT / "skills/alert-entry/SKILL.md",
+        ROOT / "skills/webhook-entry/SKILL.md",
+        ROOT / "skills/git-command-workflow/SKILL.md",
+        ROOT / "skills/gitops-mr-draft/SKILL.md",
+        ROOT / "skills/jenkins-library-mr-draft/SKILL.md",
+        ROOT / "skills/specs/profiles/gitops-agent.yaml",
+        ROOT / "skills/specs/domains/gitops-agent-domain.yaml",
         ROOT / "distributions/observability-query/tests/validate_distribution.py",
         ROOT / "distributions/software-delivery-readonly/tests/validate_distribution.py",
         ROOT / "distributions/software-delivery-draft/tests/validate_distribution.py",
         ROOT / "distributions/software-delivery-release-gated/tests/validate_distribution.py",
+        ROOT / "distributions/gitops-agent/tests/validate_distribution.py",
         ROOT / "tests/validate_docs.py",
         ROOT / "tests/validate_skills_catalog.py",
     ]
     for path in required_files:
         assert path.exists(), f"missing repo file: {path}"
+
+    catalog = load_yaml(ROOT / "skills/catalog.yaml")
+    for layer in ("L0", "L1", "L2", "L3", "L4", "L5"):
+        assert layer in catalog["layers"], f"missing skill layer: {layer}"
+
+    profile = load_yaml(ROOT / "skills/specs/profiles/gitops-agent.yaml")
+    assert profile["runtime_boundary"]["workspace_env"] == "SOFTWARE_DELIVERY_WORKSPACE_ROOT"
+    assert "git-command-workflow" in profile["allowed_skills"]["L1"]
+    assert "git_mcp_for_clone_fetch_pull_commit_push" in profile["denied"]
 
     print("hermes_devops_agent_repo_ok")
     return 0

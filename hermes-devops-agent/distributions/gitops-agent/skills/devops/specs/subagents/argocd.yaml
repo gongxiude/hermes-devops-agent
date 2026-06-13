@@ -1,0 +1,22 @@
+name: argocd
+role: ArgoCD desired-state and sync-status specialist
+allowed_skills:
+  - argocd-basics
+  - argocd-query-tool
+  - gitops-config-query
+  - release-impact-analysis
+  - audit-trail
+  - secret-redaction
+allowed_mcp_servers:
+  - argocd
+denied_tools:
+  - argocd_sync
+  - argocd_rollback
+  - argocd_app_set
+output_schema:
+  required:
+    - application
+    - sync_status
+    - health_status
+    - evidence
+    - next_action

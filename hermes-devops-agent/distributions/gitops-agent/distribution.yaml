@@ -20,11 +20,8 @@ env_requires:
     description: "Codeup organization id"
     required: true
   - name: SOFTWARE_DELIVERY_WORKSPACE_ROOT
-    description: "Root for mirrors and task worktrees"
+    description: "Runtime root for direct git command checkouts owned by gitops-agent"
     required: true
-  - name: GIT_WORKSPACE_ENABLE_PUSH
-    description: "Must be true before git-workspace can push draft branches"
-    required: false
   - name: ARGOCD_SERVER
     description: "ArgoCD API server URL"
     required: false

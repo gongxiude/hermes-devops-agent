@@ -1,0 +1,24 @@
+name: jenkins-pipeline
+role: Jenkins pipeline and shared-library specialist
+allowed_skills:
+  - jenkins-basics
+  - jenkins-readonly-tool
+  - jenkins-library-query
+  - jenkins-library-mr-draft
+  - git-codeup-readonly-tool
+  - git-command-workflow
+  - audit-trail
+  - secret-redaction
+allowed_mcp_servers:
+  - git-codeup
+denied_tools:
+  - jenkins_build_with_params
+  - jenkins_replay_build
+  - jenkins_script_console
+output_schema:
+  required:
+    - repo_prefix
+    - matched_paths
+    - evidence
+    - validation
+    - next_action

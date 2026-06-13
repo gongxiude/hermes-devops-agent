@@ -34,28 +34,16 @@ mcp_servers:
       CODEUP_BASE_URL: "${CODEUP_BASE_URL}"
       CODEUP_ACCESS_TOKEN: "${CODEUP_ACCESS_TOKEN}"
       CODEUP_ORGANIZATION_ID: "${CODEUP_ORGANIZATION_ID}"
+      LOCAL_GIT_ROOT: "${SOFTWARE_DELIVERY_WORKSPACE_ROOT}"
       MCP_LOG_LEVEL: INFO
     tools:
       include:
-        - codeup_list_projects
-        - codeup_get_file
-        - codeup_list_branches
-        - codeup_get_merge_request
-        - codeup_list_merge_requests
-  git-workspace:
-    command: python3
-    args:
-      - /Users/gongxiude/Documents/github/infrastructure-agents-guide/hermes-devops-agent/mcp-servers/git-workspace/src/server.py
-    env:
-      MCP_SERVER_NAME: git-workspace
-      GIT_WORKSPACE_ROOT: "${SOFTWARE_DELIVERY_WORKSPACE_ROOT}"
-      GIT_WORKSPACE_ENABLE_PUSH: "${GIT_WORKSPACE_ENABLE_PUSH}"
-      MCP_LOG_LEVEL: INFO
-    tools:
-      include:
-        - git_workspace_create_worktree
-        - git_workspace_cleanup_worktree
-        - git_workspace_list_worktrees
+        - codeup_list_repositories
+        - codeup_list_change_requests
+        - codeup_get_change_request
+        - codeup_list_commits
+        - git_repo_status
+        - codeup_create_change_request
   argocd:
     command: python3
     args:
@@ -85,4 +73,5 @@ gitops_agent:
   repositories:
     - yuexin-infra
     - jenkins-pipeline
+  git_execution: terminal_git_command
   readonly_in_production: true

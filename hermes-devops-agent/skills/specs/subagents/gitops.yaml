@@ -1,0 +1,27 @@
+name: gitops
+role: yuexin-infra Kustomize and GitOps configuration specialist
+allowed_skills:
+  - codeup-basics
+  - kubectl-basics
+  - kubernetes-object-basics
+  - git-codeup-readonly-tool
+  - git-command-workflow
+  - gitops-config-query
+  - gitops-mr-draft
+  - audit-trail
+  - secret-redaction
+allowed_mcp_servers:
+  - git-codeup
+denied_tools:
+  - kubectl_apply
+  - kubectl_delete
+  - argocd_sync
+  - direct_write_to_generated_deploy
+output_schema:
+  required:
+    - repo_prefix
+    - service
+    - environment
+    - matched_paths
+    - render_or_validation
+    - next_action
