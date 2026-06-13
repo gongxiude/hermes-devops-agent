@@ -80,6 +80,12 @@ def main() -> int:
     assert "git_workspace_" not in copied_text, "gitops-agent distribution must not reference git_workspace_*"
     assert "GIT_WORKSPACE_" not in copied_text, "gitops-agent distribution must not reference GIT_WORKSPACE_*"
 
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    assert "hermes profile install hermes-devops-agent/distributions/gitops-agent" in readme
+    assert "hermes profile alias gitops-agent" in readme
+    assert "gitops-agent chat -q" in readme
+    assert "hermes -p gitops-agent --version" in readme
+
     print("gitops_agent_distribution_ok")
     return 0
 
