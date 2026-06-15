@@ -6,8 +6,8 @@
 
 | 主题 | 官方文档 | 本仓库落点 |
 |---|---|---|
-| Profiles | https://hermes-agent.nousresearch.com/docs/user-guide/profiles | `profile` 被定义为运行时硬边界，独立持有 `config.yaml`、`.env`、`SOUL.md`、skills、cron、gateway state。对应 `skills/specs/profiles/observability-query.yaml` 和 distribution。 |
-| Profile Distributions | https://hermes-agent.nousresearch.com/docs/user-guide/profile-distributions/ | 采用 `distributions/observability-query/` 作为可安装交付单元，而不是只复制 prompt 或零散 skill。 |
+| Profiles | https://hermes-agent.nousresearch.com/docs/user-guide/profiles | `profile` 被定义为运行时硬边界，独立持有 `config.yaml`、`.env`、`SOUL.md`、skills、cron、gateway state。对应 `skills/specs/profiles/observability.yaml` 和 distribution。 |
+| Profile Distributions | https://hermes-agent.nousresearch.com/docs/user-guide/profile-distributions/ | 采用 `distributions/observability/` 作为可安装交付单元，而不是只复制 prompt 或零散 skill。 |
 | Secrets | https://hermes-agent.nousresearch.com/docs/user-guide/secrets/ | 长期 secret 不写入 skill；profile `.env.EXAMPLE` 只声明按环境拆分的 endpoint / kubeconfig 变量。 |
 | Cron | https://hermes-agent.nousresearch.com/docs/user-guide/features/cron/ | 巡检使用 distribution 内的 `cron/intlsms-runtime-inspection.yaml`，并明确 cron 在独立会话中运行。 |
 | Plugins | https://hermes-agent.nousresearch.com/docs/user-guide/features/plugins | 插件层单独落在 `plugins/devops_agent/`，不把 DevOps 扩展硬编码进 Hermes core。 |

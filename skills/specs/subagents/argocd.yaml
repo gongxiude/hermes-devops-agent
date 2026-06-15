@@ -1,0 +1,28 @@
+name: argocd
+role: ArgoCD desired-state and sync-status specialist
+allowed_skill_categories:
+  basics:
+    - argocd-basics
+  tool_contracts:
+    - argocd-query-tool
+  workflows:
+    - gitops-config-locate
+    - release-impact-analyze
+  contexts:
+    - yuexin-infra-domain-context
+    - skill-policy-gate
+    - audit-trail
+    - secret-redaction
+allowed_mcp_servers:
+  - argocd
+denied_tools:
+  - argocd_sync
+  - argocd_rollback
+  - argocd_app_set
+output_schema:
+  required:
+    - application
+    - sync_status
+    - health_status
+    - evidence
+    - next_action

@@ -24,11 +24,11 @@
 
 | request_type | assignee |
 |---|---|
-| observability_query（指标/日志/SLO 查询） | `observability-query` |
+| observability_query（指标/日志/SLO 查询） | `observability` |
 | gitops_query（配置/资源定义查询） | `software-delivery-readonly` |
 | gitops_draft（生成 MR 草稿） | `software-delivery-draft` |
-| incident_triage（故障诊断） | `observability-query` |
-| data_query（Redis/PostgreSQL 诊断） | `observability-query` |
+| incident_triage（故障诊断） | `observability` |
+| data_query（Redis/PostgreSQL 诊断） | `observability` |
 
 **在 kanban_create 之前先用 `hermes profile list` 确认 assignee 存在。** 如果 assignee 不在列表中，告知用户并停止。
 
@@ -50,8 +50,8 @@
 
 示例：`检查 intlsms 生产健康度，如果有异常再生成诊断报告`
 ```
-task1 = kanban_create(title="健康检查", assignee="observability-query")
-task2 = kanban_create(title="诊断报告（仅在异常时执行）", assignee="observability-query", parents=[task1])
+task1 = kanban_create(title="健康检查", assignee="observability")
+task2 = kanban_create(title="诊断报告（仅在异常时执行）", assignee="observability", parents=[task1])
 ```
 
 ### 5. 紧急请求

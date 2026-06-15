@@ -33,6 +33,12 @@ logger = logging.getLogger(__name__)
 # Matches "reply_target: <value>" (case-insensitive, value is first non-space token).
 _REPLY_TARGET_RE = re.compile(r"reply_target\s*:\s*(\S+)", re.IGNORECASE)
 
+# Explicit opt-out: a task body may set ``notify_user: false`` to suppress the
+# Feishu auto-subscription even if a reply_target is present. Defense-in-depth
+# so a future orchestration regression can't spam the chat with fan-out
+# children — the primary control is omitting reply_target on child tasks.
+_NOTIFY_OPT_OUT_RE = re.compile(r"notify_user\s*:\s*false", re.IGNORECASE)
+
 # Feishu open_id format: oc_<hex> for chats, ou_<hex> for users.
 _FEISHU_OPEN_ID_RE = re.compile(r"^(oc_|ou_)[A-Za-z0-9_-]+$")
 
@@ -124,6 +130,11 @@ def on_tool_call(
     args = args or {}
     body = str(args.get("body") or "")
     if not body:
+        return
+
+    # Explicit opt-out wins: child/intermediate tasks can set notify_user: false.
+    if _NOTIFY_OPT_OUT_RE.search(body):
+        logger.info("[kanban_reply] notify_user:false — skipping subscription")
         return
 
     chat_id = parse_reply_target(body)

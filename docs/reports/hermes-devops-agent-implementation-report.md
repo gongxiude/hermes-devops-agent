@@ -54,7 +54,7 @@
         |
         v
 隔离运行层
-  - observability-query
+  - observability
   - software-delivery-readonly
   - software-delivery-draft
   - incident-triage
@@ -124,7 +124,7 @@
 
 3. 入口层执行路由决策
    输入：标准化请求
-   输出：assignee=observability-query、priority、task metadata
+   输出：assignee=observability、priority、task metadata
 
 4. 任务总线创建任务
    输入：title、body、assignee、metadata
@@ -132,7 +132,7 @@
 
 5. Dispatcher 启动 worker profile
    输入：task_id、assignee
-   输出：observability-query worker run
+   输出：observability worker run
 
 6. Worker 读取任务并执行能力包
    输入：task body、metadata、profile allowlist
@@ -229,7 +229,7 @@
    条件：告警群、P0、故障、紧急等关键词
 
 2. 创建快速观察任务
-   assignee = observability-query
+   assignee = observability
    目标：快速返回错误率、日志异常、K8s 状态
 
 3. 同时创建完整诊断任务
@@ -289,7 +289,7 @@
 | 运行单元 | 职责 | 工具范围 |
 |---|---|---|
 | `devops-orchestrator` | 请求标准化、路由、创建任务、回传结果 | kanban + skills；无生产系统 MCP |
-| `observability-query` | 指标、日志、K8s 状态只读查询 | Prometheus、Loki、Grafana、K8s read-only |
+| `observability` | 指标、日志、K8s 状态只读查询 | Prometheus、Loki、Grafana、K8s read-only |
 | `software-delivery-readonly` | Jenkins、ArgoCD、GitOps 状态查询 | CI/CD read-only、GitOps diff/render read-only |
 | `software-delivery-draft` | GitOps 配置定位、render、MR 草稿 | Git worktree、Kustomize/Helm render、MR draft |
 | `incident-triage` | 故障初诊、证据聚合、根因假设 | 观测、K8s、发布状态、云资源 read-only |
@@ -363,7 +363,7 @@ MCP 是真实系统访问层。它只暴露可审计、可约束、可测试的 
 | 运行单元 | 应出现工具 | 不应出现工具 |
 |---|---|---|
 | `devops-orchestrator` | kanban、skills | Prometheus、Loki、K8s、prod action |
-| `observability-query` | Prometheus、Loki、K8s read-only、governance audit | prod breakglass、Git write、DB write |
+| `observability` | Prometheus、Loki、K8s read-only、governance audit | prod breakglass、Git write、DB write |
 | `software-delivery-draft` | GitOps draft、render、MR draft、ArgoCD read-only | ArgoCD sync、prod action |
 | `incident-triage` | observability、K8s read-only、release read-only | restart、rollback、scale |
 | `governance-breakglass` | approval、credential、prod action、audit | 无审批动作、批量动作 |
@@ -388,7 +388,7 @@ Skills 是能力包和作业规范，不是权限边界。权限由运行单元 
 | 运行单元 | 必载 skills | 禁止 |
 |---|---|---|
 | `devops-orchestrator` | chat-ops-entry、kanban-route、result-notify、audit/redaction | 执行生产系统查询或变更 |
-| `observability-query` | scheduled-entry、chat-ops-entry、PromQL/LogQL basics、observability-health-query、audit/redaction | restart、rollback、sync、scale |
+| `observability` | scheduled-entry、chat-ops-entry、PromQL/LogQL basics、observability-health-query、audit/redaction | restart、rollback、sync、scale |
 | `software-delivery-draft` | gitops-pr-entry、Git/Kustomize/YAML basics、render、MR draft、audit | 直接写主干、跳过 render |
 | `incident-triage` | incident orchestration、observability read-only、K8s read-only、release read-only | 自动修复、未审批生产操作 |
 | `data-infra-readonly` | DB read-only diagnostics、redaction、audit | generic SQL、DML/DDL |
@@ -440,7 +440,7 @@ orchestrator
 
 ```text
 task1: 健康检查
-  assignee = observability-query
+  assignee = observability
 
 task2: 生成诊断报告
   assignee = incident-triage
@@ -525,7 +525,7 @@ Kanban 完成任务后必须回传飞书。实现路径二选一：
 | 1 | Gateway | 飞书消息 | raw envelope |
 | 2 | Entry skill | raw envelope | 标准化请求 |
 | 3 | Orchestrator | 标准化请求 | Kanban task |
-| 4 | `observability-query` | task body | 查询计划 |
+| 4 | `observability` | task body | 查询计划 |
 | 5 | Prometheus/Loki/K8s MCP | typed params | 指标、日志、资源状态 |
 | 6 | Governance | tool result | 脱敏结果、审计事件 |
 | 7 | Worker | evidence | summary、metadata |
@@ -548,7 +548,7 @@ Kanban 完成任务后必须回传飞书。实现路径二选一：
 | 步骤 | 组件 | 输入 | 输出 |
 |---|---|---|---|
 | 1 | Orchestrator | P0 / 故障请求 | 快速观察任务 + 深度诊断任务 |
-| 2 | `observability-query` | 快速观察任务 | 错误率、日志、K8s 摘要 |
+| 2 | `observability` | 快速观察任务 | 错误率、日志、K8s 摘要 |
 | 3 | `incident-triage` | 父任务结果 | 多系统诊断计划 |
 | 4 | MCP tools | typed queries | 指标、日志、发布、K8s 证据 |
 | 5 | Incident skills | evidence | 根因假设、影响范围、建议动作 |
@@ -567,7 +567,7 @@ hermes-devops-agent/
     research/
   distributions/
     devops-orchestrator/
-    observability-query/
+    observability/
   skills/
     entry/
     governance/

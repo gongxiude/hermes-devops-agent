@@ -1,0 +1,102 @@
+services:
+  - name: intlsms-gateway
+    description: "国际短信网关 — 接收短信提交请求，路由到下游通道"
+    owner: sms-platform-team
+    repo: git@codeup.aliyun.com:devops/yuexin-infra.git
+    path: apps/intlsms/gateway
+    sla: "99.95%"
+    tier: 0
+    environments:
+      - prod
+      - test
+    dependencies:
+      upstream:
+        - intlsms-api-gateway
+      downstream:
+        - intlsms-billing-system
+        - intlsms-channel-worker
+        - intlsms-deliver-worker
+    tags:
+      - international-sms
+      - gateway
+      - tier-0
+      - golang
+  - name: intlsms-billing-system
+    description: "国际短信计费系统 — 实时扣费、余额管理"
+    owner: billing-team
+    repo: git@codeup.aliyun.com:devops/billing.git
+    path: services/billing
+    sla: "99.9%"
+    tier: 1
+    environments:
+      - prod
+    dependencies:
+      upstream:
+        - intlsms-gateway
+      downstream:
+        - aliyun-bss-api
+    tags:
+      - international-sms
+      - billing
+      - tier-1
+      - java
+  - name: intlsms-channel-worker
+    description: "国际短信通道 Worker — 对接运营商通道，发送短信"
+    owner: sms-platform-team
+    repo: git@codeup.aliyun.com:devops/yuexin-infra.git
+    path: apps/intlsms/channel-worker
+    sla: "99.9%"
+    tier: 1
+    environments:
+      - prod
+      - test
+    dependencies:
+      upstream:
+        - intlsms-gateway
+      downstream:
+        - twilio-api
+        - infobip-api
+        - sinch-api
+    tags:
+      - international-sms
+      - channel
+      - tier-1
+      - golang
+  - name: intlsms-deliver-worker
+    description: "国际短信状态报告 Worker — 处理 DLR 回调"
+    owner: sms-platform-team
+    repo: git@codeup.aliyun.com:devops/yuexin-infra.git
+    path: apps/intlsms/deliver-worker
+    sla: "99.9%"
+    tier: 1
+    environments:
+      - prod
+      - test
+    dependencies:
+      upstream:
+        - intlsms-gateway
+      downstream:
+        - intlsms-report-service
+    tags:
+      - international-sms
+      - deliver
+      - tier-1
+      - golang
+  - name: intlsms-api-gateway
+    description: "国际短信 API 网关 — 对外暴露 REST API，鉴权限流"
+    owner: api-platform-team
+    repo: git@codeup.aliyun.com:devops/api-gateway.git
+    path: gateways/intlsms
+    sla: "99.95%"
+    tier: 0
+    environments:
+      - prod
+    dependencies:
+      upstream: []
+      downstream:
+        - intlsms-gateway
+    tags:
+      - international-sms
+      - api-gateway
+      - tier-0
+      - nginx

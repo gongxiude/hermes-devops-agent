@@ -1,0 +1,59 @@
+name: gitops-agent
+domain_agent: GitOps Agent
+runtime_boundary:
+  profile: gitops-agent
+  workspace_env: SOFTWARE_DELIVERY_WORKSPACE_ROOT
+  previous_workspace_forbidden: /Users/gongxiude/Documents/my-world
+  autonomy: [observe, recommend, draft]
+  production_write: denied_without_approval
+allowed_skill_categories:
+  basics:
+    - git-command-basics
+    - kustomize-basics
+    - jenkins-basics
+    - argocd-basics
+    - codeup-basics
+    - kubectl-basics
+    - kubernetes-object-basics
+  tool_contracts:
+    - git-command-workflow
+    - git-codeup-readonly-tool
+    - jenkins-readonly-tool
+    - argocd-query-tool
+  workflows:
+    - gitops-config-locate
+    - kustomize-render
+    - jenkins-library-inspect
+    - release-impact-analyze
+    - gitops-mr-draft-orchestration
+    - jenkins-change-orchestration
+    - software-delivery-change-orchestration
+  contexts:
+    - skill-policy-gate
+    - audit-trail
+    - secret-redaction
+    - yuexin-infra-domain-context
+    - jenkins-pipeline-domain-context
+subagents:
+  - jenkins-pipeline
+  - argocd
+  - gitops
+mcp_servers:
+  - git-codeup
+  - argocd
+terminal_git:
+  required_commands:
+    - git status --short --branch
+    - git fetch --prune origin
+    - git pull --ff-only origin <base-branch>
+    - git checkout -b hermes/<task_id>/<purpose>
+    - git add <changed-files>
+    - git commit -m <message>
+    - git push origin HEAD:<branch>
+denied:
+  - direct_write_to_master
+  - force_push
+  - argocd_sync_without_release_gate
+  - jenkins_build_trigger_without_release_gate
+  - read_runtime_workspace_from_my_world
+  - git_mcp_for_clone_fetch_pull_commit_push

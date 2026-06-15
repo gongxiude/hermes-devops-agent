@@ -1,0 +1,30 @@
+name: hermes-devops-infra-agent
+version: 0.1.0
+description: "Infrastructure agent for Alibaba Cloud resource inspection, K8s cluster analysis, network topology, security compliance, and cost optimization."
+hermes_requires: ">=0.12.0"
+author: "Platform Engineering"
+env_requires:
+  - name: ALIYUN_ACCESS_KEY_ID
+    description: "Alibaba Cloud AccessKey ID"
+    required: true
+  - name: ALIYUN_ACCESS_KEY_SECRET
+    description: "Alibaba Cloud AccessKey Secret"
+    required: true
+  - name: ALIYUN_REGION
+    description: "Default Alibaba Cloud region"
+    required: false
+  - name: KUBECONFIG_READONLY
+    description: "Read-only kubeconfig path for ACK clusters"
+    required: false
+  - name: LLM_RELAY_BASE_URL
+    description: "Internal LLM relay base URL"
+    required: true
+  - name: LLM_RELAY_API_KEY
+    description: "Internal LLM relay API key"
+    required: true
+distribution_owned:
+  - SOUL.md
+  - config.yaml
+  - mcp.json
+  - cron/
+  - skills/

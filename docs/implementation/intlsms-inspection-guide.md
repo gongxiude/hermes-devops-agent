@@ -1,12 +1,12 @@
 # 国际短信运行巡检使用指南
 
-> Profile: `observability-query` | 能力边界: Observe / Recommend | 禁止生产写动作
+> Profile: `observability` | 能力边界: Observe / Recommend | 禁止生产写动作
 
 ---
 
 ## 一、巡检概览
 
-巡检由 `observability-query` profile 在 `hermes-devops-orchestrator` 体系内执行，每次巡检对生产（或测试）环境下的 **7 个国际短信服务** 分别采集 Prometheus 指标、Loki 日志和 Kubernetes 工作负载状态，输出风险等级和人工下一步动作。
+巡检由 `observability` profile 在 `hermes-devops-orchestrator` 体系内执行，每次巡检对生产（或测试）环境下的 **7 个国际短信服务** 分别采集 Prometheus 指标、Loki 日志和 Kubernetes 工作负载状态，输出风险等级和人工下一步动作。
 
 巡检是纯只读操作：不执行 restart / rollback / scale / sync / apply / patch / delete / exec / 数据库变更。任何写动作请求在策略层直接拒绝。
 
@@ -95,13 +95,13 @@
 
 ### 5.1 定时巡检（主要方式）
 
-巡检默认每 **15 分钟**自动执行一次，由 `observability-query` profile 内的 cron job 驱动：
+巡检默认每 **15 分钟**自动执行一次，由 `observability` profile 内的 cron job 驱动：
 
 ```yaml
-# hermes-devops-agent/distributions/observability-query/cron/intlsms-runtime-inspection.yaml
+# hermes-devops-agent/distributions/observability/cron/intlsms-runtime-inspection.yaml
 schedule: "*/15 * * * *"
 timezone: Asia/Shanghai
-profile: observability-query
+profile: observability
 ```
 
 触发后 agent 自动对生产环境执行完整巡检，结果通过 Kanban 回传，并抄送飞书配置的通知频道。
@@ -109,14 +109,14 @@ profile: observability-query
 **查看 cron 状态：**
 
 ```bash
-hermes -p observability-query cronjob list
+hermes -p observability cronjob list
 ```
 
 **临时暂停 / 恢复：**
 
 ```bash
-hermes -p observability-query cronjob pause intlsms-runtime-inspection
-hermes -p observability-query cronjob resume intlsms-runtime-inspection
+hermes -p observability cronjob pause intlsms-runtime-inspection
+hermes -p observability cronjob resume intlsms-runtime-inspection
 ```
 
 ### 5.2 飞书 ChatOps（按需触发）
@@ -134,8 +134,8 @@ hermes -p observability-query cronjob resume intlsms-runtime-inspection
 ```
 飞书消息
   → hermes-devops-orchestrator (解析 request_type=observability_query)
-  → kanban_create(assignee=observability-query)
-  → observability-query profile 执行巡检
+  → kanban_create(assignee=observability)
+  → observability profile 执行巡检
   → 结果通过飞书回传至原会话
 ```
 
@@ -151,17 +151,17 @@ hermes -p observability-query cronjob resume intlsms-runtime-inspection
 
 ### 5.3 CLI 手动触发
 
-在安装了 `observability-query` profile 的机器上直接运行：
+在安装了 `observability` profile 的机器上直接运行：
 
 ```bash
 # 生产巡检（默认 15 分钟窗口）
-hermes -p observability-query chat -q "执行国际短信生产环境巡检" -Q
+hermes -p observability chat -q "执行国际短信生产环境巡检" -Q
 
 # 指定环境和窗口
-hermes -p observability-query chat -q "执行国际短信测试环境巡检，窗口 30 分钟" -Q
+hermes -p observability chat -q "执行国际短信测试环境巡检，窗口 30 分钟" -Q
 
 # 只查单个服务
-hermes -p observability-query chat -q "查 intlsms 生产 gateway 服务健康状态" -Q
+hermes -p observability chat -q "查 intlsms 生产 gateway 服务健康状态" -Q
 ```
 
 `-Q` 参数让 agent 完成后退出，适合 CI/运维脚本调用。
@@ -201,7 +201,7 @@ hermes -p observability-query chat -q "查 intlsms 生产 gateway 服务健康�
 |---|---|
 | `correlation_id` | 本次巡检唯一 ID（格式：`ins-YYYYMMDD-HHmmss-<env>`） |
 | `actor` | `cron/intlsms-runtime-inspection` 或飞书用户 open_id |
-| `profile` | `observability-query` |
+| `profile` | `observability` |
 | `environment` / `cluster` / `namespace` | 实际执行环境 |
 | `overall_status` | `healthy` / `warning` / `critical` / `unknown` |
 | `evidence` | 每个服务每个检查项的原始结果 |
@@ -214,7 +214,7 @@ hermes -p observability-query chat -q "查 intlsms 生产 gateway 服务健康�
 
 ## 七、凭证与环境配置
 
-巡检运行前需在 `observability-query` profile 的 `.env` 中配置以下变量：
+巡检运行前需在 `observability` profile 的 `.env` 中配置以下变量：
 
 ```bash
 # 生产环境
@@ -238,7 +238,7 @@ K8S_CONTEXT_TEST=test-aliyun-zjk-intlsms
 K8S_NAMESPACE_TEST=intl-test
 ```
 
-`.env` 文件不进 Git，只存在于已安装的 profile 目录（`~/.hermes/profiles/observability-query/.env`）。
+`.env` 文件不进 Git，只存在于已安装的 profile 目录（`~/.hermes/profiles/observability/.env`）。
 
 ---
 
@@ -259,10 +259,10 @@ K8S_NAMESPACE_TEST=intl-test
 
 | 文件 | 作用 |
 |---|---|
-| `distributions/observability-query/cron/intlsms-runtime-inspection.yaml` | Cron 触发配置（频率、profile、指令） |
+| `distributions/observability/cron/intlsms-runtime-inspection.yaml` | Cron 触发配置（频率、profile、指令） |
 | `skills/governance/domains/intlsms-runtime-inspection.yaml` | 领域配置（服务清单、环境、查询模板、阈值） |
-| `distributions/observability-query/config.yaml` | Profile MCP server 注册与 `observability_query` 运行参数 |
-| `distributions/observability-query/SOUL.md` | Agent 行为约束 |
+| `distributions/observability/config.yaml` | Profile MCP server 注册与 `observability_query` 运行参数 |
+| `distributions/observability/SOUL.md` | Agent 行为约束 |
 | `skills/orchestration/intlsms-runtime-inspection/SKILL.md` | L3 编排 skill（执行链路） |
 | `skills/capabilities/observability-health-query/SKILL.md` | L2 能力 skill（MCP 调用边界） |
 | `skills/tool-contracts/prometheus-query-tool/SKILL.md` | L1 Prometheus 安全契约 |

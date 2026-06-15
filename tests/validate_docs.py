@@ -15,7 +15,7 @@ def require_sections(path: Path, sections: list[str]) -> None:
 
 def main() -> int:
     require_sections(
-        ROOT / "docs/implementation/observability-query-intlsms-runtime-inspection.md",
+        ROOT / "docs/implementation/observability-intlsms-runtime-inspection.md",
         [
             "## 目标",
             "## 适用场景",
