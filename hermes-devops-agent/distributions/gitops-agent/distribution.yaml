@@ -33,4 +33,3 @@ distribution_owned:
   - config.yaml
   - mcp.json
   - cron/
-  - skills/devops/
