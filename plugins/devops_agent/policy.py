@@ -29,7 +29,6 @@ from typing import Any
 # ---------------------------------------------------------------------------
 
 _PROFILE_TIERS: dict[str, int] = {
-    "observability":            0,
     "observability":                  0,
     "gitops-agent":                   2,
     "infra-agent":                    0,

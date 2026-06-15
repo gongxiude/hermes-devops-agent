@@ -10,6 +10,45 @@ ROOT = Path(__file__).resolve().parents[1]
 PROFILE = ROOT
 
 
+# 自包含扁平技能:每个技能直接位于 skills/<name>/SKILL.md,
+# 安装时随 distribution 一起拷贝,无中央共享源、无 profile-spec 选择层。
+FLAT_SKILLS = [
+    "alert-entry",
+    "alertmanager-basics",
+    "aliyun-basics",
+    "aliyun-readonly-tool",
+    "anomaly-detection",
+    "audit-trail",
+    "capacity-forecast",
+    "chat-ops-entry",
+    "gitops-config-query",
+    "grafana-basics",
+    "intlsms-domain-context",
+    "intlsms-runtime-inspection",
+    "k8s-readonly-tool",
+    "kubectl-basics",
+    "kubernetes-debug",
+    "kubernetes-object-basics",
+    "kubernetes-workload-diagnose",
+    "loki-logql-basics",
+    "loki-query-tool",
+    "observability-health-query",
+    "on-demand-runtime-inspection",
+    "prometheus-query-tool",
+    "promql-basics",
+    "release-impact-analysis",
+    "release-impact-analyze",
+    "runtime-service-inspection",
+    "scheduled-entry",
+    "scheduled-runtime-inspection",
+    "secret-redaction",
+    "security-event-detection",
+    "service-risk-summary",
+    "skill-policy-gate",
+    "webhook-entry",
+]
+
+
 def load_yaml(path: Path) -> dict:
     data = yaml.safe_load(path.read_text(encoding="utf-8"))
     if not isinstance(data, dict):
@@ -67,67 +106,18 @@ def main() -> int:
     assert "Never switch profiles" in soul
     assert "Never execute restart" in soul
 
-    required_layers = {
-        "L0": PROFILE / "skills/devops/basics",
-        "L1": PROFILE / "skills/devops/tool-contracts",
-        "L2": PROFILE / "skills/devops/capabilities",
-        "L3": PROFILE / "skills/devops/orchestration",
-        "L4": PROFILE / "skills/devops/governance",
-        "L5": PROFILE / "skills/devops/entry",
-        "subagents": PROFILE / "skills/devops/specs/subagents",
-        "profiles": PROFILE / "skills/devops/specs/profiles",
-    }
-    for layer, path in required_layers.items():
-        assert path.exists(), f"missing layered skills path: {layer} {path}"
-        assert any(path.rglob("*")), f"empty layered skills path: {layer} {path}"
+    # 自包含扁平技能:每个技能存在且 frontmatter 含 name/description。
+    for name in FLAT_SKILLS:
+        skill_path = PROFILE / "skills" / name / "SKILL.md"
+        assert skill_path.exists(), f"missing flat skill: {skill_path}"
+        meta = load_skill(skill_path)
+        assert meta.get("name"), f"skill missing name: {skill_path}"
+        assert meta.get("description"), f"skill missing description: {skill_path}"
 
-    domain = load_yaml(PROFILE / "skills/devops/governance/domains/intlsms-runtime-inspection.yaml")
-    assert domain["profile"] == "observability"
-    assert domain["allowed_autonomy"] == ["observe", "recommend"]
-    assert set(domain["environments"]) == {"prod", "test"}
-    assert domain["environments"]["prod"]["observability"]["prometheus"]["endpoint_env"] == "OBSERVE_PROMETHEUS_BASE_URL_PROD"
-    assert domain["environments"]["test"]["observability"]["loki"]["endpoint_env"] == "OBSERVE_LOKI_BASE_URL_TEST"
+    # 安装即拷贝 skills/ 整个目录:不应再有 devops 空壳嵌套结构。
+    assert not (PROFILE / "skills/devops").exists(), "skills/devops shell must be removed"
 
-    profile_spec = load_yaml(PROFILE / "skills/devops/specs/profiles/observability.yaml")
-    assert profile_spec["name"] == "observability"
-    assert "observability-agent" in profile_spec["subagents"]
-    assert profile_spec["allowed_skills"]["L5"] == ["chat-ops-entry", "scheduled-entry"]
-
-    l1_catalog = load_yaml(PROFILE / "skills/devops/tool-contracts/catalog.yaml")
-    assert l1_catalog["layer"] == "L1"
-    assert {item["name"] for item in l1_catalog["skills"]} == {
-        "prometheus-query-tool",
-        "loki-query-tool",
-        "k8s-readonly-tool",
-    }
-
-    entry_catalog = load_yaml(PROFILE / "skills/devops/entry/catalog.yaml")
-    assert entry_catalog["layer"] == "L5"
-    assert {item["name"] for item in entry_catalog["skills"]} == {"chat-ops-entry", "scheduled-entry"}
-
-    required_skills = [
-        PROFILE / "skills/devops/basics/promql-basics/SKILL.md",
-        PROFILE / "skills/devops/basics/loki-logql-basics/SKILL.md",
-        PROFILE / "skills/devops/basics/kubectl-basics/SKILL.md",
-        PROFILE / "skills/devops/basics/kubernetes-object-basics/SKILL.md",
-        PROFILE / "skills/devops/tool-contracts/prometheus-query-tool/SKILL.md",
-        PROFILE / "skills/devops/tool-contracts/loki-query-tool/SKILL.md",
-        PROFILE / "skills/devops/tool-contracts/k8s-readonly-tool/SKILL.md",
-        PROFILE / "skills/devops/capabilities/observability-health-query/SKILL.md",
-        PROFILE / "skills/devops/capabilities/kubernetes-debug/SKILL.md",
-        PROFILE / "skills/devops/orchestration/intlsms-runtime-inspection/SKILL.md",
-        PROFILE / "skills/devops/governance/skill-policy-gate/SKILL.md",
-        PROFILE / "skills/devops/governance/audit-trail/SKILL.md",
-        PROFILE / "skills/devops/governance/secret-redaction/SKILL.md",
-        PROFILE / "skills/devops/entry/chat-ops-entry/SKILL.md",
-        PROFILE / "skills/devops/entry/scheduled-entry/SKILL.md",
-    ]
-    for path in required_skills:
-        skill = load_skill(path)
-        assert skill["name"]
-        assert skill["description"]
-
-    print("observability_query_distribution_ok")
+    print("observability_distribution_ok")
     return 0
 
 
