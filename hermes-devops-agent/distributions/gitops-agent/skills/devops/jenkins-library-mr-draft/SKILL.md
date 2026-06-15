@@ -12,6 +12,8 @@ metadata:
 
 # Jenkins Library MR Draft
 
+> Deprecated: use `jenkins-change-orchestration` for new catalog/profile references. This skill is kept only for compatibility during migration.
+
 ## Goal
 
 Prepare a reviewable Jenkins shared-library or Jenkinsfile change draft for `jenkins-pipeline`. This skill does not trigger Jenkins builds.

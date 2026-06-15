@@ -28,3 +28,9 @@ env_requires:
   - name: ARGOCD_TOKEN
     description: "ArgoCD API token"
     required: false
+distribution_owned:
+  - SOUL.md
+  - config.yaml
+  - mcp.json
+  - cron/
+  - skills/devops/

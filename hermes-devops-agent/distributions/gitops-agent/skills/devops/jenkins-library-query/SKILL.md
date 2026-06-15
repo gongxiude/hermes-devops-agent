@@ -12,6 +12,8 @@ metadata:
 
 # Jenkins Library Query
 
+> Deprecated: use `jenkins-library-inspect` for new catalog/profile references. This skill is kept only for compatibility during migration.
+
 ## Goal
 
 Answer read-only questions about Jenkins shared-library and pipeline behavior stored in `jenkins-pipeline`.

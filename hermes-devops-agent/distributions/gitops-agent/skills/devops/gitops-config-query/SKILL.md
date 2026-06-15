@@ -12,6 +12,8 @@ metadata:
 
 # GitOps Config Query
 
+> Deprecated: use `gitops-config-locate` for new catalog/profile references. This skill is kept only for compatibility during migration.
+
 ## Goal
 
 Answer read-only questions about Kubernetes desired state stored in `yuexin-infra`.

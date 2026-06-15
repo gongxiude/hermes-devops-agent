@@ -1,65 +1,63 @@
-layers:
-  L0:
-    skills:
-      - name: jenkins-basics
-        path: jenkins-basics/SKILL.md
-      - name: argocd-basics
-        path: argocd-basics/SKILL.md
-      - name: codeup-basics
-        path: codeup-basics/SKILL.md
-      - name: kubectl-basics
-        path: kubectl-basics/SKILL.md
-      - name: kubernetes-object-basics
-        path: kubernetes-object-basics/SKILL.md
-  L1:
-    skills:
-      - name: jenkins-readonly-tool
-        path: jenkins-readonly-tool/SKILL.md
-      - name: argocd-query-tool
-        path: argocd-query-tool/SKILL.md
-      - name: git-codeup-readonly-tool
-        path: git-codeup-readonly-tool/SKILL.md
-      - name: git-command-workflow
-        path: git-command-workflow/SKILL.md
-    catalogs: []
-  L2:
-    skills:
-      - name: jenkins-library-query
-        path: jenkins-library-query/SKILL.md
-      - name: gitops-config-query
-        path: gitops-config-query/SKILL.md
-      - name: release-impact-analysis
-        path: release-impact-analysis/SKILL.md
-  L3:
-    skills:
-      - name: jenkins-library-mr-draft
-        path: jenkins-library-mr-draft/SKILL.md
-      - name: gitops-mr-draft
-        path: gitops-mr-draft/SKILL.md
-      - name: software-delivery-query
-        path: software-delivery-query/SKILL.md
-      - name: software-delivery-draft
-        path: software-delivery-draft/SKILL.md
-  L4:
-    skills:
-      - name: skill-policy-gate
-        path: skill-policy-gate/SKILL.md
-      - name: audit-trail
-        path: audit-trail/SKILL.md
-      - name: secret-redaction
-        path: secret-redaction/SKILL.md
-    domains:
-      - name: gitops-agent-domain
-        path: specs/domains/gitops-agent-domain.yaml
-  L5:
-    skills:
-      - name: chat-ops-entry
-        path: chat-ops-entry/SKILL.md
-      - name: scheduled-entry
-        path: scheduled-entry/SKILL.md
-      - name: webhook-entry
-        path: webhook-entry/SKILL.md
-    catalogs: []
+categories:
+  basics:
+    - git-command-basics
+    - kustomize-basics
+    - kubectl-basics
+    - kubernetes-object-basics
+    - jenkins-basics
+    - argocd-basics
+    - codeup-basics
+    - promql-basics
+    - loki-logql-basics
+    - grafana-basics
+    - alertmanager-basics
+    - aliyun-basics
+
+  tool_contracts:
+    - git-command-workflow
+    - git-codeup-readonly-tool
+    - jenkins-readonly-tool
+    - argocd-query-tool
+    - k8s-readonly-tool
+    - prometheus-query-tool
+    - loki-query-tool
+    - aliyun-readonly-tool
+    - release-gate-tool
+    - release-executor-tool
+
+  workflows:
+    - gitops-config-locate
+    - kustomize-render
+    - jenkins-library-inspect
+    - release-impact-analyze
+    - runtime-service-inspection
+    - kubernetes-workload-diagnose
+    - observability-health-query
+    - scheduled-runtime-inspection
+    - on-demand-runtime-inspection
+    - gitops-mr-draft-orchestration
+    - jenkins-change-orchestration
+    - software-delivery-change-orchestration
+
+  contexts:
+    - skill-policy-gate
+    - audit-trail
+    - secret-redaction
+    - intlsms-domain-context
+    - yuexin-infra-domain-context
+    - jenkins-pipeline-domain-context
+
+deprecated:
+  gitops-config-query: gitops-config-locate
+  gitops-mr-draft: gitops-mr-draft-orchestration
+  jenkins-library-query: jenkins-library-inspect
+  jenkins-library-mr-draft: jenkins-change-orchestration
+  software-delivery-query: software-delivery-change-orchestration
+  software-delivery-draft: software-delivery-change-orchestration
+  release-impact-analysis: release-impact-analyze
+  kubernetes-debug: kubernetes-workload-diagnose
+  intlsms-runtime-inspection: scheduled-runtime-inspection + intlsms-domain-context
+
 specs:
   subagents:
     - name: jenkins-pipeline

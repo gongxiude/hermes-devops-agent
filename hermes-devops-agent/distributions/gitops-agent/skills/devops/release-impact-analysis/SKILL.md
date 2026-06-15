@@ -12,6 +12,8 @@ metadata:
 
 # Release Impact Analysis
 
+> Deprecated: use `release-impact-analyze` for new catalog/profile references. This skill is kept only for compatibility during migration.
+
 ## 目标
 
 对一次发布或一组变更窗口做影响分析，回答"什么时候发了什么、落到了哪里、随后出现了什么异常"。

@@ -1,7 +1,7 @@
 ---
 name: kanban-route
 description: Parse incoming Feishu messages, reject non-DevOps requests, and route to the correct specialist profile via Kanban. Handles single-task, fan-out, and pipeline (parent-child) patterns. Replaces intent-parse — no pre-step required.
-version: 1.2.0
+version: 1.3.0
 platforms: [linux, macos, windows]
 environments: [kanban]
 metadata:
@@ -31,7 +31,7 @@ metadata:
 | `context.service` | 从消息中提取服务名（如 `intlsms`、`gateway`） |
 | `context.environment` | 从消息提取；未提及时默认 `prod` |
 | `context.priority` | 命中紧急关键词 → `urgent`，否则 `normal` |
-| `context.reply_target` | 来源 chat_id |
+| `context.reply_target` | 来源 chat_id，**仅当本任务结果需直达用户时填**（单任务、fan-in 汇总任务、pipeline 末任务）；fan-out 子任务和 pipeline 上游任务省略。见下「reply_target 设置规则」 |
 
 ### 紧急关键词（命中任意一个 → `priority = urgent`）
 
@@ -190,7 +190,7 @@ class Context(TypedDict):
     service: str                          # e.g. "gateway", "intlsms"
     environment: Literal["prod", "test"]
     priority: Literal["normal", "urgent"]
-    reply_target: str                     # 飞书 chat_id，结果回传
+    reply_target: NotRequired[str]        # 飞书 chat_id，结果回传；仅汇总/末任务携带（见「reply_target 设置规则」）
 
 
 class DevOpsAgentTask(TypedDict):
@@ -217,7 +217,7 @@ t1 = kanban_create(
         "type": "metrics-query",
         "trigger": {"source": "user", "sourceId": "oc_xxx", "timestamp": ts},
         "context": {"actor": "ou_xxx", "service": "gateway", "environment": "prod",
-                    "priority": "normal", "reply_target": "oc_xxx"},
+                    "priority": "normal", "reply_target": "oc_xxx"},  # 单任务：直达用户，携带 reply_target
         "payload": {"raw_request": "查看当前生产环境 gateway 服务的内存和CPU", "window": "30m"},
     }),
     skills=["prometheus-query-tool", "promql-basics"],
@@ -234,7 +234,7 @@ t2 = kanban_create(
         "type": "gitops-manifest-draft",
         "trigger": {"source": "user", "sourceId": "oc_xxx", "timestamp": ts},
         "context": {"actor": "ou_xxx", "service": "intlsms", "environment": "prod",
-                    "priority": "normal", "reply_target": "oc_xxx"},
+                    "priority": "normal", "reply_target": "oc_xxx"},  # 末任务：携带 reply_target；上游任务省略
         "payload": {"raw_request": "生成回滚 MR", "repo_prefix": "yuexin-infra",
                     "requested_change": "回滚 intlsms-gateway 到上一版本"},
     }),
@@ -253,7 +253,7 @@ t1 = kanban_create(
         "type": "metrics-query",
         "trigger": {"source": "user", "sourceId": "oc_xxx", "timestamp": ts},
         "context": {"actor": "ou_xxx", "service": "gateway", "environment": "prod",
-                    "priority": "normal", "reply_target": "oc_xxx"},
+                    "priority": "normal"},  # 子任务：不带 reply_target，不直达用户
         "payload": {"raw_request": "查生产指标", "window": "30m"},
     }),
     skills=["prometheus-query-tool", "promql-basics"],
@@ -266,7 +266,7 @@ t2 = kanban_create(
         "type": "ecs-inspection",
         "trigger": {"source": "user", "sourceId": "oc_xxx", "timestamp": ts},
         "context": {"actor": "ou_xxx", "service": "gateway", "environment": "prod",
-                    "priority": "normal", "reply_target": "oc_xxx"},
+                    "priority": "normal"},  # 子任务：不带 reply_target，不直达用户
         "payload": {"raw_request": "查 ECS 实例状态"},
     }),
     skills=["aliyun-readonly-tool", "aliyun-basics"],
@@ -279,7 +279,7 @@ t3 = kanban_create(
         "type": "health-check",
         "trigger": {"source": "user", "sourceId": "oc_xxx", "timestamp": ts},
         "context": {"actor": "ou_xxx", "service": "gateway", "environment": "prod",
-                    "priority": "normal", "reply_target": "oc_xxx"},
+                    "priority": "normal", "reply_target": "oc_xxx"},  # 汇总任务：唯一出口，携带 reply_target
         "payload": {"raw_request": "汇总风险报告"},
     }),
     skills=["observability-health-query"],
@@ -290,6 +290,23 @@ t3 = kanban_create(
 `parents=[...]` 控制提升时机——子任务在所有父任务到达 `done` 后自动从 `todo` 提升为 `ready`。
 
 **parent 链接必须在 `kanban_create` 时传入，不得先创建再用 `kanban_link` 补链。**
+
+---
+
+## reply_target 设置规则（飞书单一出口）
+
+飞书结果回传由 `kanban_reply` 插件按 task body 的 `reply_target` 自动订阅：**每个带 `reply_target` 的任务完成时都会独立推送一条飞书消息**。因此 `reply_target` 必须收敛到「唯一出口」，否则一次 fan-out 会刷屏多条互相矛盾的中间结果。
+
+| 模式 | 携带 `reply_target` 的任务 | 省略的任务 |
+|---|---|---|
+| 单任务 | 该任务本身 | — |
+| fan-out + 汇总 | **仅** fan-in 汇总任务（`parents=[...]`） | 全部子任务 |
+| pipeline（链式依赖） | **仅** 末任务 | 全部上游任务 |
+
+**硬约束：**
+- `reply_target` 存在 ⟺ 该任务结果直达用户。子任务/上游任务一律省略。
+- 汇总任务在 `kanban_create` 时携带 `reply_target`，并负责读取各 parent 结果后输出**单条**结构化报告（见 `result-notify`）。
+- 不得给 fan-out 的每个子任务都设 `reply_target`——这是"多出口刷屏"的根因。
 
 ---
 

@@ -12,6 +12,8 @@ metadata:
 
 # Software Delivery Query
 
+> Deprecated: use `software-delivery-change-orchestration` for new catalog/profile references. This skill is kept only for compatibility during migration.
+
 ## Goal
 
 Answer delivery-state questions using read-only evidence from Git / Codeup, ArgoCD, and Jenkins.

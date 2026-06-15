@@ -19,3 +19,9 @@ env_requires:
   - name: KUBECONFIG_READONLY_TEST
     description: "Read-only kubeconfig path for test cluster"
     required: false
+distribution_owned:
+  - SOUL.md
+  - config.yaml
+  - mcp.json
+  - cron/
+  - skills/devops/

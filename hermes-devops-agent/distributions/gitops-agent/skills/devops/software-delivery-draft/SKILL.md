@@ -12,6 +12,8 @@ metadata:
 
 # Software Delivery Draft
 
+> Deprecated: use `software-delivery-change-orchestration` for new catalog/profile references. This skill is kept only for compatibility during migration.
+
 ## Goal
 
 Prepare reviewable MR drafts for the two approved Software Delivery repositories. Git clone, fetch, pull, branch, commit, and push are executed as direct `git` commands in the Hermes terminal under `SOFTWARE_DELIVERY_WORKSPACE_ROOT`.

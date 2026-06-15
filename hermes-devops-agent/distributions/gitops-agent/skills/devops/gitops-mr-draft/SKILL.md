@@ -12,6 +12,8 @@ metadata:
 
 # GitOps MR Draft
 
+> Deprecated: use `gitops-mr-draft-orchestration` for new catalog/profile references. This skill is kept only for compatibility during migration.
+
 ## Goal
 
 Prepare a reviewable GitOps change draft for `yuexin-infra`. This skill creates a task worktree and prepares evidence for a Codeup MR; it does not sync ArgoCD or apply Kubernetes changes.

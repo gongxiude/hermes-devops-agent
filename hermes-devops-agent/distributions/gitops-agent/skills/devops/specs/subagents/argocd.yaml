@@ -1,12 +1,18 @@
 name: argocd
 role: ArgoCD desired-state and sync-status specialist
-allowed_skills:
-  - argocd-basics
-  - argocd-query-tool
-  - gitops-config-query
-  - release-impact-analysis
-  - audit-trail
-  - secret-redaction
+allowed_skill_categories:
+  basics:
+    - argocd-basics
+  tool_contracts:
+    - argocd-query-tool
+  workflows:
+    - gitops-config-locate
+    - release-impact-analyze
+  contexts:
+    - yuexin-infra-domain-context
+    - skill-policy-gate
+    - audit-trail
+    - secret-redaction
 allowed_mcp_servers:
   - argocd
 denied_tools:

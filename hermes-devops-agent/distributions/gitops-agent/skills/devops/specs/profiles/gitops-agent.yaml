@@ -6,35 +6,34 @@ runtime_boundary:
   previous_workspace_forbidden: /Users/gongxiude/Documents/my-world
   autonomy: [observe, recommend, draft]
   production_write: denied_without_approval
-allowed_skills:
-  L0:
+allowed_skill_categories:
+  basics:
+    - git-command-basics
+    - kustomize-basics
     - jenkins-basics
     - argocd-basics
     - codeup-basics
     - kubectl-basics
     - kubernetes-object-basics
-  L1:
+  tool_contracts:
+    - git-command-workflow
+    - git-codeup-readonly-tool
     - jenkins-readonly-tool
     - argocd-query-tool
-    - git-codeup-readonly-tool
-    - git-command-workflow
-  L2:
-    - jenkins-library-query
-    - gitops-config-query
-    - release-impact-analysis
-  L3:
-    - jenkins-library-mr-draft
-    - gitops-mr-draft
-    - software-delivery-query
-    - software-delivery-draft
-  L4:
+  workflows:
+    - gitops-config-locate
+    - kustomize-render
+    - jenkins-library-inspect
+    - release-impact-analyze
+    - gitops-mr-draft-orchestration
+    - jenkins-change-orchestration
+    - software-delivery-change-orchestration
+  contexts:
     - skill-policy-gate
     - audit-trail
     - secret-redaction
-  L5:
-    - chat-ops-entry
-    - scheduled-entry
-    - webhook-entry
+    - yuexin-infra-domain-context
+    - jenkins-pipeline-domain-context
 subagents:
   - jenkins-pipeline
   - argocd

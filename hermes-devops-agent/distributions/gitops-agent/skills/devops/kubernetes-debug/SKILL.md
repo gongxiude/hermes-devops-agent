@@ -12,6 +12,8 @@ metadata:
 
 # Kubernetes Debug
 
+> Deprecated: use `kubernetes-workload-diagnose` for new catalog/profile references. This skill is kept only for compatibility during migration.
+
 ## Overview
 
 Systematic toolkit for debugging Kubernetes clusters, workloads, networking, and storage with a deterministic, safety-first workflow.

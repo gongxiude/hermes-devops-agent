@@ -21,4 +21,9 @@ env_requires:
     required: true
   - name: LLM_RELAY_API_KEY
     description: "Internal LLM relay API key"
-    required: true
+    required: truedistribution_owned:
+  - SOUL.md
+  - config.yaml
+  - mcp.json
+  - cron/
+  - skills/devops/

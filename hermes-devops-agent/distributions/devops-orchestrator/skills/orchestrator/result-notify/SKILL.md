@@ -1,7 +1,7 @@
 ---
 name: result-notify
 description: Aggregate completed Kanban task results and post a structured summary back to the originating Feishu chat. Use after one or more Kanban tasks reach a terminal state (done / failed / blocked).
-version: 1.0.0
+version: 1.1.0
 platforms: [linux, macos, windows]
 environments: [kanban]
 metadata:
@@ -28,9 +28,15 @@ Kanban task 达到以下任一终态时触发：
 
 **多任务请求（fan-out / pipeline）等待所有叶子任务终态后统一汇总**，不在中间任务完成时提前发送。
 
-## reply_target 来源
+## reply_target 来源与单一出口不变量
 
 从 Kanban task body 的 `reply_target` 字段读取飞书 `chat_id`。不使用其他来源，不从内存或上下文猜测 chat_id。
+
+**单一出口不变量（与 `kanban-route` 配套）：**
+
+- fan-out 子任务、pipeline 上游任务 **不携带 `reply_target`，不单独推送飞书**。
+- 一次请求的飞书唯一出口是：单任务本身、fan-in 汇总任务、或 pipeline 末任务。
+- `kanban_reply` 插件按 `reply_target` 自动订阅推送——子任务省略 `reply_target` 即不会产生中间推送，避免一次 fan-out 刷屏多条互相矛盾的结果。
 
 ## 回传消息格式
 
@@ -65,7 +71,12 @@ Kanban task 达到以下任一终态时触发：
 
 ## 多任务汇总规则
 
-当一次请求产生多个 task 时（扇出或流水线），等待所有 task 终态后统一汇总：
+当一次请求产生多个 task 时（扇出或流水线），由**汇总任务（fan-in / 末任务）**统一汇总——它是唯一携带 `reply_target` 的任务。汇总任务必须：
+
+1. 通过 `kanban_show <parent_id>` 读取**每个** parent 的 `summary` 和 `metadata`。
+2. **数字对账**（reconcile）：对同一对象在各子任务/各数据源的计数做一致性校验，不一致必须标注冲突，不得各报各的（详见 `observability-health-query` / `scheduled-runtime-inspection` 的「对账步骤」）。
+3. **整体风险取最高**：`healthy < warning < critical < unknown` 中取最严重者；任一子任务因数据源不可用而降级，则整体不得 healthy。
+4. 输出**单条**结构化报告（不逐个子任务单独推送）。
 
 ```
 📋 任务汇总 — <原始请求摘要>
@@ -74,6 +85,7 @@ Kanban task 达到以下任一终态时触发：
 #<id2> ✅ <title2>：<一句话结论>
 #<id3> ❌ <title3>：<失败原因一句话>
 
+对账：<期望 N 服务 / M 关键，实际成功 X；冲突项或数据缺口若有则列出>
 整体风险：<取所有任务中最高风险等级>
 ```
 

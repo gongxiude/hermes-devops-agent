@@ -35,11 +35,11 @@ def main() -> int:
 
     config = load_yaml(PROFILE / "config.yaml")
     assert config["observability_query"]["supported_environments"] == ["prod", "test"]
+    # Test environment has no Loki data source, so loki-intlsms-test is not registered.
     assert set(config["mcp_servers"]) == {
         "prometheus-intlsms-prod",
         "prometheus-intlsms-test",
         "loki-intlsms-prod",
-        "loki-intlsms-test",
         "k8s-intlsms-prod",
         "k8s-intlsms-test",
     }

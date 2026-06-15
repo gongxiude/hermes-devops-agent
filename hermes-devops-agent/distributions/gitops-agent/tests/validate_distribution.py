@@ -61,7 +61,7 @@ def main() -> int:
     profile = load_yaml(ROOT / "skills/devops/specs/profiles/gitops-agent.yaml")
     assert profile["runtime_boundary"]["workspace_env"] == "SOFTWARE_DELIVERY_WORKSPACE_ROOT"
     assert profile["runtime_boundary"]["previous_workspace_forbidden"] == "/Users/gongxiude/Documents/my-world"
-    assert "git-command-workflow" in profile["allowed_skills"]["L1"]
+    assert "git-command-workflow" in profile["allowed_skill_categories"]["tool_contracts"]
     assert "git-workspace-draft-tool" not in str(profile)
     assert "git-workspace" not in profile.get("mcp_servers", [])
     assert "git_mcp_for_clone_fetch_pull_commit_push" in profile.get("denied", [])
