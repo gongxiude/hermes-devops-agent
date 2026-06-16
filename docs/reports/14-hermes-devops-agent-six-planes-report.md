@@ -4,7 +4,8 @@
 
 ## 全局视图
 
-Hermes DevOps Agent 不是"加了运维工具的 Chatbot"，而是一个**把不可信的模型输出和高权限基础设施操作隔离开**的分布式系统。它的核心问题不是"模型能不能写脚本"，而是"出错时谁来兜底"。
+
+本方案以 Hermes Agent 作为运维助手的运行底座。飞书 ChatOps 通过 Gateway 接入，告警、Webhook、Schedules 和工单事件按来源进入对应 profile(Agent)。把运维需要的能力统一收敛到 Hermes 的 Gateway、Profile、Skills、Tools、MCP 和 Hooks 体系内。
 
 整个系统拆成**六个互相协作但职责正交的平面**，每个平面有自己的强制层和失败模式：
 
@@ -30,15 +31,13 @@ Hermes DevOps Agent 不是"加了运维工具的 Chatbot"，而是一个**把不
                              │
 ┌────────────────────────────▼────────────────────────────────┐
 │                 4. 能力体系(Capability)                      │
-│  Skills: basics / tool_contracts / workflows / contexts      │
-│  Subagents (领域隔离执行,delegate_task)                      │
+│  Skills: assets / workflows / basics                        │
+│  Subagent Delegation (profile 内临时并行执行,delegate_task)  │
 └────────────────────────────┬────────────────────────────────┘
                              │
 ┌────────────────────────────▼────────────────────────────────┐
 │                5. 工具集成(Integration)                      │
-│  MCP Safe Wrappers (typed tools + schema + audit)            │
 │  Hermes Tools / MCP Servers                                  │
-│  Credential Broker (短 TTL 凭证) + Git Worktree 池           │
 │  CLI / DSL / 配置规范由 basics skills 提供                    │
 └────────────────────────────┬────────────────────────────────┘
                              │  ← 6 横切所有层
@@ -74,7 +73,7 @@ Hermes DevOps Agent 不是"加了运维工具的 Chatbot"，而是一个**把不
 
 ## Plane 2: 路由调度
 
-两条入口路径架构上**独立**——Kanban 只服务于 ChatOps 跨 profile 路由，事件驱动信号直接由领域 profile 自治消化，不绕 Board。
+路由调度分为两个入口， 一个入口来自飞书， 另外一个入口来自webhook/Schedules等。 
 
 ```text
 飞书 ChatOps           ──→  devops-orchestrator Gateway
@@ -88,10 +87,9 @@ Hermes DevOps Agent 不是"加了运维工具的 Chatbot"，而是一个**把不
 ```
 
 **两条路径的分工**：
-- **ChatOps 路径（经 Kanban）**：自然语言 → orchestrator 解析意图 → `kanban_create(assignee=...)` → dispatcher spawn 目标 profile worker → `kanban_complete` → 回传飞书。Kanban 在这里解决"自然语言意图 → 哪个 profile 处理"的路由问题。
+- **飞书路径（经 Kanban）**：自然语言 → orchestrator 解析意图 → `kanban_create(assignee=...)` → dispatcher spawn 目标 profile worker → `kanban_complete` → 回传飞书。Kanban 在这里解决"自然语言意图 → 哪个 profile 处理"的路由问题。
 - **事件驱动路径（不经 Kanban）**：告警 / Webhook / Cron / Ticket → 领域 profile 自有 gateway → profile 内部完整执行 → 结果回传飞书 / 工单。信号已经路由到目的地，无需再绕 Board。
 
-两条路径独立运行，但共用同一份 plugin 审计 hook，所有 tool call 都写入同一份 action trail。
 
 
 
@@ -100,7 +98,7 @@ Hermes DevOps Agent 不是"加了运维工具的 Chatbot"，而是一个**把不
 ```text
   飞书群 @Bot → devops-orchestrator Gateway
     → orchestrator 解析意图（需要 LLM 解析自然语言）
-    → kanban_create(assignee=software-delivery-draft, ...)
+    → kanban_create(assignee=gitops-agent, ...)
     → 飞书回复"已创建任务 #N"
 
   Dispatcher (15s tick) spawn software-delivery-draft:
@@ -119,17 +117,15 @@ Hermes DevOps Agent 不是"加了运维工具的 Chatbot"，而是一个**把不
 
 ```text
 Alertmanager webhook → observability profile 的 webhook gateway
-  → entry workflow 解析（结构化 JSON,无需 LLM）:
+  → 结构化 JSON解析（无需 LLM）:
         alert_name=IntlsmsHighErrorRate
         service=intlsms-gateway, env=prod
         severity=P1, error_rate=45%, window=5m
-  → context / policy 校验:
-        actor=alertmanager(system), scope=observe → allow
   → alert-triage workflow（profile 内部，同一进程）:
         ├─ prometheus_query(error_rate by route, 30m)
         ├─ loki_query("level=error", intlsms-gateway, 30m)
         └─ argocd_get_recent_syncs(intlsms-gateway, 1h)
-  → observability-health-query workflow 聚合:
+  → observability-query workflow 聚合:
         503 突增,集中在 send_sms_v2 路由
         5min 前 ArgoCD sync 引入新版本
   → audit-trail 写入:
@@ -139,7 +135,6 @@ profile 直接调用飞书 API → 故障群:
   "【P1】intlsms-gateway prod 错误率 45%
    疑似 5min 前 ArgoCD sync(send_sms_v2)引入
    证据 [audit_01HX...]"
-
 
 ```
 
@@ -170,7 +165,11 @@ custom_toolsets:
 
 ## Plane 3: **Agent Runtime**
 
-Profile 是**运行时状态隔离层**，不是安全沙箱。每个 profile 有独立 `HERMES_HOME`、`.env`、`SOUL`、`workspace`、`tool/MCP scope`。
+Profile 是 Hermes Agent 的运行时隔离单位，可以简单理解为一个Profile就是一个单独的agent。每个 profile 使用独立的 HERMES_HOME、.env、SOUL、workspace 和 tool/MCP scope，用于隔离配置、凭证、上下文、可用工具和工作目录。
+
+所有 profile 都放在同一个 monorepo 仓库里交付和维护。新增 profile、修改配置、调整 skills、变更工具权限或更新文档，都必须走 Git 提交、Review、合并和发布流程，不能在线上手改、口头同步或绕过仓库。
+
+Hermes Agent 原生能力未覆盖、但 DevOps Agent 运行时必须具备的能力，通过 Plugin 进行扩展。Plugin 负责承载项目级定制逻辑，包括 gateway 前置校验、tool 调用前后的 policy gate、审计事件补充、敏感信息脱敏、Kanban 回传订阅、slash commands 以及少量受控自定义工具。这样扩展能力仍然留在 Hermes 的运行时生命周期内，而不是散落在外部脚本或旁路服务里。
 
 ```text
 ┌─────────────────────────────────────────────────────┐
@@ -195,19 +194,69 @@ Profile 是**运行时状态隔离层**，不是安全沙箱。每个 profile �
 └─────────────────────────────────────────────────────┘
 ```
 
+monorepo 的目录结构如下
+
+```
+.
+├── distributions
+│   ├── devops-orchestrator
+│   ├── gitops-agent
+│   ├── infra-agent
+│   └── observability
+├── docs
+│   ├── implementation
+│   ├── mcp-setup.md
+│   ├── reports
+│   └── research
+├── mcp-servers
+│   ├── aliyun
+│   ├── argocd
+│   ├── ... ... 
+│   └── ... ... 
+├── plugins
+│   └── devops_agent
+├── README.md
+└── README.md
+
+```
 
 
-###  profile + subagent的组合架构
+Profile 安装与更新常用命令如下：
+
+```bash
+# 从 monorepo 本地 distribution 安装 profile
+hermes profile install ./distributions/gitops-agent
+
+# 按 profile 记录的 distribution 来源拉取并更新
+hermes profile update gitops-agent -y
+
+# 查看 profile 当前安装来源、版本和 manifest 信息
+hermes profile info gitops-agent
+```
+
+
+### Profile + Kanban Dispatch + Subagent Delegation
+
+Profile 是长期运行时边界，Subagent 是一次任务里的临时执行单元，两者不是同一个层级。DevOps Agent 的运行时拆成三层处理：
+
+| 层级 | Hermes 落点 | 解决什么问题 | 边界 |
+|---|---|---|---|
+| Profile | `hermes profile` | 隔离入口、配置、凭证、workspace、tools、MCP scope、skills、memory | 长期存在，1 个 profile 对应 1 个运行时角色 |
+| Kanban Dispatch | Gateway / Kanban / dispatcher | 把 ChatOps 自然语言任务分派给目标 profile，并跟踪状态、回收结果 | 跨 profile 分派只走任务，不在对话内部静默切换权限 |
+| Subagent Delegation | `delegate_task` | 在一个 profile 内把复杂任务拆给临时子 Agent 并行执行 | 同步执行，只返回 summary，不做持久 worker、不做跨 profile 调度 |
+
+Hermes 官方的 subagent 能力是 **delegation**：父 Agent 通过 `delegate_task` 临时拉起子 Agent，子 Agent 使用独立 conversation、独立 terminal session 和受限 toolsets。父 Agent 不接收子 Agent 的中间工具调用，只接收最终 summary。父任务被中断时，子任务也会被取消。
+
 
 1. devops-orchestrator
 
 ```
   Profile: devops-orchestrator
-    ├── agentic-intent-parser
+    ├── intent-parser workflow
     │     └── 解析飞书自然语言：actor / service / env / request_type
-    ├── agentic-task-router
+    ├── task-router workflow
     │     └── 选择目标 profile 并 kanban_create
-    └── agentic-result-summarizer
+    └── result-summarizer delegation worker
           └── 汇总 worker 输出并回传飞书 / 故障群
 ```
 
@@ -215,15 +264,15 @@ Profile 是**运行时状态隔离层**，不是安全沙箱。每个 profile �
 
 ```
   Profile: infra-agent
-    ├── alicloud-analyst
+    ├── alicloud-analysis delegation worker
     │     └── 阿里云 ECS / RDS / VPC / OSS / RAM 资源、容量、配额巡检
-    ├── kubernetes-cluster-analyst
+    ├── kubernetes-diagnosis delegation worker
     │     └── ACK / K8s 集群、Pod、Service、Ingress 状态查询与诊断
-    ├── network-analyst
+    ├── network-diagnosis delegation worker
     │     └── VPC / SLB / CEN / DNS 网络拓扑与连通性查询
-    ├── alicloud-security-analyst
+    ├── alicloud-security delegation worker
     │     └── RAM 权限、ActionTrail、暴露面合规检查
-    └── alicloud-cost-analyst
+    └── alicloud-cost delegation worker
           └── 成本分析、闲置资源识别、规格优化建议
 ```
 
@@ -231,25 +280,25 @@ Profile 是**运行时状态隔离层**，不是安全沙箱。每个 profile �
 
 ```
   Profile: gitops-agent
-    ├── jenkins-pipeline
+    ├── jenkins-pipeline delegation worker
     │     └── Jenkins job / build / shared-library 查询与修改草稿
-    ├── argocd
+    ├── argocd delegation worker
     │     └── ArgoCD app / sync / rollback 状态与已审批操作
-    └── gitops
+    └── gitops delegation worker
           └── Kustomize / Helm overlay 定位、render、base 与 overlay 对比
 ```
 
-  4. observability 
+4. observability 
 
 ```
   Profile: observability
-    ├── prometheus-metrics-query
+    ├── prometheus-metrics delegation worker
     │     └── Prometheus 指标查询、SLO 评估、告警来源溯源
-    ├── loki-logs-query
+    ├── loki-logs delegation worker
     │     └── Loki 日志聚类、错误模式识别、关联分析
-    ├── grafana
+    ├── grafana delegation worker
     │     └── Grafana dashboard、告警规则定位与可视化查询
-    └── alert-router
+    └── alert-router workflow
           └── Alertmanager / Grafana / 云监控 webhook 接入、去重、聚合、补充上下文
 ```
 
@@ -259,148 +308,93 @@ Profile 是**运行时状态隔离层**，不是安全沙箱。每个 profile �
 
 这一层解决一个问题：**Agent 如何把运维请求变成可控、可审计、可复用的执行能力。**
 
-Hermes skills 运行时是 flat namespace。当前方案不再维护多层 skill 目录，统一收敛为 4 类 skills。
-
 ```text
 ┌──────────────────────────────────────────────────────────────┐
 │                  Skills 实现分类（仓库真实维护）               │
 ├──────────────────────────────────────────────────────────────┤
-│ basics          基础工具知识：git / kubectl / kustomize / promql │
-│ tool_contracts  工具安全契约：MCP、terminal、typed tool 调用边界 │
-│ workflows       可复用流程：查询、诊断、巡检、MR 草稿、发布分析 │
-│ contexts        业务上下文与治理：服务信息、仓库信息、审计脱敏  │
+│ 业务层(assets)       服务、环境、任务识别、治理边界、脱敏要求      │
+│ 能力层(workflows)    查询、诊断、巡检、变更草稿、工具调用边界      │
+│ 基础工具层(basics)    git / kubectl / kustomize / promql 等语法    │
 └──────────────────────────────────────────────────────────────┘
 ```
 
-### 四类 skills 的职责
+### 三类 skills 的职责
 
-| 类别 | 放什么 | 不放什么 | 示例 |
-|---|---|---|---|
-| `basics` | CLI / DSL / 配置语法 | 业务服务名、生产权限 | `git-command-basics`、`kustomize-basics`、`promql-basics` |
-| `tool_contracts` | MCP / terminal / typed tool 的允许动作、禁止动作、审计字段 | 业务流程编排 | `prometheus-query-tool`、`k8s-readonly-tool`、`git-command-workflow` |
-| `workflows` | 可复用运维流程 | 写死单一业务服务 | `runtime-service-inspection`、`gitops-config-locate`、`kustomize-render` |
-| `contexts` | 业务上下文、仓库上下文、治理规则 | tool 权限 | `intlsms-domain-context`、`yuexin-infra-domain-context`、`audit-trail` |
+| 层级 | 仓库分类 | 放什么 | 不放什么 | 示例 |
+|---|---|---|---|---|
+| 业务层 | `assets` | 业务入口、服务识别、环境识别、任务分类、仓库入口、治理边界、脱敏要求 | 具体执行步骤、tool 授权 | `intl-sms-knowledge`：国际短信服务、环境、仓库、负责人、告警入口、生产边界 |
+| 能力层 | `workflows` | 可复用运维流程、MCP / terminal / typed tool 的调用边界、允许动作、禁止动作、审计字段 | 写死单一业务服务、生产凭证 | 国际短信错误率告警命中 `anomaly-detection`；健康巡检命中 `observability-inspection`；容量评估命中 `capacity-forecast` |
+| 基础工具层 | `basics` | CLI / DSL / 配置语法 | 业务服务名、生产权限 | 国际短信可观测查询依赖 `promql-basics`、`loki-logql-basics`、`alertmanager-basics`、`kubectl-basics` |
 
-### 各类 skills 当前清单
+### 各类 skills 目标清单
 
-清单以 `hermes-devops-agent/skills/catalog.yaml` 的 `categories` 为准（运行时真实维护的四类）。
+目标维护口径只保留三类：`assets`、`workflows`、`basics`。当前仓库中历史 `contexts` 目录的服务上下文、治理规则和脱敏规则收敛到 `assets`；历史 `tool_contracts` 目录的工具调用边界收敛到 `workflows`。
 
-| 类别 | 当前 skills |
+| 类别 | 目标 skills |
 |---|---|
-| `basics` (12) | `git-command-basics`、`kustomize-basics`、`kubectl-basics`、`kubernetes-object-basics`、`jenkins-basics`、`argocd-basics`、`codeup-basics`、`promql-basics`、`loki-logql-basics`、`grafana-basics`、`alertmanager-basics`、`aliyun-basics` |
-| `tool_contracts` (10) | `git-command-workflow`、`git-codeup-readonly-tool`、`jenkins-readonly-tool`、`argocd-query-tool`、`k8s-readonly-tool`、`prometheus-query-tool`、`loki-query-tool`、`aliyun-readonly-tool`、`release-gate-tool`、`release-executor-tool` |
-| `workflows` (12) | `gitops-config-locate`、`kustomize-render`、`jenkins-library-inspect`、`release-impact-analyze`、`runtime-service-inspection`、`kubernetes-workload-diagnose`、`observability-health-query`、`scheduled-runtime-inspection`、`on-demand-runtime-inspection`、`gitops-mr-draft-orchestration`、`jenkins-change-orchestration`、`software-delivery-change-orchestration` |
-| `contexts` (6) | `skill-policy-gate`、`audit-trail`、`secret-redaction`、`intlsms-domain-context`、`yuexin-infra-domain-context`、`jenkins-pipeline-domain-context` |
+| `assets` | `intl-sms-knowledge`、`datacenter-knowledge`、`audit-trail`、`secret-redaction` |
+| `workflows` | `gitops-workflow`、`jenkins-workflow`、`observability-inspection`、`kubernetes-workload-diagnose`、`anomaly-detection`、`capacity-forecast`、`security-event-detection`、`service-risk-summary` |
+| `basics` | `git-basics`、`kustomize-basics`、`kubectl-basics`、`kubernetes-object-basics`、`argocd-basics`、`promql-basics`、`loki-logql-basics`、`alertmanager-basics` |
 
-业务对象只进入 `contexts`（如国际短信信息放入 `intlsms-domain-context`）；`workflows` 保持通用，与不同 context 组合复用。
+业务对象先进入业务层（`assets`）。业务层负责把请求识别成明确任务：服务是谁、环境是什么、告警入口在哪里、要查指标还是查日志、是否涉及生产、需要哪些治理规则。识别完成后再进入匹配的能力层（`workflows`）；能力层保持通用，不写死单一业务服务，通过不同业务层输入组合复用。
 
 ### 调用关系
 
-最小执行链：profile 确定后，由 workflow 选流程、context 注入业务上下文、tool_contracts 调受控工具、basics 提供语法。
+最小执行链：profile 确定后，先进入业务层做业务识别和任务分类；匹配到对应能力层流程后，能力层读取需要的 skills 并调用受控工具；最后由基础工具层提供命令、DSL 和配置语法。
 
 ```text
 用户请求
   ↓
 profile 已经确定
   ↓
-workflow 选择执行流程
+业务层(assets) 识别业务对象 + 区分任务类型
   ↓
-context 提供业务上下文
+能力层(workflows) 选择执行流程
   ↓
-tool_contracts 调用受控工具
+能力层(workflows) 调用 MCP / terminal / typed tool
   ↓
-basic 提供命令 / DSL / 配置语法
-  ↓
-输出结果 + audit trail
-```
-
-四类 skills 在一次任务中是**纵向分层**协作的——entry 负责请求标准化，orchestration 负责编排，functional workflow 负责执行，context 负责业务上下文与治理，tool_contracts 负责受控工具，basics 负责语法：
-
-```text
-entry workflow          请求标准化（actor / service / env / request_type）
-  ↓
-orchestration workflow  编排子任务（fan-out / pipeline / human-in-the-loop）
-  ↓
-functional workflow     执行诊断 / 查询 / 巡检 / 草稿 / 发布分析
-  ↓
-context                 注入业务上下文 + 治理规则 + 脱敏要求
-  ↓
-tool_contracts          受控调用 MCP / terminal / typed tool
-  ↓
-basics                  提供命令 / DSL / 配置语法
+基础工具层(basics) 提供命令 / DSL / 配置语法
   ↓
 输出结果 + audit trail
 ```
 
-Kanban 统一入口下，`devops-orchestrator` 只解析意图并建任务；worker profile 收到 task 后在自身 tool/MCP scope 内完成上述分层执行：
-
-```text
-飞书消息 → devops-orchestrator
-  [chat-ops-entry workflow] 解析请求
-  → kanban_create(assignee=<specialist>)
-
-specialist worker spawn:
-  [skill-policy-gate context] 校验 actor / scope
-  [orchestration workflow]    编排子任务
-  [functional workflow]       执行诊断 / 查询
-  [tool_contracts]            调用 MCP / terminal / typed tool
-  [basics]                    提供语法知识
-  → kanban_complete(summary, metadata)
-```
-
-### 示例：查询国际短信 gateway 测试环境配置
+### 示例：分析国际短信 prod 错误率告警
 
 ```text
 用户请求：
-  当前国际短信 gateway 测试环境 resource 配置是多少
+  国际短信 prod 错误率突然升高，帮我看下影响范围和可能原因
 
 执行链路：
-  gitops-agent profile
-    → gitops-config-locate
-    → intlsms-domain-context / yuexin-infra-domain-context
-    → git-command-workflow
-    → git-command-basics / kustomize-basics
-    → kustomize-render
+  observability profile
+    → intl-sms-knowledge
+    → 识别任务类型：生产错误率异常 / 影响范围评估
+    → anomaly-detection
+    → observability-health-query
+    → kubernetes-workload-diagnose
+    → promql-basics / loki-logql-basics / alertmanager-basics / kubectl-basics
 
 输出：
-  最终生效 resource 配置
-  来源文件
-  渲染依据
+  错误率变化窗口
+  受影响 route / pod / namespace
+  关联日志模式
+  近期告警与发布线索
+  下一步处置建议
   审计记录
 ```
 
 ### 目录标准与 Distribution 同步
 
-Hermes skills 原生是 flat namespace，**实施目录不按分类拆物理目录**——分类只活在 `catalog.yaml`，落盘是每个 skill 一个独立目录：
+Hermes skills 原生是 flat namespace。当前仓库以各 distribution 内的 `skills/` 作为落盘入口；目标维护口径按 `assets / workflows / basics` 三类收敛，分类目录只服务于交付组织，不改变 Hermes 运行时的 flat namespace：
 
 ```text
-skills/
-  <skill-name>/
-    SKILL.md
-    references/   # 可选，仅放真实可复用参考资料
-    examples/     # 可选，仅放真实业务 / 工程示例
-    scripts/      # 可选，仅放可执行、可验证的辅助脚本
+distributions/<profile>/skills/
+  assets/
+    <skill-name>/SKILL.md
+  workflows/
+    <skill-name>/SKILL.md
+  basics/
+    <skill-name>/SKILL.md
 ```
-
-`skills/` 是**唯一源码层**，installable distribution 里的 `skills/devops/` 是它的**同构镜像副本**，不维护第二套手写结构。改完 shared skills 必须覆盖同步到 distribution 再跑 validator：
-
-```text
-skills/                                  # 源码层（唯一真源）
-  └─ 覆盖同步 →
-distributions/<profile>/skills/devops/   # 安装层镜像副本
-```
-
-> `gitops-agent` distribution 例外排除 `git-workspace-draft-tool`：它的 Git clone/fetch/pull/commit/push 走 direct Git CLI，不经 MCP draft 工具。
-
-### 落地规则
-
-| 规则 | 执行口径 |
-|---|---|
-| skills 目录 | `skills/<skill-name>/SKILL.md`（flat namespace，详见上「目录标准」） |
-| catalog | 只维护 `basics`、`tool_contracts`、`workflows`、`contexts` |
-| 业务对象 | 只放到 `contexts` |
-| 通用流程 | 放到 `workflows`，通过不同 context 复用 |
-| 权限 | 不由 skill 授权，由 profile + MCP scope + policy hook 控制 |
 
 ---
 
@@ -426,7 +420,6 @@ distributions/<profile>/skills/devops/   # 安装层镜像副本
 prometheus-intlsms-prod
 prometheus-intlsms-test
 loki-intlsms-prod
-loki-intlsms-test
 k8s-intlsms-prod
 k8s-intlsms-test
 ```
@@ -449,40 +442,53 @@ mcp_servers:
 
 ### 6.1 Plugin 职责
 
-当前 `plugins/devops_agent/` 已不再只是预留目录。仓库中已有 `plugin.yaml`、`__init__.py`、`policy.py`、`audit.py`、`redaction.py`、`guardrails.py`、`kanban_reply.py` 和 `commands.py`。`plugin.yaml` 版本为 `0.4.0`，声明了 NeMo Guardrails input rail、policy gate、audit trail、secret redaction、Kanban 到飞书回传订阅、治理工具、slash commands 和 CLI command。
+Hermes plugin 可用于扩展 tools、hooks、slash commands、CLI commands、skills 和数据文件；也可以通过 hooks 介入 Gateway、工具调用、LLM 调用、session、消息处理等生命周期。
 
-注册面以 `plugins/devops_agent/__init__.py` 为准：
+### 6.2 官方能力到运维场景的映射
 
-```python
-def register(ctx):
-    ctx.register_hook("pre_gateway_dispatch",  _guardrails.pre_gateway_dispatch)
-    ctx.register_hook("pre_tool_call",         _pre_tool_call)
-    ctx.register_hook("post_tool_call",        _post_tool_call)
-    ctx.register_hook("transform_tool_result", _transform_tool_result)
-
-    ctx.register_tool("devops_policy_decide", toolset="devops_governance", ...)
-    ctx.register_tool("devops_audit_emit",    toolset="devops_governance", ...)
-
-    ctx.register_command("devops_status", ...)
-    ctx.register_command("devops_audit", ...)
-    ctx.register_cli_command(name="devops", ...)
-```
-
-### 6.2 Plugin 能力清单
-
-| 能力 | 当前实现文件 | 作用 | 当前状态 |
+| Hermes plugin 能力 | 运维助手用途 | 放在 plugin 的原因 | 不放在 plugin 的内容 |
 |---|---|---|---|
-| Input rail | `guardrails.py` + `pre_gateway_dispatch` | 飞书消息进入 worker 前做 jailbreak / prompt injection 初筛 | 已有代码，需运行时联调 |
-| Policy gate | `policy.py` + `pre_tool_call` | 对工具名中的生产写模式进行拦截；非 `governance-breakglass` profile 不允许调用匹配的生产写工具 | 已有代码，需验证 hook 阻断语义 |
-| Audit trail | `audit.py` + `post_tool_call` | 写结构化 action trail | 已有代码，需验证运行时日志路径和回放 |
-| Redaction | `redaction.py` + `transform_tool_result` | 脱敏 tool output，防止 secret 进入模型上下文 | 已有代码，需补样例测试 |
-| Kanban 回传订阅 | `kanban_reply.py` + `post_tool_call(kanban_create)` | 解析 task body 中的 `reply_target`，写入 Kanban notify subscription | 已有代码，需飞书端 smoke |
-| Governance tools | `devops_policy_decide`、`devops_audit_emit` | 显式策略检查和手工审计事件 | 已注册 |
-| Slash / CLI | `commands.py` | `/devops_status`、`/devops_audit`、`hermes devops ...` | 已有代码，需本机 CLI 验证 |
+| Tools | 暴露 `policy_decide`、`audit_emit`、`approval_check`、`evidence_pack` 这类治理工具 | 这些工具是运行时通用能力，多个 profile 都要复用 | 不封装 kubectl、Jenkins、ArgoCD 的真实业务操作；真实操作走 MCP / typed tools |
+| Hooks | 在 gateway、tool call、LLM call、message/session 生命周期插入治理动作 | 适合做统一拦截、审计、脱敏、上下文注入 | 不做跨 profile 调度，不替代 Kanban |
+| Slash commands | 提供 `/devops_status`、`/devops_audit`、`/devops_policy` 等 ChatOps 管理命令 | 飞书侧需要轻量查询和人工确认入口 | 不承载复杂诊断流程 |
+| CLI commands | 提供本机 `hermes devops ...` 类调试、审计查询、策略回放命令 | 方便开发、验收、故障回放 | 不作为生产自动化入口 |
+| Bundled skills | 随 plugin 分发治理类 skill，例如策略说明、审计解释、脱敏规则说明 | 让 profile 获得统一治理知识 | 不承载服务资产和业务流程，服务资产仍在 `assets`，流程仍在 `workflows` |
+| Data files | 分发策略规则、脱敏模式、审计 schema、风险级别映射 | 这些是插件治理逻辑的配置输入 | 不放生产凭证、审批 token、云账号密钥 |
 
-### 6.3 硬性约束
+### 6.3 运维助手需要的 Plugin 能力
 
-**插件不得修改 Hermes core**。如果框架能力不足，先新增通用 plugin surface，再让 DevOps plugin 使用该 surface。
+| 能力 | 触发位置 | 输入 | 输出 | 验收标准 |
+|---|---|---|---|---|
+| Gateway 输入治理 | `pre_gateway_dispatch` | 飞书消息、Webhook payload、actor、source、profile | allow / deny / rewrite / risk reason | 注入攻击样例被拒绝；正常查询不被误拦 |
+| 任务上下文补充 | gateway / message hook | actor、群聊、服务名、环境、request id | 标准化 metadata | 后续 audit、policy、workflow 都能拿到同一个 request id |
+| Tool 调用前策略校验 | `pre_tool_call` | profile、tool、action、env、approval、actor | allow / deny + reason | 未审批生产写操作被拒绝；只读查询通过 |
+| Tool 结果脱敏 | `transform_tool_result` | tool output、目标通道、脱敏规则 | 已脱敏输出 | secret fixture 不进入模型上下文、飞书消息和审计明文 |
+| Tool 调用后审计 | `post_tool_call` | request id、tool、input hash、result、duration、error | action trail event | 每次工具调用都能按 request id 回放 |
+| LLM 前上下文收敛 | LLM lifecycle hook | profile、assets、workflow、message | 最小必要上下文 | 不把无关服务资产和敏感配置塞进模型上下文 |
+| LLM 后输出检查 | LLM / message lifecycle hook | 模型输出、目标通道、risk labels | allow / redact / require approval | 生产变更建议必须带审批提示和证据来源 |
+| Kanban 回传绑定 | tool/message hook | task id、reply target、source message | notify subscription | task 完成后能回到原飞书会话 |
+| 审计查询命令 | slash / CLI command | request id、time range、profile、actor | 审计摘要 / evidence path | 运维人员能查到最近任务、拒绝原因和证据包 |
+| 策略回放命令 | CLI command | 历史 tool call event、策略版本 | replay result | 策略变更后能回放验证是否误拦 / 漏拦 |
+
+### 6.4 实施边界
+
+Plugin 只做运行时治理、审计、脱敏、命令和轻量工具扩展。Profile 选择由 Gateway / Kanban / Dispatcher 完成；业务识别放在 `assets`；诊断和变更流程放在 `workflows`；真实系统调用走 MCP / typed tools；基础命令语法由 `basics` 提供。
+
+```text
+飞书 / Webhook / Cron
+  ↓
+Gateway
+  ↓
+Plugin hooks: 输入治理 + metadata 标准化
+  ↓
+Profile assets / workflows / basics
+  ↓
+MCP / typed tools
+  ↓
+Plugin hooks: policy gate + redaction + audit trail
+  ↓
+飞书 / 工单 / audit store
+```
 
 ---
 
@@ -497,14 +503,13 @@ sequenceDiagram
     participant Orch as devops-orchestrator
     participant Board as Kanban Board
     participant Disp as Dispatcher
-    participant Worker as software-delivery-draft
+    participant Worker as gitops-agent
     participant Policy as Policy Engine
-    participant MCP as devops-gitops-draft MCP
     participant Git as yuexin-infra
     participant Audit as Audit Trail
 
     User->>Orch: @Bot 国际短信 test 环境 resource 配置
-    Orch->>Orch: entry workflow 解析: service=intlsms-gateway, env=test
+    Orch->>Orch: 解析: service=intlsms-gateway, env=test
     Orch->>Board: kanban_create(assignee=software-delivery-draft)
     Orch->>User: 已创建任务 #N，处理中
 
@@ -531,13 +536,3 @@ sequenceDiagram
     Board->>Orch: notification hook
     Orch->>User: 【结果】requests 500m/512Mi, limits 2/2Gi<br/>来源 overlays/test/intlsms-gateway/resources.yaml
 ```
-
-### 时序关键点
-
-- **entry workflow 不切换 profile**——只输出标准化请求结构。
-- **Worker spawn 后才进入 policy gate**——orchestrator 不持有任何 MCP 生产工具。
-- **每个 tool call 都经过 pre/post hook**——审计闭环必须能不读聊天记录还原 run。
-- **事件驱动信号不走这条链**——告警 / Webhook / Cron / Ticket 直接进入领域 profile gateway，policy gate / MCP call / audit emit 全部在 profile 内部完成，结果回传飞书 / 工单。
-- **生产紧急动作也不走这条链**——走独立 `governance-breakglass` Gateway，独立飞书 Bot + 独立凭证。
-
----
