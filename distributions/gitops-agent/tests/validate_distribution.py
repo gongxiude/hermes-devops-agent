@@ -9,33 +9,41 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 
 
-# 自包含扁平技能(源自 profile spec 的 allowed_skill_categories):
-# 每个技能直接位于 skills/<name>/SKILL.md,随 distribution 一起安装。
-FLAT_SKILLS = [
-    "git-command-basics",
-    "kustomize-basics",
-    "jenkins-basics",
-    "argocd-basics",
-    "codeup-basics",
-    "kubectl-basics",
-    "kubernetes-object-basics",
-    "git-command-workflow",
-    "git-codeup-readonly-tool",
-    "jenkins-readonly-tool",
-    "argocd-query-tool",
-    "gitops-config-locate",
-    "kustomize-render",
-    "jenkins-library-inspect",
-    "release-impact-analyze",
-    "gitops-mr-draft-orchestration",
-    "jenkins-change-orchestration",
-    "software-delivery-change-orchestration",
-    "skill-policy-gate",
-    "audit-trail",
-    "secret-redaction",
-    "yuexin-infra-domain-context",
-    "jenkins-pipeline-domain-context",
-]
+# 自包含技能按 profile spec 的 allowed_skill_categories 分目录归类:
+# 每个技能位于 skills/<category>/<name>/SKILL.md,随 distribution 一起安装。
+SKILL_CATEGORIES = {
+    "basics": [
+        "git-command-basics",
+        "kustomize-basics",
+        "jenkins-basics",
+        "argocd-basics",
+        "codeup-basics",
+        "kubectl-basics",
+        "kubernetes-object-basics",
+    ],
+    "tool_contracts": [
+        "git-command-workflow",
+        "git-codeup-readonly-tool",
+        "jenkins-readonly-tool",
+        "argocd-query-tool",
+    ],
+    "workflows": [
+        "gitops-config-locate",
+        "kustomize-render",
+        "jenkins-library-inspect",
+        "release-impact-analyze",
+        "gitops-mr-draft-orchestration",
+        "jenkins-change-orchestration",
+        "software-delivery-change-orchestration",
+    ],
+    "contexts": [
+        "skill-policy-gate",
+        "audit-trail",
+        "secret-redaction",
+        "yuexin-infra-domain-context",
+        "jenkins-pipeline-domain-context",
+    ],
+}
 
 
 def load_yaml(path: Path) -> dict:
@@ -74,13 +82,14 @@ def main() -> int:
     for path in core_files:
         assert path.exists(), f"missing gitops-agent file: {path}"
 
-    # 自包含扁平技能存在且 frontmatter 含 name/description。
-    for name in FLAT_SKILLS:
-        skill_path = ROOT / "skills" / name / "SKILL.md"
-        assert skill_path.exists(), f"missing flat skill: {skill_path}"
-        meta = load_skill(skill_path)
-        assert meta.get("name"), f"skill missing name: {skill_path}"
-        assert meta.get("description"), f"skill missing description: {skill_path}"
+    # 自包含技能按分类目录存在且 frontmatter 含 name/description。
+    for category, names in SKILL_CATEGORIES.items():
+        for name in names:
+            skill_path = ROOT / "skills" / category / name / "SKILL.md"
+            assert skill_path.exists(), f"missing skill: {skill_path}"
+            meta = load_skill(skill_path)
+            assert meta.get("name"), f"skill missing name: {skill_path}"
+            assert meta.get("description"), f"skill missing description: {skill_path}"
     assert not (ROOT / "skills/devops").exists(), "skills/devops shell must be removed"
     assert not (ROOT / "skills/git-workspace-draft-tool").exists()
 
