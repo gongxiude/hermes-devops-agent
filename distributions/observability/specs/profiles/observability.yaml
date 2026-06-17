@@ -1,0 +1,67 @@
+name: observability
+domain_agent: Observability Agent
+runtime_boundary:
+  profile: observability
+  autonomy: [observe, recommend]
+  production_write: denied
+# 三层 skill 分类（对齐 Plane 4 目标：assets / workflows / basics；
+# 历史 contexts 收敛到 assets，历史 tool_contracts 收敛到 workflows）。
+# 列表必须与 distributions/observability/skills/<category>/<name>/ 目录一一对应，
+# 由 tests/validate_distribution.py 校验。
+allowed_skill_categories:
+  assets:
+    - intlsms-inspection
+    - intlsms-domain-context
+    - alert-entry
+    - chat-ops-entry
+    - scheduled-entry
+    - webhook-entry
+    - audit-trail
+    - secret-redaction
+    - skill-policy-gate
+  workflows:
+    - k8s-cluster-inspector
+    - runtime-service-inspection
+    - scheduled-runtime-inspection
+    - on-demand-runtime-inspection
+    - observability-health-query
+    - anomaly-detection
+    - capacity-forecast
+    - kubernetes-debug
+    - kubernetes-workload-diagnose
+    - security-event-detection
+    - service-risk-summary
+    - release-impact-analyze
+    - release-impact-analysis
+    - gitops-config-query
+    - prometheus-query-tool
+    - loki-query-tool
+    - k8s-readonly-tool
+    - aliyun-readonly-tool
+    - intlsms-runtime-inspection
+  basics:
+    - promql-basics
+    - promql-generator
+    - promql-validator
+    - logql-generator
+    - alertmanager-basics
+    - grafana-basics
+    - aliyun-basics
+    - kubectl-basics
+    - kubernetes-object-basics
+mcp_servers:
+  - prometheus-intlsms-prod
+  - prometheus-intlsms-test
+  - loki-intlsms-prod
+  - k8s-intlsms-prod
+  - k8s-intlsms-test
+denied:
+  - restart
+  - rollback
+  - scale
+  - sync
+  - apply
+  - patch
+  - delete
+  - database_write
+  - profile_switch
