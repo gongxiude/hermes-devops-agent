@@ -8,6 +8,10 @@ hooks_auto_accept: false
 model:
   provider: custom
   model: gpt-5.4
+  # default 必须与 model 一致：cron 调度器解析模型时只读 model.default
+  # （cron/scheduler.py: _model_cfg.get("default")），缺失会导致定时任务报
+  # "Model name not specified / model name cannot be empty"。
+  default: gpt-5.4
   base_url: "${LLM_RELAY_BASE_URL}"
   api_key: "${LLM_RELAY_API_KEY}"
   api_mode: chat_completions
