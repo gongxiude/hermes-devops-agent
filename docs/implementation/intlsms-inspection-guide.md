@@ -95,28 +95,31 @@
 
 ### 5.1 定时巡检（主要方式）
 
-巡检默认每 **15 分钟**自动执行一次，由 `observability` profile 内的 cron job 驱动：
+巡检默认**每天早上 09:10**自动执行一次。调度由 **`devops-orchestrator`** 驱动（不是 observability 自身）——orchestrator 在 09:10 创建一条 Kanban 任务分派给 observability，observability 执行巡检后由 orchestrator 的 kanban watcher 按 `reply_target` 推送飞书。单一飞书出口。
 
-```yaml
-# hermes-devops-agent/distributions/observability/cron/intlsms-runtime-inspection.yaml
-schedule: "*/15 * * * *"
-timezone: Asia/Shanghai
-profile: observability
+```
+orchestrator cron (10 9 * * *)
+  → kanban_create(assignee=observability, reply_target=feishu:<chat_id>)
+  → observability worker 执行巡检（intlsms prod MCP，read-only）
+  → kanban_complete → orchestrator kanban watcher → 推送飞书
 ```
 
-触发后 agent 自动对生产环境执行完整巡检，结果通过 Kanban 回传，并抄送飞书配置的通知频道。
+调度声明见 `distributions/devops-orchestrator/cron/intlsms-daily-inspection.yaml`。
 
-**查看 cron 状态：**
+> **为什么放在 orchestrator**：cron 投递只查【本网关】的平台配置（`cron/scheduler.py`），observability profile 未接飞书，自身无法投递；orchestrator 是飞书网关 + kanban dispatcher，天然单一出口。
+>
+> **模型配置要求**：cron 调度器解析模型时只读 `model.default`（不读 `model.model`），orchestrator 与 observability 的 `config.yaml` model 块都必须含 `default:`，否则定时任务报 `model name cannot be empty`。
 
-```bash
-hermes -p observability cronjob list
-```
-
-**临时暂停 / 恢复：**
+**注册 / 查看 / 暂停（在已安装实例上）：**
 
 ```bash
-hermes -p observability cronjob pause intlsms-runtime-inspection
-hermes -p observability cronjob resume intlsms-runtime-inspection
+# 注册（reply_target 的 chat_id 按环境填写，见 cron 声明文件）
+hermes -p hermes-devops-orchestrator cron create "10 9 * * *" "<见 cron 声明文件的 prompt>" \
+  --name "intlsms 生产巡检 (每日 09:10, Kanban→observability)" --deliver local
+
+hermes -p hermes-devops-orchestrator cron list
+hermes -p hermes-devops-orchestrator cron pause  <job_id>
+hermes -p hermes-devops-orchestrator cron resume <job_id>
 ```
 
 ### 5.2 飞书 ChatOps（按需触发）

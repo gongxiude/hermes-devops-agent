@@ -10,43 +10,54 @@ ROOT = Path(__file__).resolve().parents[1]
 PROFILE = ROOT
 
 
-# 自包含扁平技能:每个技能直接位于 skills/<name>/SKILL.md,
-# 安装时随 distribution 一起拷贝,无中央共享源、无 profile-spec 选择层。
-FLAT_SKILLS = [
-    "alert-entry",
-    "alertmanager-basics",
-    "aliyun-basics",
-    "aliyun-readonly-tool",
-    "anomaly-detection",
-    "audit-trail",
-    "capacity-forecast",
-    "chat-ops-entry",
-    "gitops-config-query",
-    "grafana-basics",
-    "intlsms-domain-context",
-    "intlsms-runtime-inspection",
-    "k8s-readonly-tool",
-    "kubectl-basics",
-    "kubernetes-debug",
-    "kubernetes-object-basics",
-    "kubernetes-workload-diagnose",
-    "loki-logql-basics",
-    "loki-query-tool",
-    "observability-health-query",
-    "on-demand-runtime-inspection",
-    "prometheus-query-tool",
-    "promql-basics",
-    "release-impact-analysis",
-    "release-impact-analyze",
-    "runtime-service-inspection",
-    "scheduled-entry",
-    "scheduled-runtime-inspection",
-    "secret-redaction",
-    "security-event-detection",
-    "service-risk-summary",
-    "skill-policy-gate",
-    "webhook-entry",
-]
+# 三层 skill 分类（Plane 4 目标：assets / workflows / basics）。
+# 每个技能位于 skills/<category>/<name>/SKILL.md。这是测试的真值来源，
+# 并与 specs/profiles/observability.yaml 的 allowed_skill_categories 互校。
+SKILL_CATEGORIES = {
+    "assets": [
+        "intlsms-inspection",
+        "intlsms-domain-context",
+        "alert-entry",
+        "chat-ops-entry",
+        "scheduled-entry",
+        "webhook-entry",
+        "audit-trail",
+        "secret-redaction",
+        "skill-policy-gate",
+    ],
+    "workflows": [
+        "k8s-cluster-inspector",
+        "runtime-service-inspection",
+        "scheduled-runtime-inspection",
+        "on-demand-runtime-inspection",
+        "observability-health-query",
+        "anomaly-detection",
+        "capacity-forecast",
+        "kubernetes-debug",
+        "kubernetes-workload-diagnose",
+        "security-event-detection",
+        "service-risk-summary",
+        "release-impact-analyze",
+        "release-impact-analysis",
+        "gitops-config-query",
+        "prometheus-query-tool",
+        "loki-query-tool",
+        "k8s-readonly-tool",
+        "aliyun-readonly-tool",
+        "intlsms-runtime-inspection",
+    ],
+    "basics": [
+        "promql-basics",
+        "promql-generator",
+        "promql-validator",
+        "logql-generator",
+        "alertmanager-basics",
+        "grafana-basics",
+        "aliyun-basics",
+        "kubectl-basics",
+        "kubernetes-object-basics",
+    ],
+}
 
 
 def load_yaml(path: Path) -> dict:
@@ -97,25 +108,46 @@ def main() -> int:
     assert server["command"] == "python3"
     assert server["env"]["PROMETHEUS_URL"] == "${OBSERVE_PROMETHEUS_BASE_URL_TEST}"
 
-    cron = load_yaml(PROFILE / "cron/intlsms-runtime-inspection.yaml")
-    assert cron["profile"] == "observability"
-    assert cron["policy"]["autonomy"] == ["observe", "recommend"]
-    assert "restart" in cron["policy"]["denied_actions"]
+    # 巡检定时调度已迁移到 devops-orchestrator（orchestrator cron → kanban → observability
+    # worker → 飞书）。observability 不再自带 cron 文件，仅作为巡检执行 profile。
+    assert not (PROFILE / "cron/intlsms-runtime-inspection.yaml").exists(), (
+        "observability 不应再持有巡检 cron；调度归属 devops-orchestrator"
+    )
 
     soul = (PROFILE / "SOUL.md").read_text(encoding="utf-8")
     assert "Never switch profiles" in soul
     assert "Never execute restart" in soul
 
-    # 自包含扁平技能:每个技能存在且 frontmatter 含 name/description。
-    for name in FLAT_SKILLS:
-        skill_path = PROFILE / "skills" / name / "SKILL.md"
-        assert skill_path.exists(), f"missing flat skill: {skill_path}"
-        meta = load_skill(skill_path)
-        assert meta.get("name"), f"skill missing name: {skill_path}"
-        assert meta.get("description"), f"skill missing description: {skill_path}"
+    # 三层分类技能：每个技能存在于 skills/<category>/<name>/SKILL.md 且 frontmatter 含 name/description。
+    for category, names in SKILL_CATEGORIES.items():
+        for name in names:
+            skill_path = PROFILE / "skills" / category / name / "SKILL.md"
+            assert skill_path.exists(), f"missing skill: {skill_path}"
+            meta = load_skill(skill_path)
+            assert meta.get("name"), f"skill missing name: {skill_path}"
+            assert meta.get("description"), f"skill missing description: {skill_path}"
 
-    # 安装即拷贝 skills/ 整个目录:不应再有 devops 空壳嵌套结构。
-    assert not (PROFILE / "skills/devops").exists(), "skills/devops shell must be removed"
+    # 磁盘上的分类目录必须与 SKILL_CATEGORIES 完全一致（无遗漏、无多余、无残留扁平目录）。
+    skills_root = PROFILE / "skills"
+    on_disk_categories = {p.name for p in skills_root.iterdir() if p.is_dir()}
+    assert on_disk_categories == set(SKILL_CATEGORIES), (
+        f"skills/ 顶层应只含分类目录 {set(SKILL_CATEGORIES)}，实际 {on_disk_categories}"
+    )
+    for category, names in SKILL_CATEGORIES.items():
+        on_disk = {p.name for p in (skills_root / category).iterdir() if p.is_dir()}
+        assert on_disk == set(names), (
+            f"分类 {category} 目录与 SKILL_CATEGORIES 不一致：缺 {set(names) - on_disk}，多 {on_disk - set(names)}"
+        )
+
+    # profile spec 的 allowed_skill_categories 必须与 SKILL_CATEGORIES 一致。
+    spec = load_yaml(PROFILE / "specs/profiles/observability.yaml")
+    assert spec["runtime_boundary"]["profile"] == "observability"
+    allowed = spec["allowed_skill_categories"]
+    assert set(allowed) == set(SKILL_CATEGORIES), "spec 分类与 SKILL_CATEGORIES 不一致"
+    for category, names in SKILL_CATEGORIES.items():
+        assert set(allowed[category]) == set(names), (
+            f"spec.{category} 与 SKILL_CATEGORIES.{category} 不一致"
+        )
 
     print("observability_distribution_ok")
     return 0

@@ -1,0 +1,45 @@
+# 国际短信生产环境每日巡检 — 定时调度
+#
+# 设计：orchestrator 不自己执行巡检，只在 09:10 创建一条 Kanban 任务分派给
+# observability；observability worker 跑完巡检后 kanban_complete，由 orchestrator
+# 的 kanban watcher 按 body 里的 reply_target 把结果推送到飞书。单一飞书出口。
+#
+# 为什么放在 orchestrator 而不是 observability：
+#   - cron 投递只查【本网关】平台配置（cron/scheduler.py），无法跨网关投递；
+#     observability profile 未接飞书，自身无法投递。
+#   - orchestrator 是飞书网关 + kanban dispatcher，天然是单一出口。
+#
+# 注意：Hermes 不会自动加载 distribution 的 cron/*.yaml，此文件仅记录意图。
+# 实际注册需在已安装实例上执行（reply_target 的 chat_id 按环境填写）：
+#
+#   hermes -p hermes-devops-orchestrator cron create "10 9 * * *" \
+#     "<下方 prompt>" \
+#     --name "intlsms 生产巡检 (每日 09:10, Kanban→observability)" \
+#     --deliver local
+#
+# 排障：若巡检报 "model name cannot be empty"，确认 orchestrator 与 observability
+# 的 config.yaml model 块都含 `default:`（cron 只读 model.default）。
+
+name: intlsms-daily-inspection
+description: "Schedule a daily intlsms prod inspection by creating one Kanban task routed to observability; orchestrator delivers the result to Feishu."
+profile: hermes-devops-orchestrator
+schedule: "10 9 * * *"
+timezone: Asia/Shanghai
+enabled: true
+deliver: local   # cron 自身不投递；巡检结果经 Kanban watcher 按 reply_target 推送
+prompt: |
+  你是 DevOps orchestrator 的定时调度入口。现在调度国际短信生产环境的每日巡检——
+  你不自己执行巡检，只创建一条 Kanban 任务分派给 observability。
+
+  调用 kanban_create 创建任务：
+  - title: 国际短信生产环境每日巡检
+  - assignee: observability
+  - body 必须包含以下字段：
+    actor: cron/intlsms-daily-inspection
+    service: intlsms
+    environment: prod
+    request_type: scheduled
+    reply_target: feishu:<目标 chat_id，按环境填写>
+    描述: 执行国际短信生产环境巡检。只允许使用 prometheus-intlsms-prod、loki-intlsms-prod、k8s-intlsms-prod 独立 MCP；禁止调用 mcp_devops_observe_*；按 scheduled-runtime-inspection + intlsms-domain-context 输出短巡检报告和风险项，无证据不得判 healthy。
+
+  创建成功后只回一句简短确认，不要自己调用任何巡检/MCP 工具。
