@@ -282,7 +282,7 @@ t3 = kanban_create(
                     "priority": "normal", "reply_target": "oc_xxx"},  # 汇总任务：唯一出口，携带 reply_target
         "payload": {"raw_request": "汇总风险报告"},
     }),
-    skills=["observability-health-query"],
+    skills=["k8s-cluster-inspector"],
     parents=[t1, t2],
 )["task_id"]
 ```

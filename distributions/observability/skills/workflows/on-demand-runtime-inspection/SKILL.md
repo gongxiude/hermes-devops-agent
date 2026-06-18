@@ -7,7 +7,7 @@ environments: [observability]
 metadata:
   hermes:
     tags: [runtime, inspection, on-demand, observability]
-    related_skills: [observability-health-query, kubernetes-workload-diagnose, audit-trail, secret-redaction]
+    related_skills: [kubernetes-workload-diagnose, audit-trail, secret-redaction]
 ---
 
 # On-Demand Runtime Inspection

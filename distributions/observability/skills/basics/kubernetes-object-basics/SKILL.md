@@ -26,7 +26,7 @@ Use this skill for Kubernetes object vocabulary and relationships: Pod, Deployme
 ## Typical Use
 
 - `kubernetes-debug` uses this skill to interpret pod phases, restart counts, and events.
-- `observability-health-query` uses this skill to interpret Deployment resource and status evidence.
+- `` uses this skill to interpret Deployment resource and status evidence.
 
 ## Evidence
 

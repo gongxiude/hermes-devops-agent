@@ -7,7 +7,7 @@ environments: [observability, software-delivery-draft, software-delivery-query, 
 metadata:
   hermes:
     tags: [secret, redaction, security, cross-cutting, credential]
-    related_skills: [audit-trail, observability-health-query]
+    related_skills: [audit-trail]
 ---
 
 # Secret Redaction

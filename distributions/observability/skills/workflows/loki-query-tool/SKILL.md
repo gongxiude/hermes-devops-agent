@@ -7,7 +7,7 @@ environments: [observability, incident-triage]
 metadata:
   hermes:
     tags: [loki, tool, query, logs, readonly]
-    related_skills: [loki-logql-basics, secret-redaction, observability-health-query]
+    related_skills: [loki-logql-basics, secret-redaction]
 ---
 
 # Loki Query Tool

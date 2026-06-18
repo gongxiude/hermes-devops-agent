@@ -1,7 +1,7 @@
 ---
 name: k8s-cluster-inspector
-description: Use when a Hermes DevOps profile needs a cluster-wide read-only Kubernetes inspection sourced ONLY from MCP (k8s read-only API, Prometheus, Loki) — control-plane, node health, workloads/pods, storage, network/services, config & security audit, probe audit — with severity grading, fault prioritization, and a health score. Cluster/infra scope (complements service-scoped daily-inspection).
-version: 1.8.0
+description: 巡检的首选 skill——当用户说「巡检 / 国际短信巡检 / 集群巡检 / 生产巡检 / k8s 巡检」时使用。Cluster-wide read-only Kubernetes & service inspection sourced ONLY from MCP (k8s read-only API, Prometheus, Loki) — control-plane, node health, workloads/pods, storage, network, config & security audit, probe audit, plus capacity / anomaly / risk time-series analysis — with severity grading, fault prioritization, health score, and Feishu report.
+version: 1.9.0
 platforms: [linux, macos, windows]
 environments: [observability]
 metadata:
@@ -68,14 +68,25 @@ asset 层负责把业务节奏映射成 `time_range`，workflow 据此取时间�
 > 即「周巡检」= 把窗口类证据的回看放大到一周，**不会**把当前状态平均成一周值。
 > 瞬时指标（如 CPU 使用率）在更长窗口下应取**峰值/分位**而非简单均值，避免掩盖尖刺。
 
-## 执行策略：子 agent 取数（delegate_task — 用于上下文隔离，非提速）
+## 执行策略：默认单 agent 串行（delegate_task 为可选）
 
-> **依据官方 delegation 文档**：`delegate_task` 是**同步**的，阻塞父 agent 直到子 agent 全部返回，
-> **不是异步加速**（实测并行版并不比串行快）。它的正确用途是**上下文隔离**——集群巡检会产生几十份
-> pod yaml + 大量指标序列，直接灌进主上下文会爆；用子 agent 在**隔离的新上下文**里取数 + 浓缩，
-> 只把**结构化证据**回传，主 agent 保持精简用于汇总 / 判级 / 出报告。
+> **默认：单 agent 串行执行全部巡检（含时序分析），由主 agent 亲自写聚合报告。**
+> 这是 **kanban-worker / cron 路径的强制要求**——实测 delegate_task 在该路径上 3 次有 2 次把子 agent 的
+> 局部 summary 泄漏成最终输出，导致飞书收到错误内容。串行虽稍慢（~4–7min），但**单一最终输出可靠**。
 >
-> 集群规模不大、只图省事时，**单 agent 串行同样可行**（更简单，且不慢）。是否分片按上下文体量决定。
+> `delegate_task` 仅作为**可选项**，且只在「上下文体量极大、且你能确保主 agent fan-in 写最终 summary」时
+> 才考虑（见下）。**cron/kanban 路径不要用 delegate_task。**
+>
+> 依据官方 delegation 文档：`delegate_task` 是**同步**的（不提速），用途是上下文隔离；leaf 子 agent
+> 禁用 `send_message`/`memory`/`code_execution`。
+
+### 最终输出规则（串行/委派都适用）
+
+- **主 agent 亲自**把聚合结果写成最终 / `kanban_complete` 的 summary；**任一中间/局部结果都不得直接当 summary**。
+- **单条投递、不超长**：summary 只放精简飞书推送版（`references/report-template.md` 一、**≤2000 字、单条**）；
+  完整 8 维度明细 + 证据 JSON 放 **comment / 存档**，不塞进 summary（>4000 字会被飞书拆成两条）。
+
+### （可选）delegate_task 分片取数 —— 仅上下文体量极大、且能保证 fan-in 时
 
 **分片（≤3 并发，按 MCP 数据源；`role=leaf` 只读子 agent）：**
 
@@ -208,13 +219,15 @@ asset 层负责把业务节奏映射成 `time_range`，workflow 据此取时间�
 - **Terminating 卡住**：k8s yaml 看 finalizer；events 看 volume detach / 节点失联。
 - **关键中间件**（MySQL/Redis/Kafka）StatefulSet 异常单列并提级（证据限 k8s 对象 + exporter 指标）。
 
-## 时序分析层（容量评估 / 异常检测 / 风险评估 —— 经 delegate_task）
+## 时序分析层（容量评估 / 异常检测 / 风险评估）
 
 前面的清单是**点检 + 短窗阈值**；本层用 `prometheus_query_range` 取**时间序列**做前瞻分析。
 
-**用 `delegate_task` 的并行批跑时序分析**——这正是官方文档说的 delegate_task **正确用途**：
-推理重、引入大量序列样本，放隔离上下文里跑，只回结构化结论。**容量评估与异常检测彼此独立 → 并行
-两个子 agent**；**风险评估依赖前两者结果 → 不并行**，由主 agent fan-in 综合（也可在前两者返回后再委派一次）。
+**默认：主 agent 串行完成容量 / 异常 / 风险三项分析**（cron/kanban 路径强制串行，见上）。
+容量评估与异常检测彼此独立、风险评估依赖前两者（综合）——串行时按「容量 → 异常 → 风险」顺序做即可。
+
+<可选并行：仅在上下文体量极大且能保证 fan-in 时> 用 `delegate_task(tasks=[容量, 异常])` 并行两个 leaf
+子 agent，风险仍由主 agent fan-in；示例：
 
 ```
 # 阶段 1：容量 ∥ 异常（并行，≤3 并发，role=leaf）

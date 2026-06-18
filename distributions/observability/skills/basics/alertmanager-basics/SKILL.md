@@ -7,7 +7,7 @@ environments: [observability, incident-triage]
 metadata:
   hermes:
     tags: [alertmanager, observability, monitoring, basics, alert, silence]
-    related_skills: [alert-entry, promql-basics, grafana-basics, observability-health-query]
+    related_skills: [alert-entry, promql-basics, grafana-basics]
 ---
 
 # Alertmanager Basics

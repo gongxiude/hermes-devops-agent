@@ -31,7 +31,6 @@ SKILL_CATEGORIES = {
         "runtime-service-inspection",
         "scheduled-runtime-inspection",
         "on-demand-runtime-inspection",
-        "observability-health-query",
         "anomaly-detection",
         "capacity-forecast",
         "kubernetes-debug",
