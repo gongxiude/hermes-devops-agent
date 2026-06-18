@@ -27,6 +27,7 @@ SKILL_CATEGORIES = {
     ],
     "workflows": [
         "k8s-cluster-inspector",
+        "incident-commander",
         "runtime-service-inspection",
         "scheduled-runtime-inspection",
         "on-demand-runtime-inspection",
