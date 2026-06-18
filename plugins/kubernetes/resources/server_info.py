@@ -8,20 +8,19 @@ from _fleet_core import catalog
 
 PLUGIN_NAME = "kubernetes"
 PLUGIN_VERSION = "0.1.0"
-SECTION = "kubernetes"
 
 
 def server_info(cfg: Optional[dict] = None) -> str:
-    listing = catalog.list_targets(SECTION, None, cfg)
+    candidates, _ = catalog.from_clusters(cfg)
     lines = [f"{PLUGIN_NAME} plugin v{PLUGIN_VERSION}"]
-    if not listing:
-        lines.append("  (no kubernetes clusters configured)")
+    pub = catalog.public_list(candidates)
+    if not pub:
+        lines.append("  (no clusters configured)")
         return "\n".join(lines)
-    for backend, clusters in listing.items():
-        lines.append(f"  backend: {backend} ({len(clusters)} cluster(s))")
-        for c in clusters:
-            lines.append(
-                f"    - {c.get('id')}: business_line={c.get('business_line')} "
-                f"environment={c.get('environment')} cluster={c.get('cluster')}"
-            )
+    lines.append(f"  clusters ({len(pub)}):")
+    for c in pub:
+        lines.append(
+            f"    - {c.get('id')}: category={c.get('category')} "
+            f"env={c.get('env')} cluster={c.get('cluster')}"
+        )
     return "\n".join(lines)

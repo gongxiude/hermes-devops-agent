@@ -1,143 +1,172 @@
 """Generic multi-target catalog, shared across capability domains.
 
-Reads ``load_config()[section][backend]`` and resolves a single connection
-target from prompt-derived selectors. ``section`` is the domain key
-(``observability`` / ``kubernetes`` / ``argocd``); ``backend`` is the concrete
-system within it (``prometheus`` / ``loki`` / ``k8s`` / ``argocd``).
+Resolution is over a plain *candidate list* (each item a dict with selector
+fields ``id`` / ``category`` / ``env`` / ``cluster`` plus backend-specific
+connection fields). Plugins supply candidates from wherever their config lives:
+- ``from_section`` — ``config[section][backend].targets`` (observability).
+- ``from_clusters`` — the shared top-level ``clusters:`` registry (kubernetes,
+  and future argocd), the single source of truth for cluster destinations.
 
-Each target entry has selector fields (``id`` / ``business_line`` /
-``environment`` / ``cluster``) plus backend-specific connection fields
-(``base_url``/``token`` for HTTP backends, ``kubeconfig``/``context`` for k8s).
-Connection fields are validated per-backend via ``require`` (a list of fields
-that must be present and ``.env``-expanded).
-
-Config is read fresh per call (load_config has its own cache) — no mutable
-module-level state, sidestepping the multi-thread ``global _client`` race.
+Selectors are domain-agnostic: ``category`` (业务线: intlsms/datacenter/ops/ai)
++ ``env`` (prod/test) + ``cluster`` (location, disambiguator) + ``target`` (id
+override). Config is read fresh per call (load_config caches) — no mutable
+module state.
 """
 
 from __future__ import annotations
 
-from typing import Any, Callable, Dict, List, Optional
+import os
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 # Test hook: when set, used instead of hermes_cli.config.load_config.
 _CONFIG_LOADER: Optional[Callable[[], Dict[str, Any]]] = None
 
-_PUBLIC_FIELDS = ("id", "business_line", "environment", "cluster")
+_PUBLIC_FIELDS = ("id", "category", "env", "cluster")
 
 
 class CatalogError(Exception):
     """No/ambiguous/misconfigured target for the given selectors."""
 
 
-def _load_cfg() -> Dict[str, Any]:
+def load_config() -> Dict[str, Any]:
     if _CONFIG_LOADER is not None:
         return _CONFIG_LOADER() or {}
-    from hermes_cli.config import load_config
+    from hermes_cli.config import load_config as _lc
 
-    return load_config() or {}
-
-
-def backend_config(section: str, backend: str, cfg: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-    cfg = cfg if cfg is not None else _load_cfg()
-    return ((cfg.get(section) or {}).get(backend) or {})
+    return _lc() or {}
 
 
-def targets(section: str, backend: str, cfg: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
-    return list(backend_config(section, backend, cfg).get("targets") or [])
-
-
-def selector_values(
-    section: str, backend: str, field: str, cfg: Optional[Dict[str, Any]] = None
-) -> List[str]:
-    """Distinct, order-preserving values of ``field`` across a backend's targets."""
+def distinct(candidates: List[Dict[str, Any]], field: str) -> List[str]:
     seen: List[str] = []
-    for tgt in targets(section, backend, cfg):
-        val = tgt.get(field)
-        if val and val not in seen:
-            seen.append(val)
+    for c in candidates:
+        v = c.get(field)
+        if v and v not in seen:
+            seen.append(v)
     return seen
 
 
-def _public(tgt: Dict[str, Any]) -> Dict[str, Any]:
-    return {k: tgt.get(k) for k in _PUBLIC_FIELDS}
+def public_list(candidates: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    return [{k: c.get(k) for k in _PUBLIC_FIELDS} for c in candidates]
 
 
-def list_targets(
-    section: str,
-    backend: Optional[str] = None,
-    cfg: Optional[Dict[str, Any]] = None,
-) -> Dict[str, List[Dict[str, Any]]]:
-    """Redacted (no credentials) target listings for a section, keyed by backend."""
-    cfg = cfg if cfg is not None else _load_cfg()
-    sec = cfg.get(section) or {}
-    names = [backend] if backend else list(sec.keys())
-    return {name: [_public(t) for t in targets(section, name, cfg)] for name in names}
-
-
-def _require(tgt: Dict[str, Any], section: str, backend: str, fields: List[str]) -> Dict[str, Any]:
+def _require(target: Dict[str, Any], fields: List[str], label: str) -> Dict[str, Any]:
     for field in fields:
-        val = str(tgt.get(field) or "").strip()
+        val = str(target.get(field) or "").strip()
         if not val or val.startswith("${"):
             raise CatalogError(
-                f"target '{tgt.get('id')}' of {section}.{backend} has empty/unexpanded "
-                f"'{field}' ({val!r}); its .env variable is not set"
+                f"{label} '{target.get('id')}' has empty/unexpanded '{field}' "
+                f"({val!r}); its .env variable is not set"
             )
-    return tgt
+    return target
 
 
 def resolve(
     selectors: Dict[str, Any],
-    backend: str,
-    section: str,
-    cfg: Optional[Dict[str, Any]] = None,
+    candidates: List[Dict[str, Any]],
+    *,
+    defaults: Optional[Dict[str, Any]] = None,
     require: Optional[List[str]] = None,
+    label: str = "target",
 ) -> Dict[str, Any]:
-    """Resolve selectors to exactly one target. Raises CatalogError otherwise.
+    """Resolve selectors to exactly one candidate. Raises CatalogError otherwise.
 
-    Precedence: explicit ``target`` id > (business_line + environment [+ cluster]).
-    Missing business_line/environment fall back to the backend's ``default_*``.
-    ``require`` lists connection fields that must be present + ``.env``-expanded.
+    Precedence: explicit ``target`` id > (category + env [+ cluster]). Missing
+    category/env fall back to ``defaults``. ``require`` lists connection fields
+    that must be present + ``.env``-expanded.
     """
-    cfg = cfg if cfg is not None else _load_cfg()
-    bcfg = backend_config(section, backend, cfg)
-    ts = list(bcfg.get("targets") or [])
-    if not ts:
-        raise CatalogError(f"{section}.{backend} has no targets configured")
+    defaults = defaults or {}
+    require = require or []
+    if not candidates:
+        raise CatalogError(f"no {label}s configured")
 
     target_id = str(selectors.get("target") or "").strip()
     if target_id:
-        for tgt in ts:
-            if tgt.get("id") == target_id:
-                return _require(tgt, section, backend, require or [])
+        for c in candidates:
+            if c.get("id") == target_id:
+                return _require(c, require, label)
         raise CatalogError(
-            f"target id '{target_id}' not found in {section}.{backend}; "
-            f"available ids: {[t.get('id') for t in ts]}"
+            f"{label} id '{target_id}' not found; available ids: {[c.get('id') for c in candidates]}"
         )
 
-    business_line = str(selectors.get("business_line") or bcfg.get("default_business_line") or "").strip()
-    environment = str(selectors.get("environment") or bcfg.get("default_environment") or "").strip()
+    category = str(selectors.get("category") or defaults.get("category") or "").strip()
+    env = str(selectors.get("env") or defaults.get("env") or "").strip()
     cluster = str(selectors.get("cluster") or "").strip()
 
-    candidates: List[Dict[str, Any]] = []
-    for tgt in ts:
-        if business_line and tgt.get("business_line") != business_line:
+    matched: List[Dict[str, Any]] = []
+    for c in candidates:
+        if category and c.get("category") != category:
             continue
-        if environment and tgt.get("environment") != environment:
+        if env and c.get("env") != env:
             continue
-        if cluster and tgt.get("cluster") != cluster:
+        if cluster and c.get("cluster") != cluster:
             continue
-        candidates.append(tgt)
+        matched.append(c)
 
-    if len(candidates) == 1:
-        return _require(candidates[0], section, backend, require or [])
-    if not candidates:
+    if len(matched) == 1:
+        return _require(matched[0], require, label)
+    if not matched:
         raise CatalogError(
-            f"no {section}.{backend} target matches business_line={business_line!r} "
-            f"environment={environment!r} cluster={cluster!r}; "
-            f"available: {[_public(t) for t in ts]}"
+            f"no {label} matches category={category!r} env={env!r} cluster={cluster!r}; "
+            f"available: {public_list(candidates)}"
         )
     raise CatalogError(
-        f"ambiguous {section}.{backend} selection ({len(candidates)} matches) for "
-        f"business_line={business_line!r} environment={environment!r}; "
-        f"add 'cluster' or 'target'. candidates: {[t.get('id') for t in candidates]}"
+        f"ambiguous {label} ({len(matched)} matches) for category={category!r} env={env!r}; "
+        f"add 'cluster' or 'target'. candidates: {[c.get('id') for c in matched]}"
     )
+
+
+# --------------------------------------------------------------------------
+# Source adapters: turn a config shape into (candidates, defaults).
+# --------------------------------------------------------------------------
+
+def from_section(
+    cfg: Optional[Dict[str, Any]], section: str, backend: str
+) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+    """Candidates from ``config[section][backend].targets`` (HTTP-style domains)."""
+    cfg = cfg if cfg is not None else load_config()
+    block = ((cfg.get(section) or {}).get(backend) or {})
+    candidates = list(block.get("targets") or [])
+    defaults = {"category": block.get("default_category"), "env": block.get("default_env")}
+    return candidates, defaults
+
+
+def _kubeconfig_default() -> str:
+    for key in ("KUBECONFIG_READONLY", "KUBECONFIG_READONLY_PROD", "KUBECONFIG"):
+        val = (os.environ.get(key) or "").strip()
+        if val:
+            return os.path.expanduser(val)
+    return os.path.expanduser("~/.kube/config")
+
+
+def from_clusters(
+    cfg: Optional[Dict[str, Any]] = None,
+    *,
+    defaults: Optional[Dict[str, Any]] = None,
+) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+    """Candidates from the shared top-level ``clusters:`` registry (kubectl-style).
+
+    Each registry entry (an ArgoCD-style destination) becomes a candidate whose
+    kube ``context`` comes from the entry (defaulting to its id) and whose
+    ``kubeconfig`` is the shared read-only kubeconfig from ``.env``.
+    """
+    cfg = cfg if cfg is not None else load_config()
+    registry = cfg.get("clusters") or {}
+    kubeconfig = _kubeconfig_default()
+    kubectl_bin = (os.environ.get("KUBECTL_BIN") or "kubectl").strip() or "kubectl"
+
+    candidates: List[Dict[str, Any]] = []
+    for cid, entry in registry.items():
+        if not isinstance(entry, dict):
+            continue
+        candidates.append({
+            "id": cid,
+            "category": entry.get("category"),
+            "env": entry.get("env"),
+            "cluster": entry.get("cluster") or cid,
+            "server": entry.get("server"),
+            "namespace": entry.get("namespace") or "",
+            "context": entry.get("context") or cid,
+            "kubeconfig": kubeconfig,
+            "kubectl_bin": kubectl_bin,
+        })
+    return candidates, (defaults or {})

@@ -23,13 +23,16 @@ def _err(message: str) -> str:
     return json.dumps({"status": "error", "error": message}, ensure_ascii=False)
 
 
-def build_specs(cfg, *, section, backend, catalog, selectors, client) -> List[Dict[str, Any]]:
+def build_specs(cfg, *, catalog, selectors, load, require, label, client) -> List[Dict[str, Any]]:
     """Build the prometheus_labels and prometheus_targets tool-specs."""
-    sel_props = selectors.selector_properties(section, backend, cfg)
+    candidates, _ = load(cfg)
+    sel_props = selectors.selector_properties(candidates)
 
     def _resolve(args: Dict[str, Any]):
+        cands, defaults = load(None)
         return catalog.resolve(
-            selectors.extract_selectors(args), backend, section, require=["base_url"]
+            selectors.extract_selectors(args), cands,
+            defaults=defaults, require=require, label=label,
         )
 
     def handle_labels(args: Dict[str, Any], **_: Any) -> str:
@@ -59,7 +62,8 @@ def build_specs(cfg, *, section, backend, catalog, selectors, client) -> List[Di
 
     def _check() -> bool:
         try:
-            return bool(catalog.targets(section, backend))
+            cands, _ = load(None)
+            return bool(cands)
         except Exception:  # noqa: BLE001 — availability check must never raise
             return False
 

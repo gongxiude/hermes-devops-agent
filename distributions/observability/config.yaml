@@ -68,51 +68,78 @@ observability_query:
 # 新增业务线/实例：在对应后端 targets 追加一条 + .env 加变量，无需改代码。
 observability:
   prometheus:
-    default_business_line: intlsms
-    default_environment: prod
+    default_category: intlsms
+    default_env: prod
     targets:
       - id: intlsms-prod
-        business_line: intlsms
-        environment: prod
-        cluster: prod-aliyun-sg
+        category: intlsms
+        env: prod
+        cluster: aliyun-sg
         base_url: "${OBSERVE_PROMETHEUS_BASE_URL_PROD}"
         token: "${OBSERVE_PROMETHEUS_TOKEN_PROD}"
         auth_scheme: Basic
       - id: intlsms-test
-        business_line: intlsms
-        environment: test
-        cluster: test-aliyun-zjk
+        category: intlsms
+        env: test
+        cluster: aliyun-zjk
         base_url: "${OBSERVE_PROMETHEUS_BASE_URL_TEST}"
         token: "${OBSERVE_PROMETHEUS_TOKEN_TEST}"
         auth_scheme: Bearer
   # loki:            # 【未来】结构同上；target 增加 username/password 等 loki 专属字段
-  #   default_business_line: intlsms
-  #   default_environment: prod
+  #   default_category: intlsms
+  #   default_env: prod
   #   targets: []
 
-# kubernetes 插件的多集群 catalog(只读)。每个 target = 一个集群。
-# 集群由 context 选择(一个 kubeconfig 多 context);连接细节从 .env 展开。
-# 所有集群变更走 GitOps —— 本插件只读,绝不 mutate。
+# kubernetes 插件只读多集群:集群来自下方共享 clusters: 注册表。
 kubernetes:
-  k8s:
-    default_business_line: intlsms
-    default_environment: prod
-    targets:
-      - id: intlsms-prod
-        business_line: intlsms
-        environment: prod
-        cluster: prod-aliyun-sg
-        kubeconfig: "${KUBECONFIG_READONLY_PROD}"
-        context: "${K8S_CONTEXT_PROD}"
-        namespace: "${K8S_NAMESPACE_PROD}"
-        kubectl_bin: "${KUBECTL_BIN_PROD}"
-        readonly: true
-      - id: intlsms-test
-        business_line: intlsms
-        environment: test
-        cluster: test-aliyun-zjk
-        kubeconfig: "${KUBECONFIG_READONLY_TEST}"
-        context: "${K8S_CONTEXT_TEST}"
-        namespace: intl-test
-        kubectl_bin: "${KUBECTL_BIN_TEST}"
-        readonly: true
+  default_category: intlsms
+  default_env: prod
+
+# 共享集群注册表(单一真源,kubernetes 插件 + 未来 argocd 插件共用)。
+# 对齐你的 ArgoCD destination 维度:category(业务线)× env × 物理集群。
+# context = 本机 kubeconfig 里能连到该物理集群的上下文名;namespace = 默认命名空间。
+# 多个 destination 可共用同一物理 context(如 intlsms-test 与 datacenter-test 同集群)。
+# server/overlayEnv/manualSync/... 等 GitOps 元数据留给未来 argocd 插件,k8s 只读忽略。
+clusters:
+  prod-aliyun-sg-intlsms:
+    category: intlsms
+    env: prod
+    cluster: aliyun-sg
+    server: https://10.100.17.201:6443
+    namespace: prod
+    context: prod-aliyun-sg-intlsms
+  test-aliyun-zjk-intlsms:        # 同物理集群=test-aliyun-zjk-datacenter,走其 context + intl-test ns（待确认）
+    category: intlsms
+    env: test
+    cluster: aliyun-zjk
+    server: https://47.92.210.170:6443
+    namespace: intl-test
+    context: test-aliyun-zjk-datacenter
+  test-aliyun-zjk-datacenter:
+    category: datacenter
+    env: test
+    cluster: aliyun-zjk
+    server: https://47.92.210.170:6443
+    namespace: test
+    context: test-aliyun-zjk-datacenter
+  prod-aliyun-sh-datacenter:
+    category: datacenter
+    env: prod
+    cluster: aliyun-sh
+    server: https://172.25.15.116:6443
+    namespace: ""
+    context: prod-aliyun-sh-datacenter
+  prod-aliyun-zjk-ops:
+    category: ops
+    env: prod
+    cluster: aliyun-zjk
+    server: https://kubernetes.default.svc
+    namespace: ""
+    context: prod-aliyun-zjk-ops
+  prod-aliyun-zjk-ai:             # 疑似 ops 集群的 yuexin-ai 命名空间，走 ops context（待确认）
+    category: ai
+    env: prod
+    cluster: aliyun-zjk
+    server: https://kubernetes.default.svc
+    namespace: yuexin-ai
+    context: prod-aliyun-zjk-ops

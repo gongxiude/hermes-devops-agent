@@ -11,19 +11,22 @@ from __future__ import annotations
 from typing import Any, Dict, List
 
 
-def build_specs(cfg, *, section, backend, catalog, selectors, runner, safeguards) -> List[Dict[str, Any]]:
-    sel_props = selectors.selector_properties(section, backend, cfg)
+def build_specs(cfg, *, catalog, selectors, load, require, label, runner, safeguards) -> List[Dict[str, Any]]:
+    candidates, _ = load(cfg)
+    sel_props = selectors.selector_properties(candidates)
     sg = safeguards
 
     def _resolve(args: Dict[str, Any]):
+        cands, defaults = load(None)
         return catalog.resolve(
-            selectors.extract_selectors(args), backend, section,
-            require=["kubeconfig", "context"],
+            selectors.extract_selectors(args), cands,
+            defaults=defaults, require=require, label=label,
         )
 
     def _check() -> bool:
         try:
-            return bool(catalog.targets(section, backend))
+            cands, _ = load(None)
+            return bool(cands)
         except Exception:  # noqa: BLE001
             return False
 
