@@ -7,7 +7,7 @@ environments: [observability]
 metadata:
   hermes:
     tags: [runtime, inspection, scheduled, observability]
-    related_skills: [observability-health-query, kubernetes-workload-diagnose, audit-trail, secret-redaction]
+    related_skills: [kubernetes-workload-diagnose, audit-trail, secret-redaction]
 ---
 
 # Scheduled Runtime Inspection

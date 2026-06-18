@@ -74,7 +74,7 @@ Kanban task 达到以下任一终态时触发：
 当一次请求产生多个 task 时（扇出或流水线），由**汇总任务（fan-in / 末任务）**统一汇总——它是唯一携带 `reply_target` 的任务。汇总任务必须：
 
 1. 通过 `kanban_show <parent_id>` 读取**每个** parent 的 `summary` 和 `metadata`。
-2. **数字对账**（reconcile）：对同一对象在各子任务/各数据源的计数做一致性校验，不一致必须标注冲突，不得各报各的（详见 `observability-health-query` / `scheduled-runtime-inspection` 的「对账步骤」）。
+2. **数字对账**（reconcile）：对同一对象在各子任务/各数据源的计数做一致性校验，不一致必须标注冲突，不得各报各的（详见 `k8s-cluster-inspector` / `scheduled-runtime-inspection` 的「对账步骤」）。
 3. **整体风险取最高**：`healthy < warning < critical < unknown` 中取最严重者；任一子任务因数据源不可用而降级，则整体不得 healthy。
 4. 输出**单条**结构化报告（不逐个子任务单独推送）。
 

@@ -7,7 +7,7 @@ environments: [observability]
 metadata:
   hermes:
     tags: [capacity, forecast, prometheus, kubernetes, analysis, resource]
-    related_skills: [prometheus-query-tool, k8s-readonly-tool, observability-health-query]
+    related_skills: [prometheus-query-tool, k8s-readonly-tool]
 ---
 
 # Capacity Forecast

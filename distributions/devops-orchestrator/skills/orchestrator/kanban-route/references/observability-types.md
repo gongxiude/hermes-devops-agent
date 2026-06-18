@@ -9,7 +9,7 @@
 | `metrics-query` | `[prometheus-query-tool, promql-basics]` | prometheus-metrics-query | Prometheus 指标查询、SLO 评估、时间序列分析 |
 | `log-query` | `[loki-query-tool, loki-logql-basics]` | loki-logs-query | Loki 日志聚类、错误模式识别、关联分析 |
 | `alert-triage` | `[alertmanager-basics, alert-entry]` | alert-router | Alertmanager / Grafana / 云监控告警接入、去重、聚合 |
-| `health-check` | `[observability-health-query]` | prometheus-metrics-query + loki-logs-query | 服务全链路健康度（指标 + 日志 + K8s 状态联合查询） |
+| `health-check` | `[k8s-cluster-inspector]` | prometheus-metrics-query + loki-logs-query | 服务全链路健康度（指标 + 日志 + K8s 状态联合查询） |
 | `anomaly-detection` | `[anomaly-detection, prometheus-query-tool, loki-query-tool]` | prometheus-metrics-query + loki-logs-query | 异常识别、根因推断、影响范围评估 |
 | `dashboard-query` | `[grafana-basics]` | grafana | Grafana dashboard / panel / alert rule 定位与可视化查询 |
 
@@ -117,6 +117,6 @@ kanban_create(
         "context": {"actor": "cron", "service": "intlsms", "environment": "prod", "priority": "normal", "reply_target": ops_chat_id},
         "payload": {"raw_request": "每日生产健康巡检", "window": "5m"},
     }),
-    skills=["observability-health-query"],
+    skills=["k8s-cluster-inspector"],
 )["task_id"]
 ```

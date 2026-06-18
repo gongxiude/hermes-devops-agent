@@ -7,7 +7,7 @@ environments: [observability]
 metadata:
   hermes:
     tags: [intlsms, runtime, inspection, observability, scheduled]
-    related_skills: [observability-health-query, skill-policy-gate, scheduled-entry, alert-entry]
+    related_skills: [skill-policy-gate, scheduled-entry, alert-entry]
 ---
 
 # 国际短信运行巡检
@@ -26,7 +26,7 @@ observability profile
   -> skill-policy-gate
   -> intlsms-runtime-inspection
   -> observability-agent
-     -> observability-health-query
+     -> 
      -> prometheus-query-tool
      -> loki-query-tool
   -> kubernetes-agent

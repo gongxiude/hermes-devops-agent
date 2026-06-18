@@ -7,7 +7,7 @@ environments: [observability, software-delivery-query]
 metadata:
   hermes:
     tags: [service, risk, summary, observability, delivery]
-    related_skills: [observability-health-query, release-impact-analysis, capacity-forecast, anomaly-detection]
+    related_skills: [release-impact-analysis, capacity-forecast, anomaly-detection]
 ---
 
 # Service Risk Summary

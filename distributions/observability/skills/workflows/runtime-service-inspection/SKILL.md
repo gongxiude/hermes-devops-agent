@@ -7,7 +7,7 @@ environments: [observability, gitops-agent]
 metadata:
   hermes:
     tags: [runtime, service, inspection, observability, kubernetes]
-    related_skills: [observability-health-query, kubernetes-workload-diagnose, audit-trail]
+    related_skills: [kubernetes-workload-diagnose, audit-trail]
 ---
 
 # Runtime Service Inspection

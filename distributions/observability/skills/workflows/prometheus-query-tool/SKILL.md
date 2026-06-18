@@ -7,7 +7,7 @@ environments: [observability, incident-triage]
 metadata:
   hermes:
     tags: [prometheus, tool, query, metrics, readonly]
-    related_skills: [promql-basics, observability-health-query, anomaly-detection]
+    related_skills: [promql-basics, anomaly-detection]
 ---
 
 # Prometheus Query Tool

@@ -7,7 +7,7 @@ environments: [observability, incident-triage]
 metadata:
   hermes:
     tags: [anomaly, detection, prometheus, loki, grafana, analysis, root-cause]
-    related_skills: [observability-health-query, promql-basics, loki-logql-basics, alertmanager-basics]
+    related_skills: [promql-basics, loki-logql-basics, alertmanager-basics]
 ---
 
 # Anomaly Detection

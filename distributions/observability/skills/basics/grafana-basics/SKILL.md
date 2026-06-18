@@ -7,7 +7,7 @@ environments: [observability, incident-triage]
 metadata:
   hermes:
     tags: [grafana, observability, dashboard, basics, alert-rule]
-    related_skills: [promql-basics, alertmanager-basics, observability-health-query]
+    related_skills: [promql-basics, alertmanager-basics]
 ---
 
 # Grafana Basics

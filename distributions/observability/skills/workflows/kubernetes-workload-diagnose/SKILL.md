@@ -7,7 +7,7 @@ environments: [observability, incident-triage, gitops-agent]
 metadata:
   hermes:
     tags: [kubernetes, diagnose, workload, pod, kubectl]
-    related_skills: [kubectl-basics, k8s-readonly-tool, kubernetes-object-basics, observability-health-query]
+    related_skills: [kubectl-basics, k8s-readonly-tool, kubernetes-object-basics]
 ---
 
 # Kubernetes Workload Diagnose
