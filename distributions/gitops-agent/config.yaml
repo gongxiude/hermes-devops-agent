@@ -28,7 +28,7 @@ mcp_servers:
   git-codeup:
     command: python3
     args:
-      - /Users/gongxiude/Documents/github/infrastructure-agents-guide/hermes-devops-agent/mcp-servers/git-codeup/src/server.py
+      - /Users/gongxiude/Documents/yuexin/hermes-devops-agent/mcp-servers/git-codeup/src/server.py
     env:
       MCP_SERVER_NAME: git-codeup
       CODEUP_BASE_URL: "${CODEUP_BASE_URL}"
@@ -47,7 +47,7 @@ mcp_servers:
   argocd:
     command: python3
     args:
-      - /Users/gongxiude/Documents/github/infrastructure-agents-guide/hermes-devops-agent/mcp-servers/argocd/src/server.py
+      - /Users/gongxiude/Documents/yuexin/hermes-devops-agent/mcp-servers/argocd/src/server.py
     env:
       MCP_SERVER_NAME: argocd
       ARGOCD_SERVER: "${ARGOCD_SERVER}"

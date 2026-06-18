@@ -6,49 +6,19 @@ hooks_auto_accept: false
 plugins:
   enabled:
     - devops_agent
+    - observability
+    - kubernetes
 
 terminal:
-  cwd: /Users/gongxiude/Documents/github/infrastructure-agents-guide
+  cwd: /Users/gongxiude/Documents/yuexin/hermes-devops-agent
 
 # MCP servers — 运行时实际读取此配置（mcp.json 仅为 distribution 交付格式）
+# 注意：Prometheus 已从 MCP 迁移到原生插件 `observability`（见下方 observability: 段）。
 mcp_servers:
-  prometheus-intlsms-prod:
-    command: python3
-    args:
-      - mcp-servers/prometheus/src/server.py
-    env:
-      MCP_SERVER_NAME: prometheus-intlsms-prod
-      PROMETHEUS_URL: "${OBSERVE_PROMETHEUS_BASE_URL_PROD}"
-      PROMETHEUS_TOKEN: "${OBSERVE_PROMETHEUS_TOKEN_PROD}"
-      PROMETHEUS_AUTH_SCHEME: "Basic"
-      ENABLE_DISCOVERY_TOOLS: "false"
-      ENABLE_INFO_TOOLS: "false"
-      ENABLE_QUERY_TOOLS: "true"
-      MCP_LOG_LEVEL: INFO
-    tools:
-      include:
-        - prometheus_query
-        - prometheus_query_range
-  prometheus-intlsms-test:
-    command: python3
-    args:
-      - mcp-servers/prometheus/src/server.py
-    env:
-      MCP_SERVER_NAME: prometheus-intlsms-test
-      PROMETHEUS_URL: "${OBSERVE_PROMETHEUS_BASE_URL_TEST}"
-      PROMETHEUS_TOKEN: "${OBSERVE_PROMETHEUS_TOKEN_TEST}"
-      ENABLE_DISCOVERY_TOOLS: "false"
-      ENABLE_INFO_TOOLS: "false"
-      ENABLE_QUERY_TOOLS: "true"
-      MCP_LOG_LEVEL: INFO
-    tools:
-      include:
-        - prometheus_query
-        - prometheus_query_range
   loki-intlsms-prod:
     command: python3
     args:
-      - /Users/gongxiude/Documents/github/infrastructure-agents-guide/hermes-devops-agent/mcp-servers/loki/src/server.py
+      - /Users/gongxiude/Documents/yuexin/hermes-devops-agent/mcp-servers/loki/src/server.py
     env:
       MCP_SERVER_NAME: loki-intlsms-prod
       LOKI_URL: "${OBSERVE_LOKI_BASE_URL_PROD}"
@@ -65,7 +35,7 @@ mcp_servers:
   # loki-intlsms-test:
   #   command: python3
   #   args:
-  #     - /Users/gongxiude/Documents/github/infrastructure-agents-guide/hermes-devops-agent/mcp-servers/loki/src/server.py
+  #     - /Users/gongxiude/Documents/yuexin/hermes-devops-agent/mcp-servers/loki/src/server.py
   #   env:
   #     MCP_SERVER_NAME: loki-intlsms-test
   #     LOKI_URL: "${OBSERVE_LOKI_BASE_URL_TEST}"
@@ -78,48 +48,6 @@ mcp_servers:
   #       - loki_labels
   #       - loki_label_values
   #       - loki_series
-  k8s-intlsms-prod:
-    command: python3
-    args:
-      - /Users/gongxiude/Documents/github/infrastructure-agents-guide/hermes-devops-agent/mcp-servers/k8s/src/server.py
-    env:
-      MCP_SERVER_NAME: k8s-intlsms-prod
-      K8S_CONTEXT: "${K8S_CONTEXT_PROD}"
-      K8S_NAMESPACE: "${K8S_NAMESPACE_PROD}"
-      KUBECONFIG: "${KUBECONFIG_READONLY_PROD}"
-      KUBECTL_BIN: "${KUBECTL_BIN_PROD}"
-      K8S_READ_ONLY: "true"
-      MCP_LOG_LEVEL: INFO
-    tools:
-      include:
-        - k8s_get_resources
-        - k8s_get_pod_logs
-        - k8s_get_events
-        - k8s_get_available_api_resources
-        - k8s_get_cluster_configuration
-        - k8s_get_resource_yaml
-        - k8s_describe_resource
-  k8s-intlsms-test:
-    command: python3
-    args:
-      - /Users/gongxiude/Documents/github/infrastructure-agents-guide/hermes-devops-agent/mcp-servers/k8s/src/server.py
-    env:
-      MCP_SERVER_NAME: k8s-intlsms-test
-      K8S_CONTEXT: "${K8S_CONTEXT_TEST}"
-      K8S_NAMESPACE: intl-test
-      KUBECONFIG: "${KUBECONFIG_READONLY_TEST}"
-      KUBECTL_BIN: "${KUBECTL_BIN_TEST}"
-      K8S_READ_ONLY: "true"
-      MCP_LOG_LEVEL: INFO
-    tools:
-      include:
-        - k8s_get_resources
-        - k8s_get_pod_logs
-        - k8s_get_events
-        - k8s_get_available_api_resources
-        - k8s_get_cluster_configuration
-        - k8s_get_resource_yaml
-        - k8s_describe_resource
 
 # Profile-specific settings
 observability_query:
@@ -133,3 +61,58 @@ observability_query:
   max_window: 2h
   report_format: markdown
   readonly: true
+
+# observability 插件的多实例 catalog（按后端分段）。
+# 工具根据提示词选择 业务线/环境/集群 → 命中唯一 target → 用其 base_url/token 连接。
+# base_url/token 写 ${VAR}，由 load_config() 自动从 .env 展开。
+# 新增业务线/实例：在对应后端 targets 追加一条 + .env 加变量，无需改代码。
+observability:
+  prometheus:
+    default_business_line: intlsms
+    default_environment: prod
+    targets:
+      - id: intlsms-prod
+        business_line: intlsms
+        environment: prod
+        cluster: prod-aliyun-sg
+        base_url: "${OBSERVE_PROMETHEUS_BASE_URL_PROD}"
+        token: "${OBSERVE_PROMETHEUS_TOKEN_PROD}"
+        auth_scheme: Basic
+      - id: intlsms-test
+        business_line: intlsms
+        environment: test
+        cluster: test-aliyun-zjk
+        base_url: "${OBSERVE_PROMETHEUS_BASE_URL_TEST}"
+        token: "${OBSERVE_PROMETHEUS_TOKEN_TEST}"
+        auth_scheme: Bearer
+  # loki:            # 【未来】结构同上；target 增加 username/password 等 loki 专属字段
+  #   default_business_line: intlsms
+  #   default_environment: prod
+  #   targets: []
+
+# kubernetes 插件的多集群 catalog(只读)。每个 target = 一个集群。
+# 集群由 context 选择(一个 kubeconfig 多 context);连接细节从 .env 展开。
+# 所有集群变更走 GitOps —— 本插件只读,绝不 mutate。
+kubernetes:
+  k8s:
+    default_business_line: intlsms
+    default_environment: prod
+    targets:
+      - id: intlsms-prod
+        business_line: intlsms
+        environment: prod
+        cluster: prod-aliyun-sg
+        kubeconfig: "${KUBECONFIG_READONLY_PROD}"
+        context: "${K8S_CONTEXT_PROD}"
+        namespace: "${K8S_NAMESPACE_PROD}"
+        kubectl_bin: "${KUBECTL_BIN_PROD}"
+        readonly: true
+      - id: intlsms-test
+        business_line: intlsms
+        environment: test
+        cluster: test-aliyun-zjk
+        kubeconfig: "${KUBECONFIG_READONLY_TEST}"
+        context: "${K8S_CONTEXT_TEST}"
+        namespace: intl-test
+        kubectl_bin: "${KUBECTL_BIN_TEST}"
+        readonly: true

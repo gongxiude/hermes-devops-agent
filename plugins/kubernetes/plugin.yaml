@@ -1,0 +1,24 @@
+name: kubernetes
+version: 0.1.0
+description: >
+  Read-only, multi-cluster Kubernetes inspection for Hermes. Exposes kubectl
+  get/describe/logs/events/api-resources/cluster-info as native plugin tools
+  (via register_tool). The cluster is selected from the user's prompt (business
+  line / environment / cluster) against a config-driven catalog in config.yaml's
+  `kubernetes:` section; kubeconfig/context/namespace come from `.env`. Strictly
+  read-only — the shared kubectl runner enforces a read-verb allowlist; all
+  cluster mutations go through GitOps. Grows by dropping `backends/<name>/` in.
+author: Platform Engineering
+provides_tools:
+  - k8s_get_resources
+  - k8s_get_resource_yaml
+  - k8s_describe_resource
+  - k8s_get_pod_logs
+  - k8s_get_events
+  - k8s_get_available_api_resources
+  - k8s_get_cluster_configuration
+  - k8s_list_clusters
+requires_env:
+  - name: KUBECONFIG_READONLY_PROD
+    description: "Read-only kubeconfig path for the production cluster"
+    secret: false

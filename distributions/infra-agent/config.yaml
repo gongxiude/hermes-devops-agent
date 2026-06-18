@@ -22,13 +22,13 @@ toolsets:
   - delegation
 
 terminal:
-  cwd: /Users/gongxiude/Documents/github/infrastructure-agents-guide
+  cwd: /Users/gongxiude/Documents/yuexin/hermes-devops-agent
 
 mcp_servers:
   aliyun:
     command: python3
     args:
-      - /Users/gongxiude/Documents/github/infrastructure-agents-guide/hermes-devops-agent/mcp-servers/aliyun/src/server.py
+      - /Users/gongxiude/Documents/yuexin/hermes-devops-agent/mcp-servers/aliyun/src/server.py
     env:
       MCP_SERVER_NAME: aliyun
       ALIYUN_ACCESS_KEY_ID: "${ALIYUN_ACCESS_KEY_ID}"
@@ -50,7 +50,7 @@ mcp_servers:
   k8s-readonly:
     command: python3
     args:
-      - /Users/gongxiude/Documents/github/infrastructure-agents-guide/hermes-devops-agent/mcp-servers/k8s/src/server.py
+      - /Users/gongxiude/Documents/yuexin/hermes-devops-agent/mcp-servers/k8s/src/server.py
     env:
       MCP_SERVER_NAME: k8s-readonly
       K8S_CONTEXT: "${K8S_CONTEXT}"

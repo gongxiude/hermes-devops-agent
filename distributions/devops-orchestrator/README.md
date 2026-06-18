@@ -41,7 +41,7 @@ hermes -p hermes-devops-orchestrator gateway stop
 
 ```bash
 hermes profile install \
-  ~/Documents/github/infrastructure-agents-guide/hermes-devops-agent/distributions/devops-orchestrator \
+  ~/Documents/yuexin/hermes-devops-agent/distributions/devops-orchestrator \
   --yes
 ```
 

@@ -1,0 +1,21 @@
+name: observability
+version: 0.1.0
+description: >
+  Read-only observability tools for Hermes. Exposes multi-instance,
+  multi-business-line Prometheus query as native plugin tools (via
+  register_tool). The target instance is selected from the user's prompt
+  (business line / environment / cluster) against a config-driven catalog in
+  config.yaml's `observability:` section; connection URLs/tokens come from
+  `.env`. Designed to grow: additional backends (Loki, ...) drop into
+  `backends/<name>/` with no change to the shared core.
+author: Platform Engineering
+provides_tools:
+  - prometheus_query
+  - prometheus_query_range
+  - prometheus_labels
+  - prometheus_targets
+  - observability_list_targets
+requires_env:
+  - name: OBSERVE_PROMETHEUS_BASE_URL_PROD
+    description: "Prometheus base URL (prod) for the default business line"
+    secret: false
