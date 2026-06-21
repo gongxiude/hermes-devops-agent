@@ -68,10 +68,14 @@ def summarize_apps(
         status = app.get("status") or {}
         dest = spec.get("destination") or {}
         labels = meta.get("labels") or {}
-        if dest_cluster and dest_cluster not in {str(dest.get("name") or ""), str(dest.get("server") or "")}:
+        project = str(spec.get("project") or "")
+        if dest_cluster and dest_cluster not in {str(dest.get("name") or ""), str(dest.get("server") or ""), project}:
             continue
-        if category and labels.get("category") != category:
-            continue
+        if category:
+            # Apps here are organized by project==cluster (e.g. prod-aliyun-sg-intlsms),
+            # not by a `category` label; match the label if present, else the project name.
+            if labels.get("category") != category and category not in project:
+                continue
         sync = status.get("sync") or {}
         health = status.get("health") or {}
         rows.append({
