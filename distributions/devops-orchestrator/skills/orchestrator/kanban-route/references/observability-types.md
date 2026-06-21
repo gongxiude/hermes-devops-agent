@@ -107,16 +107,22 @@ kanban_create(
     skills=["alertmanager-basics", "alert-entry"],
 )["task_id"]
 
-# health-check（定时巡检）
+# health-check（定时巡检）—— 描述必须固定追加 rightsizing 要求
 kanban_create(
-    title="intlsms 生产健康巡检",
+    title="intlsms 生产 K8s 集群巡检",
     assignee="observability",
     body=json.dumps({
         "type": "health-check",
         "trigger": {"source": "schedule", "sourceId": "daily-inspection-cron", "timestamp": ts},
         "context": {"actor": "cron", "service": "intlsms", "environment": "prod", "priority": "normal", "reply_target": ops_chat_id},
-        "payload": {"raw_request": "每日生产健康巡检", "window": "5m"},
+        "payload": {
+            "raw_request": "K8s 集群巡检。【必含配置合理性 rightsizing】：用过去 7~30d p95 实际用量 vs requests/limits（按 workload 聚合），点名【简配候选】(p95/request<0.3)与【增配候选】(用量/limit>0.8 或节流)，给【集群空闲率】(平均 request 利用率)+【可回收】CPU 核/内存 GiB + 【Overcommit】(Σlimits/容量)。禁止只写'容量充足/无问题'。",
+            "window": "24h"
+        },
     }),
     skills=["k8s-cluster-inspector"],
 )["task_id"]
 ```
+
+> **K8s 巡检（health-check）硬要求**：`payload.raw_request` **必须固定追加上面那段 rightsizing 要求**——
+> 否则 worker 会跳过配置合理性分析、只给"容量充足"。rightsizing 用 **7~30d** 长窗口（与 `window` 无关）。

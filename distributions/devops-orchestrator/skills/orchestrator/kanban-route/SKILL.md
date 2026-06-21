@@ -59,7 +59,7 @@ metadata:
 - ECS 实例、云主机 → `ecs-inspection`
 - RDS / 数据库实例 → `rds-inspection`
 - OSS 存储 → `oss-inspection`
-- K8s 集群、节点、Pod → `k8s-cluster-analysis`
+- K8s 集群巡检 / 节点 / Pod 状态 / 健康 → `health-check`（**observability**，用 k8s-cluster-inspector）
 - 网络、VPC、SLB → `network-query`
 - 安全、RAM 权限、合规 → `security-audit`
 - 成本、账单、闲置资源 → `cost-analysis`
@@ -82,7 +82,7 @@ metadata:
 `jenkins-query` · `jenkins-library-query` · `jenkins-library-draft` · `argocd-query` · `gitops-config-query` · `gitops-manifest-draft` · `release-impact-query`
 
 **infra-agent profile**（完整列表见 [references/infra-agent-types.md](references/infra-agent-types.md)）：
-`ecs-inspection` · `rds-inspection` · `oss-inspection` · `k8s-cluster-analysis` · `network-query` · `security-audit` · `cost-analysis`
+`ecs-inspection` · `rds-inspection` · `oss-inspection` · `network-query` · `security-audit` · `cost-analysis`
 
 ### 判断规则
 
@@ -112,7 +112,7 @@ metadata:
 |---|---|---|
 | `metrics-query` / `log-query` / `alert-triage` / `health-check` / `anomaly-detection` / `dashboard-query` | `observability` | [references/observability-types.md](references/observability-types.md) |
 | `jenkins-query` / `jenkins-library-query` / `jenkins-library-draft` / `argocd-query` / `gitops-config-query` / `gitops-manifest-draft` / `release-impact-query` | `gitops-agent` | [references/gitops-agent-types.md](references/gitops-agent-types.md) |
-| `ecs-inspection` / `rds-inspection` / `oss-inspection` / `k8s-cluster-analysis` / `network-query` / `security-audit` / `cost-analysis` | `infra-agent` | [references/infra-agent-types.md](references/infra-agent-types.md) |
+| `ecs-inspection` / `rds-inspection` / `oss-inspection` / `network-query` / `security-audit` / `cost-analysis` | `infra-agent` | [references/infra-agent-types.md](references/infra-agent-types.md) |
 
 ### 2-B：skills 按需加载
 
@@ -127,12 +127,12 @@ kanban_create(
     skills=["prometheus-query-tool", "promql-basics"],
 )
 
-# k8s-cluster-analysis → skills=[k8s-readonly-tool, kubernetes-object-basics, kubectl-basics]
+# health-check（含 K8s 集群巡检）→ observability，用 k8s-cluster-inspector
 kanban_create(
-    title="...",
-    assignee="infra-agent",
+    title="国际短信生产环境 K8s 集群巡检",
+    assignee="observability",
     body=json.dumps({...}),
-    skills=["k8s-readonly-tool", "kubernetes-object-basics", "kubectl-basics"],
+    skills=["k8s-cluster-inspector"],
 )
 ```
 
@@ -153,7 +153,7 @@ kanban_create(
 
 ## Step 3：绘制任务图
 
-创建任务之前，先在回复中说明路由计划：
+创建任务之前,先在**内部**完成路由规划(这是你的推理过程,**不要写进给用户的飞书回复**;用户回复一律按 Step 6 的简洁模板):
 
 1. 从消息提取工作通道（每个独立 `body.type` 是一条通道）。
 2. 将每条通道映射到 Step 2 路由表中的 profile。
@@ -330,14 +330,26 @@ kanban_complete(
 
 ## Step 6：回复用户并等待结果
 
-任务创建成功后，**立即**在飞书回复确认：
+任务创建成功后,**立即**在飞书回复确认。回复必须**简洁**:只说「创建了什么任务 + 正在处理」,
+**严禁**暴露任何路由内部细节——不要 type / tier / 执行者 profile / 技能列表 / 命名空间,
+**不要画「路由详情」表格**。这些是内部编排信息,用户不需要看。
+
+单任务:
 
 ```
-已创建任务：
-- #<t1> 查 gateway 生产内存和CPU（observability）
-- #<t2> 巡检 gateway ECS 实例状态（infra-agent）
-两个任务并行执行，完成后汇总结果。
+已创建任务 #<t1>,正在巡检国际短信生产环境 K8s,完成后回传结果。
 ```
+
+多任务:
+
+```
+已创建任务:
+- #<t1> 查 gateway 生产内存和CPU
+- #<t2> 巡检 gateway ECS 实例状态
+并行执行,完成后汇总回传。
+```
+
+> 简洁基线:一句话/一个短列表即可。括号里标注执行环境(如「生产」)可以,但不写 profile/技能/tier。
 
 ### 等待完成（CLI 同步模式）
 

@@ -48,7 +48,6 @@
 | `ecs-inspection` | 0 | — |
 | `rds-inspection` | 0 | — |
 | `oss-inspection` | 0 | — |
-| `k8s-cluster-analysis` | 0 | — |
 | `network-query` | 0 | — |
 | `security-audit` | 0 | — |
 | `cost-analysis` | 0 | — |
