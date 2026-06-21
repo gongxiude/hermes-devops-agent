@@ -41,3 +41,27 @@ def selector_properties(candidates: List[Dict[str, Any]]) -> Dict[str, Any]:
 
 def extract_selectors(args: Dict[str, Any]) -> Dict[str, Any]:
     return {key: args.get(key) for key in SELECTOR_KEYS}
+
+
+# -- single-instance / control-plane domains (e.g. argocd) -----------------
+# These pick ONE instance (usually by env), so category/cluster are NOT
+# instance selectors — they stay free for app-level filtering by the tools.
+
+def instance_properties(candidates: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Schema properties for picking a single-instance backend: env + target only."""
+
+    def _with_enum(desc: str, field: str) -> Dict[str, Any]:
+        prop: Dict[str, Any] = {"type": "string", "description": desc}
+        values = catalog.distinct(candidates, field)
+        if values:
+            prop["enum"] = values
+        return prop
+
+    return {
+        "env": _with_enum(_ENV_DESC, "env"),
+        "target": _with_enum(_TGT_DESC, "id"),
+    }
+
+
+def extract_instance(args: Dict[str, Any]) -> Dict[str, Any]:
+    return {"env": args.get("env"), "target": args.get("target")}

@@ -1,0 +1,25 @@
+name: argocd
+version: 0.1.0
+description: >
+  Read-only ArgoCD (GitOps control plane) inspection for Hermes. Exposes the
+  ArgoCD REST API — applications, sync/health status, projects, settings — as
+  native plugin tools (via register_tool). The ArgoCD instance is picked from
+  the `argocd:` catalog in config.yaml (by env); app-level queries can be
+  filtered by project / destination cluster / category. Connection
+  (ARGOCD_SERVER / ARGOCD_TOKEN) comes from `.env`. Strictly read-only — all
+  GitOps changes go through git/PR, never through this plugin.
+author: Platform Engineering
+provides_tools:
+  - argocd_list_applications
+  - argocd_get_application
+  - argocd_get_project
+  - argocd_get_settings
+  - argocd_get_version
+  - argocd_list_instances
+requires_env:
+  - name: ARGOCD_SERVER
+    description: "ArgoCD API server URL (e.g. https://argocd.example.com)"
+    secret: false
+  - name: ARGOCD_TOKEN
+    description: "ArgoCD API auth token"
+    secret: true

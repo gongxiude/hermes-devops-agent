@@ -8,6 +8,7 @@ here. Only GET is implemented: no write path.
 from __future__ import annotations
 
 import json
+import ssl
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -23,6 +24,19 @@ def build_headers(target: Dict[str, Any]) -> Dict[str, str]:
         scheme = str(target.get("auth_scheme") or "Bearer").strip()
         headers["Authorization"] = f"{scheme} {token}"
     return headers
+
+
+def _ssl_context(target: Dict[str, Any]):
+    """Return an unverified SSL context when ``verify_tls`` is explicitly false.
+
+    ArgoCD and other self-hosted control planes commonly serve self-signed
+    certs; a target may set ``verify_tls: false`` to skip verification. Default
+    (unset / true) keeps full verification.
+    """
+    verify = target.get("verify_tls")
+    if verify is False or str(verify).strip().lower() in {"false", "0", "no"}:
+        return ssl._create_unverified_context()
+    return None
 
 
 def api_get(
@@ -43,7 +57,7 @@ def api_get(
 
     req = urllib.request.Request(url, headers=build_headers(target), method="GET")
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
+        with urllib.request.urlopen(req, timeout=timeout, context=_ssl_context(target)) as resp:
             return json.loads(resp.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:
         body = exc.read().decode("utf-8", errors="replace")[:1000]
