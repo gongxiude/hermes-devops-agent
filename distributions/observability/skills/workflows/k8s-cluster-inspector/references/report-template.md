@@ -36,7 +36,7 @@
 
 📈 容量 & 异常（时序前瞻）
 · 容量：{{磁盘约 N 天后达 80% / 根分区充足，无近期压力}}
-· 配置：{{增配 N 项（贴近 limit/节流）· 简配 M 项（长期空闲）/ 配置合理}}
+· 配置：空闲率 {{X%}}（平均 req 利用率）· 简配 {{M}} 项可回收 {{≈N核/GGiB}}：{{top: worker-B(CPU 5%)、worker-D(mem 8%)}}；增配 {{K}} 项：{{worker-A(节流)}}；无 limit {{J}} 个
 · 异常：{{检出 X 处偏离 baseline（如错误率同比放大）/ 无显著异常}}
 · 前瞻风险：{{overall_risk，融合当前 + 趋势}}
 
@@ -126,12 +126,18 @@
 |---|---|---|---|---|---|
 | {{根分区}} | {{22%}} | {{平稳}} | {{>90 天 / 充足}} | {{中}} | prometheus `predict_linear(node_filesystem_avail_bytes…)` |
 
-🧮 配置合理性 / Rightsizing（p95 用量 vs requests/limits）
-| 工作负载 | 判定 | p95 用量 vs 配置 | 建议 | 证据(MCP) |
-|---|---|---|---|---|
-| {{示例 worker-A}} | 🔺 增配 | {{内存 p95 94% of limit · 有 CPU 节流}} | {{提高 limit / 加副本}} | prometheus container_memory / cfs_throttled |
-| {{示例 worker-B}} | 🔻 简配 | {{CPU p95 12% of request（7d）}} | {{下调 request / 减副本}} | prometheus container_cpu_usage |
-| {{示例 worker-C}} | ✅ 合理 | {{落在 request~limit 间}} | 维持 | prometheus |
+🧮 配置合理性 / Rightsizing（p95 over 7–30d vs requests/limits）
+
+集群汇总：平均 request 利用率 {{X%}}　简配候选 {{M}}/{{总}} workload　可回收 {{≈N 核 / G GiB}}
+Overcommit：CPU {{A%}} · 内存 {{B%}}（保守≤125% 激进≤150%）　无 limits 容器 {{K}} 个
+
+| 工作负载 | 判定 | p95 用量 / request(limit) | 利用率 | 建议新值 | 证据(MCP) |
+|---|---|---|---|---|---|
+| {{示例 worker-A}} | 🔺 增配 | mem p95 94% of limit · CPU 节流 | 94% | limit 1Gi→1.5Gi | prometheus container_memory / cfs_throttled |
+| {{示例 worker-B}} | 🔻 简配 | CPU p95 0.05 / req 1.0 | 5% | req 1.0→0.1 | prometheus container_cpu_usage |
+| {{示例 worker-C}} | ⛔ 无 limit | CPU 高消耗无 limit（Top10） | — | 补 limit ≈ p99 | prometheus(unless limits) |
+
+> 必须点名：分别列「简配候选」「增配候选」「无 limit Top10」，不许只写"配置合理/无问题"。
 
 🚨 异常检测（偏离 baseline，来自 anomaly-detection）
 | 指标 | 异常 | severity | baseline 对比 | 置信度 | 证据(MCP) |

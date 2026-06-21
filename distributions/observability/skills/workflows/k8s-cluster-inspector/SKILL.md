@@ -1,7 +1,7 @@
 ---
 name: k8s-cluster-inspector
 description: 巡检的首选 skill——当用户说「巡检 / 国际短信巡检 / 集群巡检 / 生产巡检 / k8s 巡检」时使用。Cluster-wide read-only Kubernetes & service inspection sourced ONLY from MCP (k8s read-only API, Prometheus, Loki) — control-plane, node health, workloads/pods, storage, network, config & security audit, probe audit, plus capacity / anomaly / risk time-series analysis — with severity grading, fault prioritization, health score, and Feishu report.
-version: 1.9.0
+version: 1.10.0
 platforms: [linux, macos, windows]
 environments: [observability]
 metadata:
@@ -260,17 +260,45 @@ delegate_task(tasks=[
 
 ### 容量评估的两面：未来风险 + 配置合理性（rightsizing）
 
-容量评估**不只看「未来会不会触阈」**，还要看**当前配置是否合理**——对比一段长窗口的实际用量
-（p95/峰值）与 `requests` / `limits` / `replicas`：
+容量评估**不只看「未来会不会触阈」**，**重点是逐个 workload 判断当前配置是否合理**，并给出**增配/简配**
+的具体名单。判定的核心比值是 **p95 实际用量 ÷ request**（request 是被调度预留的量，过度配置就浪费在这）：
 
-| 判定 | 信号（MCP 时序） | 建议 |
+| 判定 | 信号（p95 over 7–30d） | 建议 |
 |---|---|---|
-| **配置不够（增配）** | 实际用量长期贴近/超过 request 或 limit；CPU 节流（`container_cpu_cfs_throttled`）；内存逼近 limit（OOM 风险）；副本饱和 | **增配**：提高 request/limit 或加副本 |
-| **长期空闲（简配）** | 实际用量长期 **<< request**（如 p95 < request 的 30%，持续 7–30d）；副本利用率低 | **简配**：下调 request/limit 或减副本（省成本） |
-| 合理 | 用量稳定落在 request 与 limit 之间、无节流无饱和 | 维持 |
+| **配置不够（增配）** | `p95用量/limit > 0.8` 或 CPU 被节流（`cfs_throttled>0`）或内存逼近 limit（OOM 风险）或副本饱和 | **增配**：提高 request/limit 或加副本 |
+| **长期空闲（简配）** | **`p95用量/request < 0.3`**（CPU 或内存任一），持续 7–30d | **简配**：把 request 降到约 `p95×1.3`，必要时减副本 |
+| 合理 | `0.3 ≤ p95/request ≤ 0.8` 且无节流无饱和 | 维持 |
 
-> 核心原则：**配置不够 → 建议增配；长期空闲 → 建议简配**。两者都只给建议文本，不执行 scale。
-> rightsizing 用**长窗口 p95**（7–30d），避免被短时尖刺或低谷误导；窗口不足 → `evidence_gap`。
+> ⚠️ **常见错误（必须避免）**：用「用量 < X% **limit**，无问题」来收尾。**用量远低于 request/limit 正是
+> 过度配置（空闲）的铁证**，要判**简配**、**点名 workload**，不是判健康。limit 只用于看增配（OOM/节流）。
+
+**输出硬要求（不许偷懒给"无问题"）：**
+
+1. **逐 workload 列名单**：分别列出**增配候选**与**简配候选**，每条带 `workload / 资源(cpu|mem) / p95用量 /
+   request / limit / 利用率% / 建议新值`。即使全合理，也要给出**利用率分布**（最闲的 5 个、最紧的 5 个）证明。
+2. **集群空闲率汇总**：`平均 request 利用率`、`简配候选数 / 总 workload 数`、**可回收总量**
+   （Σ(request − p95×1.3) 的 CPU 核数与内存 GiB）——这是给老板看的省钱数字。
+3. 用 `topk/bottomk` 排序，**优先点名利用率最低的过度配置项**。
+
+### Rightsizing 量化规则（参考 sysdig：Kubernetes resource limits）
+
+- **增配阈值**：`用量/limit > 0.8`（80%）→ CPU 节流 / OOM 风险。
+- **limit 设值策略**：**保守 = max（峰值）**；**激进 = p99**（剔除最耗的 1% 尖刺）。request 取 ≈ p95。
+- **无 limit 容器 = under-managed（危险）**：节点可能被某容器耗尽内存而 starvation / CPU 全局节流。
+  必须**单列「无 limits 容器」并按消耗 Top 10 点名**（CPU、内存各一份）。
+- **集群 / 节点 Overcommit 率** = `Σlimits / 节点容量`：100% 理想（但有永不使用的浪费）、**保守 ≤125%**、
+  **激进 ≤150%**；超过则高负载时会触发 pod eviction、极端节点死亡。**逐节点也算一遍**（按 node 分组）。
+
+### Rightsizing 设值与流程（参考 sysdig：Kubernetes capacity planning）
+
+- **request 目标值** = **平均用量的 85%–115%**（不是 p95；request 用于调度，贴近均值最省）；**limit** = p99 或 max。
+- **按 workload owner 聚合**（Deployment / StatefulSet / DaemonSet，经 `kube_pod_owner`），**不要按单 pod 报**——
+  建议要落到工作负载，名字才可执行。
+- **浪费判定**：`request − 用量 > 0` 即浪费；按 namespace 汇总可做成本分摊，`topk(10)` 点名最浪费的。
+- **迭代闭环**：Monitor → 算均值 → Resize → 再 Monitor → Tweak；用 `offset 1w` 对比一周前，量化优化效果。
+
+> rightsizing 必须用**长窗口 p95**（`history_window` 7–30d，**与 cadence 的 time_range 无关**，日巡检也要拉 7–30d）；
+> 窗口不足或 request 未设置 → 该项 `evidence_gap`，但「request 设了、用量极低」必须报简配，不得跳过。
 
 ### 取时序数据（MCP-only）
 

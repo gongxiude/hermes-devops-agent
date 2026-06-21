@@ -27,8 +27,10 @@
 
 1. **识别 (describe)**：趋势方向与斜率、季节性、是否平稳、有无 level shift / changepoint。
 2. **投影 (project，容量)**：基于斜率 / `predict_linear` 外推到阈值 →「约 N 天后达 X%」。
-3. **配置合理性 (rightsizing)**：长窗口 p95 实际用量 vs `requests`/`limits`/`replicas`——
-   贴近/超 limit 或有节流 → **增配**；长期 << request（p95<30%）→ **简配**；居中 → 维持。
+3. **配置合理性 (rightsizing)**：按 **workload owner** 聚合，p95 用量 vs `requests`/`limits`——
+   `用量/limit>0.8` 或节流 → **增配**；`p95/request<0.3` → **简配**（request 调到≈均值 85–115%，limit≈p99/max）。
+   **必须点名 workload + 给可回收量**；另算集群 Overcommit（Σlimits/容量，保守≤125%）与无 limit Top10。
+   ⚠️ 不许用「用量<X% limit→无问题」收尾——那正是过度配置。
 4. **异常 (detect)**：与 baseline（`offset 1d/7d`）或分位带比较，标 spike / drift / 错误率放大；
    关注持续偏离、方差变化（文章的残差/诊断思路）。
 5. **验证 (validate，文章重点)**：**walk-forward / 多预测起点**自检——用历史多个起点验证外推一致性，

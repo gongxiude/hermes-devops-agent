@@ -144,7 +144,7 @@ quantile_over_time(0.95, container_memory_working_set_bytes[1d:10m])            
 sum(rate(apiserver_request_total{code=~"5.."}[5m])) / (sum(rate(apiserver_request_total{code=~"5.."}[5m] offset 1d)) + 1)
 
 # —— Rightsizing：配置合理性（增配 / 简配）——
-# CPU 用量 p95 / request（长窗口）：>0.9 偏紧(增配)，<0.3 长期空闲(简配)
+# CPU 用量 p95 / request（长窗口）：>0.85 偏紧(增配)，<0.3 长期空闲(简配)
 quantile_over_time(0.95, (sum by(namespace,pod,container)(rate(container_cpu_usage_seconds_total[5m])))[7d:1h])
   / max by(namespace,pod,container)(kube_pod_container_resource_requests{resource="cpu"})
 # 内存 p95 / limit：逼近 1 = OOM 风险(增配)
@@ -155,6 +155,53 @@ quantile_over_time(0.95, container_memory_working_set_bytes[7d:1h])
   / max by(namespace,pod,container)(kube_pod_container_resource_requests{resource="memory"})
 # CPU 节流（被限速即 request/limit 不够，增配）
 rate(container_cpu_cfs_throttled_periods_total[5m]) / rate(container_cpu_cfs_periods_total[5m])
+
+# —— 过度配置点名排名（直接给简配名单）——
+# 利用率最低的 15 个容器（CPU request 利用率，越小越浪费）
+bottomk(15, quantile_over_time(0.95, (sum by(namespace,pod,container)(rate(container_cpu_usage_seconds_total[5m])))[7d:1h])
+  / max by(namespace,pod,container)(kube_pod_container_resource_requests{resource="cpu"}))
+# 内存 request 利用率最低 15
+bottomk(15, quantile_over_time(0.95, container_memory_working_set_bytes[7d:1h])
+  / max by(namespace,pod,container)(kube_pod_container_resource_requests{resource="memory"}))
+
+# —— 可回收量（给老板看的省钱数字）——
+# 可回收 CPU 核数：Σ(request − p95×1.3)，仅算 p95/request<0.3 的容器
+sum(max by(namespace,pod,container)(kube_pod_container_resource_requests{resource="cpu"})
+    - 1.3 * quantile_over_time(0.95, (sum by(namespace,pod,container)(rate(container_cpu_usage_seconds_total[5m])))[7d:1h]))
+# 集群整体 CPU request 利用率（= 已用/已 request，判断整体空闲率）
+sum(rate(container_cpu_usage_seconds_total[5m])) / sum(kube_pod_container_resource_requests{resource="cpu"})
+
+# —— Overcommit 率（sysdig）：Σlimits / 节点容量。保守≤125% 激进≤150%，100% 理想——
+# 集群 CPU overcommit %
+100 * sum(kube_pod_container_resource_limits{resource="cpu"}) / sum(kube_node_status_capacity{resource="cpu"})
+# 集群内存 overcommit %
+100 * sum(kube_pod_container_resource_limits{resource="memory"}) / sum(kube_node_status_capacity{resource="memory"})
+# 逐节点 overcommit（按 node 分组同理 by (node)）
+
+# —— 无 limit 容器（sysdig：under-managed，最危险）——
+# 没有 CPU limit 的容器
+kube_pod_container_info unless kube_pod_container_resource_limits{resource="cpu"}
+# 无 limit 容器中 CPU 消耗 Top 10（优先治理）
+topk(10, sum by(namespace,pod,container)(rate(container_cpu_usage_seconds_total[5m]))
+  unless max by(namespace,pod,container)(kube_pod_container_resource_limits{resource="cpu"}))
+# 无内存 limit 中内存消耗 Top 10
+topk(10, max by(namespace,pod,container)(container_memory_working_set_bytes)
+  unless max by(namespace,pod,container)(kube_pod_container_resource_limits{resource="memory"}))
+
+# —— 按 workload owner 聚合 + 浪费检测（sysdig capacity-planning）——
+# workload(owner) 平均 CPU 用量（建议 request ≈ 此值 ×0.85~1.15）
+avg by (namespace,owner_name,container)(
+  rate(container_cpu_usage_seconds_total{container!="POD",container!=""}[5m])
+  * on(namespace,pod) group_left(owner_name)
+    avg by(namespace,pod,owner_name)(kube_pod_owner{owner_kind=~"Deployment|StatefulSet|DaemonSet"}))
+# 浪费的 CPU 核（request − 用量 > 0），按 namespace 汇总
+sum by(namespace)((avg by(namespace,pod,container)(kube_pod_container_resource_requests{resource="cpu"})
+  - rate(container_cpu_usage_seconds_total{container!="POD",container!=""}[30m])) > 0)
+# 浪费内存 GiB（同理）
+sum((avg by(namespace,pod,container)(kube_pod_container_resource_requests{resource="memory"})
+  - container_memory_usage_bytes{container!="POD",container!=""}) > 0) / (1024*1024*1024)
+# 优化效果跟踪：本周可回收 vs 一周前（差值，越负=优化越多）
+(<可回收CPU核> ) - (<可回收CPU核> offset 1w)
 ```
 
 降级：`predict_linear` / rightsizing 需足够历史；`history_window` 不足或指标未采集 → 该项 `evidence_gap`，不臆造预测。
