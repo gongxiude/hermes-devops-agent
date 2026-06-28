@@ -5,10 +5,6 @@ USER root
 
 COPY plugins /opt/hermes/plugins
 
-RUN uv pip install --python /opt/hermes/.venv/bin/python3 --no-cache "nemoguardrails>=0.9.0"
-
 USER hermes
-
-ENV PYTHONPATH=/opt/hermes/plugins
 
 WORKDIR /opt/hermes
