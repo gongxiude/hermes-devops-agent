@@ -30,7 +30,7 @@ kanban:
   failure_limit: 2
   auto_promote_children: true
   auto_decompose: false             # 关闭自动任务拆解，减少调度噪音
-  orchestrator_profile: devops-orchestrator
+  orchestrator_profile: orchestrator
 
 platforms:
   feishu:

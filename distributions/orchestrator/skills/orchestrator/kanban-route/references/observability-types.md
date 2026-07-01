@@ -11,6 +11,9 @@
 | `alert-triage` | `[alertmanager-basics, alert-entry]` | alert-router | Alertmanager / Grafana / 云监控告警接入、去重、聚合 |
 | `health-check` | `[k8s-cluster-inspector]` | prometheus-metrics-query + loki-logs-query | 服务全链路健康度（指标 + 日志 + K8s 状态联合查询） |
 | `anomaly-detection` | `[anomaly-detection, prometheus-query-tool, loki-query-tool]` | prometheus-metrics-query + loki-logs-query | 异常识别、根因推断、影响范围评估 |
+| `capacity-forecast` | `[capacity-forecast, prometheus-query-tool, k8s-readonly-tool]` | prometheus-metrics-query + kubernetes-diagnosis | 容量趋势预测、资源水位评估、扩缩容建议 |
+| `service-risk-summary` | `[service-risk-summary, observability-health-query, anomaly-detection, capacity-forecast]` | prometheus-metrics-query + loki-logs-query | 服务风险汇总，合并健康、异常、容量和发布风险 |
+| `security-event-detection` | `[security-event-detection, loki-query-tool, k8s-readonly-tool]` | loki-logs-query + kubernetes-diagnosis | 安全事件识别、异常访问、可疑行为聚合 |
 | `dashboard-query` | `[grafana-basics]` | grafana | Grafana dashboard / panel / alert rule 定位与可视化查询 |
 
 ## payload 字段规范
@@ -70,6 +73,37 @@
   "window": "30m",
   "baseline_window": "1h",        // 对比基线窗口
   "signal_sources": ["metrics", "logs", "alerts"]  // 可选，默认全部
+}
+```
+
+### `capacity-forecast`
+
+```json
+{
+  "raw_request": "string",
+  "window": "7d",
+  "forecast_window": "7d",
+  "resources": ["cpu", "memory", "pod_count"]
+}
+```
+
+### `service-risk-summary`
+
+```json
+{
+  "raw_request": "string",
+  "window": "24h",
+  "dimensions": ["health", "anomaly", "capacity", "release"]
+}
+```
+
+### `security-event-detection`
+
+```json
+{
+  "raw_request": "string",
+  "window": "30m",
+  "signal_sources": ["logs", "k8s_events"]
 }
 ```
 

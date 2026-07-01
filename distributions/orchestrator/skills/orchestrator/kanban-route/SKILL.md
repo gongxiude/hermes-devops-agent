@@ -48,6 +48,9 @@ metadata:
 - 告警、alert、P0/P1 跟进 → `alert-triage`
 - 健康检查、巡检、整体状态 → `health-check`
 - 异常检测、根因分析 → `anomaly-detection`
+- 容量预测、容量评估、趋势预测 → `capacity-forecast`
+- 服务风险汇总、风险画像、风险报告 → `service-risk-summary`
+- 安全事件、异常登录、攻击迹象、可疑行为 → `security-event-detection`
 - Grafana dashboard → `dashboard-query`
 - Jenkins 流水线查询 → `jenkins-query`
 - Jenkins library/Jenkinsfile 查询 → `jenkins-library-query`
@@ -76,7 +79,7 @@ metadata:
 **在做任何路由或创建任务之前**，确认 `body.type` 在支持范围内。
 
 **observability profile**（完整列表见 [references/observability-types.md](references/observability-types.md)）：
-`metrics-query` · `log-query` · `alert-triage` · `health-check` · `anomaly-detection` · `dashboard-query`
+`metrics-query` · `log-query` · `alert-triage` · `health-check` · `anomaly-detection` · `capacity-forecast` · `service-risk-summary` · `security-event-detection` · `dashboard-query`
 
 **gitops-agent profile**（完整列表见 [references/gitops-agent-types.md](references/gitops-agent-types.md)）：
 `jenkins-query` · `jenkins-library-query` · `jenkins-library-draft` · `argocd-query` · `gitops-config-query` · `gitops-manifest-draft` · `release-impact-query`
@@ -110,7 +113,7 @@ metadata:
 
 | body.type | assignee | type catalog |
 |---|---|---|
-| `metrics-query` / `log-query` / `alert-triage` / `health-check` / `anomaly-detection` / `dashboard-query` | `observability` | [references/observability-types.md](references/observability-types.md) |
+| `metrics-query` / `log-query` / `alert-triage` / `health-check` / `anomaly-detection` / `capacity-forecast` / `service-risk-summary` / `security-event-detection` / `dashboard-query` | `observability` | [references/observability-types.md](references/observability-types.md) |
 | `jenkins-query` / `jenkins-library-query` / `jenkins-library-draft` / `argocd-query` / `gitops-config-query` / `gitops-manifest-draft` / `release-impact-query` | `gitops-agent` | [references/gitops-agent-types.md](references/gitops-agent-types.md) |
 | `ecs-inspection` / `rds-inspection` / `oss-inspection` / `network-query` / `security-audit` / `cost-analysis` | `infra-agent` | [references/infra-agent-types.md](references/infra-agent-types.md) |
 
@@ -160,6 +163,14 @@ kanban_create(
 3. 判断各通道是独立并行还是有先后依赖。
 4. 独立通道 → 无 parent 的并行卡片。
 5. 依赖通道 → 带 `parents=[...]` 的卡片，子任务在所有父任务完成后自动提升为 `ready`。
+
+### 任务图硬约束
+
+- **single task**：一个请求只命中一个 `body.type`，直接创建一张 Kanban 卡。
+- **fan-out 并行**：多个互不依赖通道分别建卡，全部子任务不带 `reply_target`，另建 fan-in 汇总任务作为唯一出口。
+- **pipeline 依赖**：后续动作依赖前置结果时，后续 task 在 `kanban_create` 时携带 `parents=[...]`。
+- **fan-in 汇总**：汇总任务读取 parent 输出，做数字对账、冲突标注和风险取高，只发一条结果。
+- **禁止边读边建卡**：必须先确定所有通道、依赖关系、assignee、skills、tier，再开始调用 `kanban_create`。
 
 **场景示例：**
 
@@ -368,9 +379,10 @@ kanban_show → done → 读取结果，结束
 
 ## 紧急请求处理（priority = urgent）
 
-1. 先调用 `delegate_task` 发起即时响应，`toolsets` 按目标环境显式选择 MCP：
-   - 生产国际短信：`["mcp-prometheus-intlsms-prod", "mcp-loki-intlsms-prod", "mcp-k8s-intlsms-prod"]`
-2. **同时**创建 Kanban 任务做审计记录，不可跳过。
+1. 设置 `context.priority = "urgent"`。
+2. 创建 Kanban 任务并分派到目标 specialist profile。
+3. 立即回复用户："已创建紧急任务 #<id>，正在处理..."。
+4. 不调用 `delegate_task`，不直接传入任何生产 MCP toolsets。
 
 ---
 

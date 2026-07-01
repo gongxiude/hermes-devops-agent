@@ -1,8 +1,10 @@
-# hermes-devops-orchestrator
+# orchestrator
 
 DevOps 运维平台路由层。唯一职责：解析飞书消息 → 拆解任务 → 创建 Kanban 任务分派给 specialist profile → 汇总结果回传飞书。
 
 **不执行任何运维动作。** toolset 仅含 kanban / skills / memory，无任何 MCP 生产系统工具。
+
+> distribution manifest name 保持 `hermes-devops-orchestrator`，运行时 profile name 统一使用 `orchestrator`。
 
 ---
 
@@ -10,16 +12,16 @@ DevOps 运维平台路由层。唯一职责：解析飞书消息 → 拆解任�
 
 ```bash
 # 启动 gateway（后台服务）
-hermes -p hermes-devops-orchestrator gateway start
+hermes -p orchestrator gateway start
 
 # 查看状态
-hermes -p hermes-devops-orchestrator gateway status
+hermes -p orchestrator gateway status
 
 # 查看日志
-tail -f ~/.hermes/profiles/hermes-devops-orchestrator/logs/gateway.log
+tail -f ~/.hermes/profiles/orchestrator/logs/gateway.log
 
 # 停止
-hermes -p hermes-devops-orchestrator gateway stop
+hermes -p orchestrator gateway stop
 ```
 
 ---
@@ -40,9 +42,7 @@ hermes -p hermes-devops-orchestrator gateway stop
 从本地 git 仓库安装：
 
 ```bash
-hermes profile install \
-  ~/Documents/yuexin/hermes-devops-agent/distributions/devops-orchestrator \
-  --yes
+hermes profile install distributions/orchestrator --name orchestrator --yes
 ```
 
 安装后 hermes 自动创建 profile 目录，复制 `config.yaml`、`distribution.yaml`、`SOUL.md` 和 skills。
@@ -151,7 +151,7 @@ hermes kanban boards switch yuexin-gitops
 
 ```bash
 hermes -p default gateway stop
-hermes -p hermes-devops-orchestrator gateway start
+hermes -p orchestrator gateway start
 ```
 
 ---

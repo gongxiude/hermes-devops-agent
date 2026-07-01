@@ -26,7 +26,7 @@ Kanban task 达到以下任一终态时触发：
 | `failed` | 任务执行失败 |
 | `blocked` | 依赖未满足或需人工介入 |
 
-**多任务请求（fan-out / pipeline）等待所有叶子任务终态后统一汇总**，不在中间任务完成时提前发送。
+**多任务请求（fan-out / pipeline）等待所有叶子任务终态后统一汇总**，不在中间任务完成时提前发送。fan-in 汇总任务不是简单转述 parent summary，而是对多个 specialist 输出做合成、对账和风险归并。
 
 ## reply_target 来源与单一出口不变量
 
@@ -76,7 +76,8 @@ Kanban task 达到以下任一终态时触发：
 1. 通过 `kanban_show <parent_id>` 读取**每个** parent 的 `summary` 和 `metadata`。
 2. **数字对账**（reconcile）：对同一对象在各子任务/各数据源的计数做一致性校验，不一致必须标注冲突，不得各报各的（详见 `k8s-cluster-inspector` / `scheduled-runtime-inspection` 的「对账步骤」）。
 3. **整体风险取最高**：`healthy < warning < critical < unknown` 中取最严重者；任一子任务因数据源不可用而降级，则整体不得 healthy。
-4. 输出**单条**结构化报告（不逐个子任务单独推送）。
+4. **证据保留**：保留关键证据路径、task id、指标窗口、日志查询窗口或数据源名称；不得只给无来源结论。
+5. 输出**单条**结构化报告（不逐个子任务单独推送）。
 
 ```
 📋 任务汇总 — <原始请求摘要>
