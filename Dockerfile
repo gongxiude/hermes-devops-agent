@@ -4,6 +4,7 @@ FROM yuexinhub-registry.cn-zhangjiakou.cr.aliyuncs.com/yuexin_devops/hermes-agen
 USER root
 
 COPY plugins /opt/hermes/plugins
+COPY distributions /opt/distributions
 
 USER hermes
 
