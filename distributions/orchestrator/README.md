@@ -45,6 +45,12 @@ hermes -p orchestrator gateway stop
 hermes profile install distributions/orchestrator --name orchestrator --yes
 ```
 
+从远端git仓库安装：
+
+```bash 
+hermes profile install git@codeup.aliyun.com:6316fd51cb9d00684879aa3a/devops/hermes-devops-agent.git//distributions/orchestrator --name orchestrator --alias -y
+```
+
 安装后 hermes 自动创建 profile 目录，复制 `config.yaml`、`distribution.yaml`、`SOUL.md` 和 skills。
 
 ---
