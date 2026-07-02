@@ -64,3 +64,8 @@ platforms:
       require_mention: true
       # default_group_policy: allowlist  # 改为 open 则所有群组均可访问
       default_group_policy: open
+
+plugins:
+  enabled:
+    - devops_agent
+  disabled: []

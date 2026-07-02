@@ -21,60 +21,6 @@
           "loki_series"
         ]
       }
-    },
-    "k8s-intlsms-prod": {
-      "transport": "stdio",
-      "command": "/opt/hermes/.venv/bin/python",
-      "args": [
-        "/opt/mcp-servers/k8s/src/server.py"
-      ],
-      "env": {
-        "MCP_SERVER_NAME": "k8s-intlsms-prod",
-        "K8S_CONTEXT": "${K8S_CONTEXT_PROD}",
-        "K8S_NAMESPACE": "${K8S_NAMESPACE_PROD}",
-        "KUBECONFIG": "${KUBECONFIG_READONLY_PROD}",
-        "KUBECTL_BIN": "${KUBECTL_BIN_PROD}",
-        "K8S_READ_ONLY": "true",
-        "MCP_LOG_LEVEL": "INFO"
-      },
-      "tools": {
-        "include": [
-          "k8s_get_resources",
-          "k8s_get_pod_logs",
-          "k8s_get_events",
-          "k8s_get_available_api_resources",
-          "k8s_get_cluster_configuration",
-          "k8s_get_resource_yaml",
-          "k8s_describe_resource"
-        ]
-      }
-    },
-    "k8s-intlsms-test": {
-      "transport": "stdio",
-      "command": "/opt/hermes/.venv/bin/python",
-      "args": [
-        "/opt/mcp-servers/k8s/src/server.py"
-      ],
-      "env": {
-        "MCP_SERVER_NAME": "k8s-intlsms-test",
-        "K8S_CONTEXT": "${K8S_CONTEXT_TEST}",
-        "K8S_NAMESPACE": "intl-test",
-        "KUBECONFIG": "${KUBECONFIG_READONLY_TEST}",
-        "KUBECTL_BIN": "${KUBECTL_BIN_TEST}",
-        "K8S_READ_ONLY": "true",
-        "MCP_LOG_LEVEL": "INFO"
-      },
-      "tools": {
-        "include": [
-          "k8s_get_resources",
-          "k8s_get_pod_logs",
-          "k8s_get_events",
-          "k8s_get_available_api_resources",
-          "k8s_get_cluster_configuration",
-          "k8s_get_resource_yaml",
-          "k8s_describe_resource"
-        ]
-      }
     }
   }
 }

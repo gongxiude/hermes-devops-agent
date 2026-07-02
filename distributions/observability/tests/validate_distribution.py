@@ -85,28 +85,32 @@ def main() -> int:
 
     config = load_yaml(PROFILE / "config.yaml")
     assert config["observability_query"]["supported_environments"] == ["prod", "test"]
-    # Test environment has no Loki data source, so loki-intlsms-test is not registered.
-    assert set(config["mcp_servers"]) == {
-        "prometheus-intlsms-prod",
-        "prometheus-intlsms-test",
-        "loki-intlsms-prod",
-        "k8s-intlsms-prod",
-        "k8s-intlsms-test",
+    assert set(config["plugins"]["enabled"]) >= {
+        "devops_agent",
+        "observability",
+        "kubernetes",
     }
+    cli_toolsets = set(config["platform_toolsets"]["cli"])
+    assert {"devops_governance", "observability", "kubernetes", "kanban"} <= cli_toolsets
+    assert config["observability"]["prometheus"]["default_category"] == "intlsms"
+    assert config["observability"]["prometheus"]["default_env"] == "prod"
+    assert {t["id"] for t in config["observability"]["prometheus"]["targets"]} == {
+        "intlsms-prod",
+        "intlsms-test",
+    }
+    assert "prod-aliyun-sg-intlsms" in config["clusters"]
+    # Prometheus and Kubernetes are Hermes plugin toolsets. Loki remains MCP.
+    assert set(config["mcp_servers"]) == {"loki-intlsms-prod"}
     assert "devops-observe" not in config["mcp_servers"]
-    assert config["mcp_servers"]["prometheus-intlsms-test"]["tools"]["include"] == [
-        "prometheus_query",
-        "prometheus_query_range",
-    ]
-    assert "k8s_get_resources" in config["mcp_servers"]["k8s-intlsms-test"]["tools"]["include"]
+    assert "loki_query_range" in config["mcp_servers"]["loki-intlsms-prod"]["tools"]["include"]
 
     mcp = json.loads((PROFILE / "mcp.json").read_text(encoding="utf-8"))
     assert set(mcp["mcpServers"]) == set(config["mcp_servers"])
     assert "devops-observe" not in mcp["mcpServers"]
-    server = mcp["mcpServers"]["prometheus-intlsms-test"]
+    server = mcp["mcpServers"]["loki-intlsms-prod"]
     assert server["transport"] == "stdio"
-    assert server["command"] == "python3"
-    assert server["env"]["PROMETHEUS_URL"] == "${OBSERVE_PROMETHEUS_BASE_URL_TEST}"
+    assert server["command"] == "/opt/hermes/.venv/bin/python"
+    assert server["env"]["LOKI_URL"] == "${OBSERVE_LOKI_BASE_URL_PROD}"
 
     # 巡检定时调度已迁移到 devops-orchestrator（orchestrator cron → kanban → observability
     # worker → 飞书）。observability 不再自带 cron 文件，仅作为巡检执行 profile。

@@ -30,8 +30,11 @@ from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-# Matches "reply_target: <value>" (case-insensitive, value is first non-space token).
-_REPLY_TARGET_RE = re.compile(r"reply_target\s*:\s*(\S+)", re.IGNORECASE)
+# Matches "reply_target: <value>" or legacy "reply_target=<value>"
+# (case-insensitive, value is first non-space token). Orchestrator should emit
+# colon format, but accepting "=" keeps notification delivery fail-open during
+# prompt regressions and manual debug tasks.
+_REPLY_TARGET_RE = re.compile(r"reply_target\s*[:=]\s*(\S+)", re.IGNORECASE)
 
 # Explicit opt-out: a task body may set ``notify_user: false`` to suppress the
 # Feishu auto-subscription even if a reply_target is present. Defense-in-depth
@@ -79,9 +82,14 @@ def parse_reply_target(body: str) -> Optional[str]:
 
 
 def _extract_task_id(result: Any) -> Optional[str]:
-    """Pull task_id out of kanban_create's tool result (JSON string or dict)."""
+    """Pull the task id out of kanban_create's tool result.
+
+    Hermes CLI returns ``id`` for kanban tasks. Some agent/tool wrappers have
+    used ``task_id`` historically, so accept both to keep notification delivery
+    compatible across Hermes versions.
+    """
     if isinstance(result, dict):
-        tid = result.get("task_id")
+        tid = result.get("task_id") or result.get("id")
         return str(tid) if tid else None
     if isinstance(result, str):
         try:
@@ -89,7 +97,7 @@ def _extract_task_id(result: Any) -> Optional[str]:
         except (json.JSONDecodeError, ValueError):
             return None
         if isinstance(obj, dict):
-            tid = obj.get("task_id")
+            tid = obj.get("task_id") or obj.get("id")
             return str(tid) if tid else None
     return None
 

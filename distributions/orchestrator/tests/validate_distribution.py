@@ -55,6 +55,7 @@ def main() -> int:
 
     config = yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8"))
     assert config["kanban"]["orchestrator_profile"] == "orchestrator"
+    assert "devops_agent" in config["plugins"]["enabled"], "devops_agent plugin must be enabled for kanban reply hook"
 
     for rel in ORCHESTRATOR_SKILLS:
         skill_path = ROOT / rel
@@ -73,6 +74,8 @@ def main() -> int:
             "先分解，再路由",
             "合成不是摘要",
             "不在 orchestrator 内直接调用 specialist 工具或 MCP",
+            "必须先调用工具",
+            "不能使用 JSON",
         ],
     )
     assert_not_contains(
@@ -95,6 +98,9 @@ def main() -> int:
             "任务图硬约束",
             "禁止边读边建卡",
             "不调用 `delegate_task`",
+            "必须先调用 `kanban_create`",
+            "body` 必须使用纯文本 `key: value`",
+            "idempotency_key",
         ],
     )
     assert_not_contains(
@@ -103,6 +109,7 @@ def main() -> int:
             "mcp-prometheus-intlsms-prod",
             "mcp-loki-intlsms-prod",
             "mcp-k8s-intlsms-prod",
+            "body=json.dumps",
         ],
     )
 
