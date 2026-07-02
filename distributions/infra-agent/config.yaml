@@ -38,15 +38,9 @@ mcp_servers:
     tools:
       include:
         - aliyun_ecs_describe_instances
-        - aliyun_rds_describe_instances
-        - aliyun_vpc_describe_vpcs
-        - aliyun_oss_list_buckets
-        - aliyun_ram_list_users
-        - aliyun_ram_list_roles
-        - aliyun_actiontrail_lookup_events
-        - aliyun_bss_query_bill
-        - aliyun_slb_describe_load_balancers
-        - aliyun_cen_describe_cens
+        - aliyun_ecs_describe_instance_types
+        - aliyun_cms_describe_metric_last
+        - aliyun_cms_describe_metric_list
   k8s-readonly:
     command: /opt/hermes/.venv/bin/python
     args:

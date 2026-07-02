@@ -21,8 +21,14 @@ def run_aliyun(*args: str) -> dict:
         cmd.extend(["--profile", Config.ALIYUN_PROFILE])
     cmd.extend(args)
     cmd.extend(["--output", "json"])
+    env = os.environ.copy()
+    if os.getenv("ALIYUN_ACCESS_KEY_ID") and not env.get("ALIBABA_CLOUD_ACCESS_KEY_ID"):
+        env["ALIBABA_CLOUD_ACCESS_KEY_ID"] = os.getenv("ALIYUN_ACCESS_KEY_ID", "")
+    if os.getenv("ALIYUN_ACCESS_KEY_SECRET") and not env.get("ALIBABA_CLOUD_ACCESS_KEY_SECRET"):
+        env["ALIBABA_CLOUD_ACCESS_KEY_SECRET"] = os.getenv("ALIYUN_ACCESS_KEY_SECRET", "")
     result = subprocess.run(
         cmd,
+        env=env,
         text=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,

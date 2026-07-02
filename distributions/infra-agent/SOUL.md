@@ -41,15 +41,13 @@ User request → infra-agent (orchestrator)
 | Tool | Purpose |
 |------|---------|
 | `mcp_aliyun_aliyun_ecs_describe_instances` | List ECS instances |
-| `mcp_aliyun_aliyun_rds_describe_instances` | List RDS instances |
-| `mcp_aliyun_aliyun_vpc_describe_vpcs` | List VPCs |
-| `mcp_aliyun_aliyun_oss_list_buckets` | List OSS buckets |
-| `mcp_aliyun_aliyun_ram_list_users` | List RAM users |
-| `mcp_aliyun_aliyun_ram_list_roles` | List RAM roles |
-| `mcp_aliyun_aliyun_actiontrail_lookup_events` | Query ActionTrail |
-| `mcp_aliyun_aliyun_bss_query_bill` | Query billing |
-| `mcp_aliyun_aliyun_slb_describe_load_balancers` | List SLB instances |
-| `mcp_aliyun_aliyun_cen_describe_cens` | List CEN instances |
+| `mcp_aliyun_aliyun_ecs_describe_instance_types` | List ECS instance types |
+| `mcp_aliyun_aliyun_cms_describe_metric_last` | Query latest CloudMonitor metric |
+| `mcp_aliyun_aliyun_cms_describe_metric_list` | Query CloudMonitor metric history |
 | `mcp_k8s_readonly_k8s_get_resources` | Get K8s resources |
 | `mcp_k8s_readonly_k8s_get_events` | Get K8s events |
 | `mcp_k8s_readonly_k8s_describe_resource` | Describe K8s resource |
+
+The current Aliyun MCP server exposes ECS and CloudMonitor read tools only. RDS,
+VPC, OSS, RAM, ActionTrail, billing, SLB, and CEN workflows require adding those
+tools to `/opt/mcp-servers/aliyun` before enabling them in this profile.

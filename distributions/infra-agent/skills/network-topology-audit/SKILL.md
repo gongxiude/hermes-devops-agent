@@ -1,6 +1,6 @@
 ---
 name: network-topology-audit
-description: "Audit VPC, SLB, CEN, DNS network topology and connectivity."
+description: "Audit visible ECS network placement signals with the current Aliyun MCP runtime."
 version: 0.1.0
 platforms: [linux, macos]
 environments: [cli, cron, feishu]
@@ -8,21 +8,21 @@ environments: [cli, cron, feishu]
 
 # Network Topology Audit
 
-Audit Alibaba Cloud network topology across VPC, SLB, CEN, and DNS.
+Audit visible ECS network placement signals.
 
 ## Tools Used
 
-- `mcp_aliyun_aliyun_vpc_describe_vpcs` — VPC inventory
-- `mcp_aliyun_aliyun_slb_describe_load_balancers` — SLB inventory
-- `mcp_aliyun_aliyun_cen_describe_cens` — CEN inventory
+- `mcp_aliyun_aliyun_ecs_describe_instances` — ECS inventory
+
+VPC, SLB, CEN, and DNS topology audits require adding those tools to the Aliyun
+MCP server.
 
 ## Workflow
 
-1. Map VPC topology (CIDR blocks, subnets, route tables)
-2. Audit SLB configurations (listeners, backends, health checks)
-3. Check CEN inter-region bandwidth
-4. Verify DNS resolution for critical services
-5. Flag network misconfigurations or single points of failure
+1. Query ECS instances
+2. Extract visible VPC, vSwitch, private IP, and public IP fields if present
+3. Record SLB, CEN, and DNS checks as unavailable unless those tools are added
+4. Flag visible network exposure or placement risks
 
 ## Output Format
 

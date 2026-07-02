@@ -1,6 +1,6 @@
 ---
 name: alicloud-security-compliance
-description: "Audit RAM permissions, ActionTrail events, and exposure surface compliance."
+description: "Audit available Alibaba Cloud ECS exposure signals with the current Aliyun MCP runtime."
 version: 0.1.0
 platforms: [linux, macos]
 environments: [cli, cron, feishu]
@@ -8,21 +8,21 @@ environments: [cli, cron, feishu]
 
 # Alicloud Security Compliance
 
-Audit Alibaba Cloud security posture — RAM permissions, ActionTrail, exposure surface.
+Audit available Alibaba Cloud ECS exposure signals.
 
 ## Tools Used
 
-- `mcp_aliyun_aliyun_ram_list_users` — RAM user inventory
-- `mcp_aliyun_aliyun_ram_list_roles` — RAM role inventory
-- `mcp_aliyun_aliyun_actiontrail_lookup_events` — ActionTrail audit
+- `mcp_aliyun_aliyun_ecs_describe_instances` — ECS inventory
+
+RAM and ActionTrail audits require adding RAM and ActionTrail tools to the
+Aliyun MCP server.
 
 ## Workflow
 
-1. List all RAM users and their access keys (check for unused/rotated keys)
-2. Audit RAM roles for excessive permissions
-3. Query ActionTrail for high-risk API calls (delete, security group changes)
-4. Check public-facing resources (ECS with public IP, open security groups)
-5. Flag compliance violations
+1. Query ECS instances
+2. Check public IP exposure and instance metadata available from ECS inventory
+3. Record RAM and ActionTrail checks as unavailable unless those tools are added
+4. Flag visible exposure risks
 
 ## Output Format
 

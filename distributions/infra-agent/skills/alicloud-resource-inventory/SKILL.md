@@ -1,6 +1,6 @@
 ---
 name: alicloud-resource-inventory
-description: "Inspect Alibaba Cloud resources — ECS, RDS, VPC, OSS, RAM — capacity, quota, and inventory."
+description: "Inspect Alibaba Cloud ECS resources and CloudMonitor metrics using the current Aliyun MCP runtime."
 version: 0.1.0
 platforms: [linux, macos]
 environments: [cli, cron, feishu]
@@ -8,18 +8,21 @@ environments: [cli, cron, feishu]
 
 # Alicloud Resource Inventory
 
-Inspect Alibaba Cloud resources across core services.
+Inspect Alibaba Cloud ECS resources and CloudMonitor metrics.
 
 ## Tools Used
 
 - `mcp_aliyun_aliyun_ecs_describe_instances` — ECS inventory
-- `mcp_aliyun_aliyun_rds_describe_instances` — RDS inventory
-- `mcp_aliyun_aliyun_vpc_describe_vpcs` — VPC inventory
-- `mcp_aliyun_aliyun_oss_list_buckets` — OSS inventory
+- `mcp_aliyun_aliyun_ecs_describe_instance_types` — ECS instance type catalog
+- `mcp_aliyun_aliyun_cms_describe_metric_last` — Latest CloudMonitor metric value
+- `mcp_aliyun_aliyun_cms_describe_metric_list` — CloudMonitor metric history
+
+RDS, VPC, OSS, RAM, ActionTrail, billing, SLB, and CEN inventory are not enabled
+until the Aliyun MCP server implements those tools.
 
 ## Workflow
 
-1. Query each service in parallel via delegate_task
+1. Query ECS instances and instance types
 2. Check capacity utilization (CPU, memory, disk)
 3. Check quota limits vs current usage
 4. Flag resources nearing limits or with anomalies
