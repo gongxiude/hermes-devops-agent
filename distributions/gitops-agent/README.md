@@ -1,128 +1,182 @@
 # gitops-agent
 
-GitOps agent for CI/CD pipeline inspection, ArgoCD sync status, and GitOps configuration drafting.
+Kubernetes 中的 GitOps specialist profile。profile name 固定为 `gitops-agent`，distribution 路径为 `/opt/distributions/gitops-agent`，运行时目录为 `/opt/data/profiles/gitops-agent`。
 
-Consolidates three former profiles (software-delivery-draft, software-delivery-readonly,
-software-delivery-release-gated) into a single profile with 3 domain subagents.
+职责边界：
 
-## Hermes Capability Basis
+- 查询 Codeup、Jenkins、ArgoCD 和 GitOps 配置。
+- 起草 Kustomize、Jenkins pipeline、ArgoCD 相关变更。
+- 通过 Git / MR / ArgoCD 链路交付，不直接操作 Kubernetes。
+- 不常驻 gateway，由 orchestrator 或人工显式调用。
 
-This distribution uses Hermes native boundaries verified from local Hermes CLI help and official documentation:
+## 当前生产调试结果
 
-| Capability | Runtime use in `gitops-agent` | Evidence |
+截至 2026-07-02 13:22 Asia/Shanghai，`prod-aliyun-zjk-ops` 集群中的 `yuexin-ai/hermes-agent-0` 已完成以下验证：
+
+| 项目 | 结果 | 验收标准 |
 |---|---|---|
-| Profile | Isolated runtime instance for workspace, config, skills, memory, and MCP scope | `hermes profile --help` lists isolated profile lifecycle commands |
-| Profile distribution | Installable agent package with `distribution.yaml` at the root | `hermes profile install --help` accepts a local directory containing `distribution.yaml` |
-| Skills | Runtime knowledge and operating contracts loaded by the profile | `hermes skills --help` manages installed and configured skills |
-| MCP | External typed tools for Codeup and ArgoCD only | `hermes mcp --help` defines MCP as additional tools via Model Context Protocol |
-| Toolsets | Built-in `terminal`, `skills`, `kanban`, `memory`, `delegation` are profile-enabled tools | `hermes tools --help` distinguishes built-in toolsets from MCP tools |
+| 镜像 | `v20260702-p.11-76ade106` 已运行 | StatefulSet 和 Pod 镜像均为该 tag |
+| profile install | 成功 | `profile install /opt/distributions/gitops-agent --name gitops-agent --force --yes` |
+| profile update | 成功 | `profile update gitops-agent --yes` |
+| gateway | 不需要，当前 stopped | `hermes profile list` 显示 `gitops-agent` gateway stopped |
+| MCP 发现 | 成功 | `git-codeup` 发现 6 个工具 |
+| Codeup 只读 | 成功 | Codeup repositories API 可读取 1 条记录 |
+| toolsets | 成功 | `argocd`、`devops_governance` plugin toolsets enabled |
 
-Git clone, fetch, pull, branch, commit, and push are not implemented through MCP in this profile. They run through the Hermes `terminal` toolset so the Git behavior stays identical to the operator's shell workflow.
-
-Reference links:
-
-- [Hermes profiles](https://hermes-agent.nousresearch.com/docs/user-guide/profiles)
-- [Hermes profile distributions](https://hermes-agent.nousresearch.com/docs/user-guide/profile-distributions)
-- [Hermes skills](https://hermes-agent.nousresearch.com/docs/user-guide/skills)
-- [Hermes MCP](https://hermes-agent.nousresearch.com/docs/user-guide/mcp)
-- [Hermes tools](https://hermes-agent.nousresearch.com/docs/user-guide/tools)
-
-## Runtime Boundary
-
-`gitops-agent` owns its own Git workspace. Runtime work must not read or write
-`/Users/gongxiude/Documents/my-world`; that path is only a migration source for rules and historical notes.
-
-```text
-${SOFTWARE_DELIVERY_WORKSPACE_ROOT}/
-  jenkins-pipeline/
-  yuexin-infra/
-```
-
-Each GitOps operation executes through Hermes terminal using normal `git` commands:
-
-```text
-git clone <remote> <repo>       # first setup only
-git fetch --prune origin
-git pull --ff-only origin master
-git checkout -b hermes/<task_id>/<purpose>
-... edit files ...
-run repository validation
-git add <changed-files>
-git commit -m "<message>"
-git push origin HEAD:<branch>
-codeup_create_change_request    # optional MR API step
-```
-
-The legacy `my-world` subtree workflow is not used at runtime. The migrated facts are now stored in:
-
-- `skills/devops/specs/domains/gitops-agent-domain.yaml`
-- `skills/devops/specs/profiles/gitops-agent.yaml`
-- `skills/devops/specs/subagents/*.yaml`
-
-## Subagents
-
-| Subagent | Role |
-|----------|------|
-| jenkins-pipeline | Jenkins job/build/shared-library query and draft modifications |
-| argocd | ArgoCD app/sync/rollback status and approved operations |
-| gitops | Kustomize/Helm overlay location, render, base vs overlay comparison |
-
-## Repository Configuration
-
-Set repository remotes in the profile `.env`:
+## 安装和更新
 
 ```bash
-SOFTWARE_DELIVERY_WORKSPACE_ROOT=~/.hermes/profiles/gitops-agent/workspace
-GITOPS_YUEXIN_INFRA_REMOTE=git@codeup.aliyun.com:6316fd51cb9d00684879aa3a/devops/yuexin-infra.git
-GITOPS_YUEXIN_INFRA_BRANCH=master
-GITOPS_JENKINS_PIPELINE_REMOTE=git@codeup.aliyun.com:6316fd51cb9d00684879aa3a/devops/jenkins-pipeline.git
-GITOPS_JENKINS_PIPELINE_BRANCH=master
+kubectl exec -n yuexin-ai hermes-agent-0 -- sh -lc '
+  set -eu
+  HERMES=/opt/hermes/.venv/bin/hermes
+  mkdir -p /opt/data/profiles/gitops-agent/workspace
+  chmod -R u+rwX,g+rwX \
+    /opt/data/profiles/gitops-agent/skills \
+    /opt/data/profiles/gitops-agent/cron \
+    /opt/data/profiles/gitops-agent/skins 2>/dev/null || true
+  $HERMES profile install /opt/distributions/gitops-agent \
+    --name gitops-agent \
+    --force \
+    --yes
+  chmod -R u+rwX,g+rwX \
+    /opt/data/profiles/gitops-agent/skills \
+    /opt/data/profiles/gitops-agent/cron \
+    /opt/data/profiles/gitops-agent/skins 2>/dev/null || true
+  $HERMES profile update gitops-agent --yes
+  $HERMES profile info gitops-agent
+'
 ```
+
+验收标准：
+
+- `Distribution: gitops-agent`
+- `Source: /opt/distributions/gitops-agent`
+- `✓ Updated 'gitops-agent'`
+
+## 环境变量和凭证
+
+运行时 `.env` 位于：
+
+```bash
+/opt/data/profiles/gitops-agent/.env
+```
+
+需要维护的变量：
+
+| 变量 | 用途 |
+|---|---|
+| `LLM_RELAY_BASE_URL` | LLM relay 地址 |
+| `LLM_RELAY_API_KEY` | LLM relay key |
+| `CODEUP_BASE_URL` | Codeup OpenAPI 地址 |
+| `CODEUP_ACCESS_TOKEN` | Codeup API token |
+| `CODEUP_ORGANIZATION_ID` | Codeup organization id |
+| `SOFTWARE_DELIVERY_WORKSPACE_ROOT` | Git 工作目录，容器内使用 `/opt/data/profiles/gitops-agent/workspace` |
+| `GITOPS_YUEXIN_INFRA_REMOTE` | yuexin-infra remote |
+| `GITOPS_YUEXIN_INFRA_BRANCH` | yuexin-infra branch |
+| `GITOPS_JENKINS_PIPELINE_REMOTE` | jenkins-pipeline remote |
+| `GITOPS_JENKINS_PIPELINE_BRANCH` | jenkins-pipeline branch |
+| `ARGOCD_SERVER` | ArgoCD API 地址 |
+| `ARGOCD_TOKEN` | ArgoCD token |
+
+调试阶段可以从本机 Hermes profile 恢复 `.env`，但不要输出值：
+
+```bash
+kubectl cp ~/.hermes/profiles/gitops-agent/.env \
+  yuexin-ai/hermes-agent-0:/opt/data/profiles/gitops-agent/.env
+
+kubectl exec -n yuexin-ai hermes-agent-0 -- sh -lc '
+  chmod 600 /opt/data/profiles/gitops-agent/.env
+  sed -i "s#^SOFTWARE_DELIVERY_WORKSPACE_ROOT=.*#SOFTWARE_DELIVERY_WORKSPACE_ROOT=/opt/data/profiles/gitops-agent/workspace#" \
+    /opt/data/profiles/gitops-agent/.env
+'
+```
+
+长期维护应通过 GitOps Secret、ExternalSecret 或 CSI Secret Store 注入，不要依赖人工 `kubectl cp`。
 
 ## Workspace Bootstrap
 
-Run these commands inside the installed `gitops-agent` profile workspace before the first GitOps task:
+GitOps workspace 在 PVC 中持久化：
 
 ```bash
-mkdir -p "$SOFTWARE_DELIVERY_WORKSPACE_ROOT"
-cd "$SOFTWARE_DELIVERY_WORKSPACE_ROOT"
-
-git clone "$GITOPS_YUEXIN_INFRA_REMOTE" yuexin-infra
-git -C yuexin-infra fetch --prune origin
-git -C yuexin-infra pull --ff-only origin "$GITOPS_YUEXIN_INFRA_BRANCH"
-
-git clone "$GITOPS_JENKINS_PIPELINE_REMOTE" jenkins-pipeline
-git -C jenkins-pipeline fetch --prune origin
-git -C jenkins-pipeline pull --ff-only origin "$GITOPS_JENKINS_PIPELINE_BRANCH"
+/opt/data/profiles/gitops-agent/workspace
 ```
 
-If a repository already exists, skip `git clone` and still run `git fetch --prune origin` plus `git pull --ff-only origin <branch>` before reading or changing files.
-
-## Install
+首次需要 clone，后续只 fetch/pull：
 
 ```bash
-hermes profile install hermes-devops-agent/distributions/gitops-agent --name gitops-agent -y
-hermes profile alias gitops-agent --name gitops-agent
+kubectl exec -n yuexin-ai hermes-agent-0 -- sh -lc '
+  set -eu
+  . /opt/data/profiles/gitops-agent/.env
+  mkdir -p "$SOFTWARE_DELIVERY_WORKSPACE_ROOT"
+  cd "$SOFTWARE_DELIVERY_WORKSPACE_ROOT"
+  test -d yuexin-infra/.git || git clone "$GITOPS_YUEXIN_INFRA_REMOTE" yuexin-infra
+  git -C yuexin-infra fetch --prune origin
+  git -C yuexin-infra pull --ff-only origin "$GITOPS_YUEXIN_INFRA_BRANCH"
+  test -d jenkins-pipeline/.git || git clone "$GITOPS_JENKINS_PIPELINE_REMOTE" jenkins-pipeline
+  git -C jenkins-pipeline fetch --prune origin
+  git -C jenkins-pipeline pull --ff-only origin "$GITOPS_JENKINS_PIPELINE_BRANCH"
+'
 ```
 
-## Usage
+## MCP 和工具
 
 ```bash
-gitops-agent chat -q "查询 intlsms-gateway test 环境的 ArgoCD sync 状态"
-gitops-agent chat -q "对比 yuexin-infra test overlay 和 base 的差异"
-gitops-agent chat -q "查询最近一次 Jenkins build 的失败原因"
+kubectl exec -n yuexin-ai hermes-agent-0 -- sh -lc '
+  /opt/hermes/.venv/bin/hermes -p gitops-agent tools --summary list
+  /opt/hermes/.venv/bin/hermes -p gitops-agent mcp list
+  /opt/hermes/.venv/bin/hermes -p gitops-agent mcp test git-codeup
+'
 ```
 
-Hermes profile aliases are generated as wrapper scripts around `hermes -p <profile>`. On this machine both of these commands are valid:
+验收标准：
+
+- `git-codeup` enabled，发现 6 个工具。
+- `argocd` plugin toolset enabled。
+- `devops_governance` plugin toolset enabled。
+
+Codeup 只读验证只输出状态，不输出 token：
 
 ```bash
-gitops-agent --version
-hermes -p gitops-agent --version
+kubectl exec -n yuexin-ai hermes-agent-0 -- sh -lc '
+  python3 - <<'"'"'PY'"'"'
+import os, pathlib, sys
+def load_env(path):
+    data={}
+    for line in pathlib.Path(path).read_text().splitlines():
+        line=line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        k,v=line.split("=",1)
+        data[k]=v.strip().strip("\"").strip("'"'"'")
+    return data
+env=load_env("/opt/data/profiles/gitops-agent/.env")
+os.environ.update({
+    "CODEUP_BASE_URL": env.get("CODEUP_BASE_URL", ""),
+    "CODEUP_ACCESS_TOKEN": env.get("CODEUP_ACCESS_TOKEN", ""),
+    "CODEUP_ORGANIZATION_ID": env.get("CODEUP_ORGANIZATION_ID", ""),
+    "LOCAL_GIT_ROOT": env.get("SOFTWARE_DELIVERY_WORKSPACE_ROOT", ""),
+})
+sys.path.insert(0, "/opt/mcp-servers/git-codeup/src")
+from utils import codeup_get
+codeup_get(f"/oapi/v1/codeup/organizations/{os.environ[\"CODEUP_ORGANIZATION_ID\"]}/repositories", {"page":"1","perPage":"1"})
+print("codeup_read=ok")
+PY
+'
 ```
 
-Without a wrapper alias, switch the sticky profile first:
+## 常见问题
+
+`SOFTWARE_DELIVERY_WORKSPACE_ROOT` 不能使用本机 `/Users/...` 路径，容器内必须使用 `/opt/data/profiles/gitops-agent/workspace`。
+
+Jenkins 不直接操作 Kubernetes。镜像构建由 Jenkins 完成；Kubernetes 变更通过 GitOps/ArgoCD 收敛。
+
+更新时报 `PermissionError` 时执行：
 
 ```bash
-hermes profile use gitops-agent
-hermes chat -q "查询 intlsms-gateway test 环境的 ArgoCD sync 状态"
+kubectl exec -n yuexin-ai hermes-agent-0 -- sh -lc '
+  chmod -R u+rwX,g+rwX \
+    /opt/data/profiles/gitops-agent/skills \
+    /opt/data/profiles/gitops-agent/cron \
+    /opt/data/profiles/gitops-agent/skins 2>/dev/null || true
+'
 ```
