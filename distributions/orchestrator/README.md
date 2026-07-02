@@ -1,183 +1,539 @@
 # orchestrator
 
-DevOps 运维平台路由层。唯一职责：解析飞书消息 → 拆解任务 → 创建 Kanban 任务分派给 specialist profile → 汇总结果回传飞书。
+DevOps 运维平台路由层。运行时 profile name 固定为 `orchestrator`，distribution manifest name 为 `hermes-devops-orchestrator`。
 
-**不执行任何运维动作。** toolset 仅含 kanban / skills / memory，无任何 MCP 生产系统工具。
+职责边界：
 
-> distribution manifest name 保持 `hermes-devops-orchestrator`，运行时 profile name 统一使用 `orchestrator`。
+- 接收飞书消息。
+- 将请求标准化为运维任务。
+- 创建 Kanban 任务并路由给 specialist profile。
+- 汇总结果并回传飞书。
+- 不直接执行 Kubernetes、Jenkins、ArgoCD、数据库、云资源等生产动作。
 
----
+toolset 仅包含 `kanban`、`skills`、`memory`。
 
-## 快速启动
+## 当前生产调试结果
 
-```bash
-# 启动 gateway（后台服务）
-hermes -p orchestrator gateway start
+截至 2026-07-02 10:45 Asia/Shanghai，`prod-aliyun-zjk-ops` 集群中的 `yuexin-ai/hermes-agent-0` 已完成以下验证：
 
-# 查看状态
-hermes -p orchestrator gateway status
+| 项目 | 结果 | 证据 |
+|---|---|---|
+| 镜像 | `v20260702-p.9-9b82a139` 已运行 | StatefulSet 和 Pod 镜像均为该 tag |
+| Feishu SDK | 已固化到镜像 | `/opt/hermes/.venv/bin/python -c 'import lark_oapi'` 成功 |
+| profile 安装 | 成功 | `hermes profile install /opt/distributions/orchestrator --name orchestrator --force --yes` |
+| profile 更新 | 成功 | `hermes profile update orchestrator --yes` |
+| gateway | `orchestrator` running，`default` stopped | `hermes gateway list` |
+| 飞书 WebSocket | connected | `gateway_state.json` 中 `platforms.feishu.state=connected` |
+| 飞书入站 | 成功 | 收到真实 DM：`hi`、`测试` |
+| 飞书出站 | 成功 | gateway 日志显示 `Sending response (...) to oc_...` |
 
-# 查看日志
-tail -f ~/.hermes/profiles/orchestrator/logs/gateway.log
-
-# 停止
-hermes -p orchestrator gateway stop
-```
-
----
-
-## 配置文件
-
-| 文件 | 说明 |
-|---|---|
-| `config.yaml` | hermes 运行时配置（model、toolsets、kanban、feishu platform） |
-| `.env` | 飞书凭证、访问策略 |
-
----
-
-## 配置过程记录
-
-### 1. Distribution 安装
-
-从本地 git 仓库安装：
+本次线上验证日志位置：
 
 ```bash
-hermes profile install distributions/orchestrator --name orchestrator --yes
+/opt/data/profiles/orchestrator/logs/gateway.log
+/opt/data/profiles/orchestrator/logs/agent.log
+/opt/data/logs/gateways/orchestrator/current
 ```
 
-从远端git仓库安装：
+## 运行时目录
 
-```bash 
-hermes profile install git@codeup.aliyun.com:6316fd51cb9d00684879aa3a/devops/hermes-devops-agent.git//distributions/orchestrator --name orchestrator --alias -y
+Kubernetes Pod 内的关键目录：
+
+| 路径 | 说明 | 是否持久化 |
+|---|---|---|
+| `/opt/hermes` | Hermes 安装目录和 `.venv` | 否，来自镜像 |
+| `/opt/distributions/orchestrator` | 镜像内置 orchestrator distribution | 否，来自镜像 |
+| `/opt/data` | Hermes HOME，PVC 挂载点 | 是 |
+| `/opt/data/profiles/orchestrator` | orchestrator profile 运行时目录 | 是 |
+| `/opt/data/.env` | gateway 全局环境文件 | 是 |
+| `/opt/data/profiles/orchestrator/.env` | profile 环境文件 | 是 |
+
+不要把依赖临时安装到 `/opt/data/python-packages` 作为长期方案。Python 运行时依赖必须在 Dockerfile 构建阶段安装进 `/opt/hermes/.venv`。
+
+## 镜像要求
+
+Hermes Feishu gateway 需要 `lark-oapi`。业务镜像 Dockerfile 必须包含：
+
+```dockerfile
+RUN uv pip install --python /opt/hermes/.venv/bin/python --no-cache-dir lark-oapi
 ```
 
-安装后 hermes 自动创建 profile 目录，复制 `config.yaml`、`distribution.yaml`、`SOUL.md` 和 skills。
-
----
-
-### 2. Model Provider 配置
-
-**问题：** `doctor` 报 `model.provider 'gpt-relay' is not a recognised provider`。
-
-**原因：** profile config 里直接引用了全局 `custom_providers` 的名字，但 doctor 静态校验只认内置 provider 列表。
-
-**修复：** 在 profile `config.yaml` 改用 `custom` provider 类型并内联连接参数：
-
-```yaml
-model:
-  provider: custom
-  model: gpt-5.4
-  base_url: http://llm-relay.yuexin.domain:33033/v1
-  api_key: <key>
-  api_mode: chat_completions
-```
-
----
-
-### 3. 飞书 App 凭证
-
-**问题 1：** 用户提供的 `cli_aaad2e8bbdf85bfe` 未开启 bot 功能，`/open-apis/bot/v3/info` 返回 `app do not have bot`，导致 gateway 无法以机器人身份接收消息。
-
-**诊断命令：**
+验证命令：
 
 ```bash
-# 获取 tenant_access_token
-curl -s -X POST "https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal" \
-  -H "Content-Type: application/json" \
-  -d '{"app_id":"<APP_ID>","app_secret":"<APP_SECRET>"}'
+docker build --platform linux/amd64 \
+  -t hermes-devops-agent:feishu-oapi-check \
+  -f /Users/gongxiude/Documents/yuexin/hermes-devops-agent/Dockerfile \
+  /Users/gongxiude/Documents/yuexin/hermes-devops-agent
 
-# 验证 bot 能力
-curl -s "https://open.feishu.cn/open-apis/bot/v3/info" \
-  -H "Authorization: Bearer <TOKEN>"
+docker run --rm --platform linux/amd64 \
+  --entrypoint /opt/hermes/.venv/bin/python \
+  hermes-devops-agent:feishu-oapi-check \
+  -c 'import lark_oapi; print("lark_oapi=ok")'
 ```
 
-**修复：** 改用全局 `.env` 中已有 bot 能力的应用（另一个 App ID），bot 名称从飞书开发者控制台确认后填入 `FEISHU_BOT_NAME`。
+验收标准：
 
-**问题 2：** 日志报 `Unable to hydrate bot name from application info`，需要 `admin:app.info:readonly` 权限。
-
-**修复：** 在 `.env` 中直接指定 `FEISHU_BOT_NAME`，绕过 API 权限要求：
-
-```
-FEISHU_BOT_NAME=宫秀德的智能助手
+```text
+lark_oapi=ok
 ```
 
----
+## Kubernetes 查询
 
-### 4. 用户访问策略
-
-**问题：** gateway 启动报 `No user allowlists configured. All unauthorized users will be denied`。
-
-**原因：** hermes gateway 读取 **全局** `~/.hermes/.env`，profile 级别的 `.env` 里的 `GATEWAY_ALLOW_ALL_USERS` 不被读取。
-
-**修复：** 在 `~/.hermes/.env` 中启用：
-
-```
-GATEWAY_ALLOW_ALL_USERS=true
-```
-
----
-
-### 5. Kanban DB 损坏
-
-**问题：** gateway 日志报：
-
-```
-kanban dispatcher: board default database ... is not a valid SQLite database
-```
-
-**原因：** `~/.hermes/kanban.db` 和 `agentic-inspector-debug` board 的 db 文件损坏（内容损坏，非格式错误）。
-
-**修复：**
+确认当前集群和 Pod：
 
 ```bash
-# 删除损坏文件
-rm ~/.hermes/kanban.db
-rm ~/.hermes/kanban/boards/agentic-inspector-debug/kanban.db
-
-# 重建（idempotent）
-hermes kanban init
-
-# 重建 agentic-inspector-debug board
-hermes kanban boards switch agentic-inspector-debug
-hermes kanban init
-
-# 切回默认 board
-hermes kanban boards switch yuexin-gitops
+kubectl config current-context
+kubectl get pod hermes-agent-0 -n yuexin-ai -o wide
+kubectl get sts hermes-agent -n yuexin-ai \
+  -o jsonpath='{.spec.template.spec.containers[0].image}{"\n"}'
 ```
 
----
-
-### 6. Feishu App ID 冲突
-
-**问题：** gateway 启动报 `Another local Hermes gateway is already using this Feishu app_id (PID 709)`。
-
-**原因：** 全局 default profile 的 gateway（PID 709）已连接同一个 Feishu App，WebSocket 不允许两个客户端同时连接。
-
-**修复：** 停止全局 default gateway，由 orchestrator profile 独占该飞书应用：
+进入 Pod 后使用 Hermes venv 内的 CLI：
 
 ```bash
-hermes -p default gateway stop
-hermes -p orchestrator gateway start
+kubectl exec -n yuexin-ai hermes-agent-0 -- sh
+
+HERMES=/opt/hermes/.venv/bin/hermes
+$HERMES profile list
 ```
 
----
+Pod 内默认 PATH 不一定包含 `hermes`，不要假定裸 `hermes` 命令可用。
 
-## .env 关键配置项
+## 环境配置
 
+Kubernetes ConfigMap 中维护运行环境，但 s6 子进程实际以 Hermes HOME 下的 `.env` 为准。调试或恢复时，从当前 live ConfigMap 同步到 `/opt/data/.env` 和 profile `.env`。
+
+不要在文档或日志中输出 Secret 原文。
+
+```bash
+kubectl get cm -n yuexin-ai hermes-agent-env-6dbmcdc7h8 -o json \
+  | jq -r '.data as $d |
+      [
+        "FEISHU_APP_ID",
+        "FEISHU_APP_SECRET",
+        "FEISHU_BOT_NAME",
+        "GATEWAY_ALLOW_ALL_USERS",
+        "API_SERVER_ENABLED",
+        "API_SERVER_HOST",
+        "API_SERVER_PORT",
+        "API_SERVER_KEY",
+        "API_SERVER_CORS_ORIGINS",
+        "HERMES_DASHBOARD",
+        "HERMES_DASHBOARD_HOST",
+        "HERMES_DASHBOARD_PORT",
+        "HERMES_DASHBOARD_BASIC_AUTH_USERNAME",
+        "HERMES_DASHBOARD_BASIC_AUTH_PASSWORD",
+        "HERMES_DASHBOARD_BASIC_AUTH_SECRET",
+        "TZ"
+      ][] | select($d[.] != null) | "\(.)=\($d[.] | @sh)"' \
+  | base64 \
+  | kubectl exec -i -n yuexin-ai hermes-agent-0 -- sh -lc '
+      set -eu
+      umask 077
+      tmp=$(mktemp /opt/data/.env.tmp.XXXXXX)
+      cat | base64 -d > "$tmp"
+      mv "$tmp" /opt/data/.env
+      cp /opt/data/.env /opt/data/profiles/orchestrator/.env
+      chmod 600 /opt/data/.env /opt/data/profiles/orchestrator/.env
+    '
 ```
-FEISHU_APP_ID=<app_id>           # 必须已在飞书开发者控制台开启「机器人」功能
-FEISHU_APP_SECRET=<app_secret>
-FEISHU_BOT_NAME=<bot名称>        # 与飞书控制台显示名一致，避免需要 admin 权限
-GATEWAY_ALLOW_ALL_USERS=true     # 写入 ~/.hermes/.env（全局），不是 profile .env
+
+如果 `FEISHU_BOT_NAME` 包含空格，确保 `.env` 中使用 shell/dotenv 兼容格式：
+
+```bash
+FEISHU_BOT_NAME='hermes 运维助手'
 ```
 
-> `GATEWAY_ALLOW_ALL_USERS=true` 实际需要在 `~/.hermes/.env`（全局）中设置才生效。
+验收命令只打印变量名，不打印值：
 
----
+```bash
+kubectl exec -n yuexin-ai hermes-agent-0 -- sh -lc '
+  for f in /opt/data/.env /opt/data/profiles/orchestrator/.env; do
+    echo "FILE $f"
+    awk -F= "{print \$1}" "$f" | sort
+  done
+'
+```
 
-## 注意事项
+验收标准：
 
-- **同一 Feishu App 只能有一个 gateway WebSocket 连接**。如果全局 default gateway 或其他 profile 使用同一 App ID，必须先停止它们。
-- **bot 能力验证**：新飞书应用需在开发者控制台开启「机器人」功能，否则无法接收消息。
-- **GATEWAY_ALLOW_ALL_USERS** 作用于整个 hermes 实例，不是 profile 级别。如需精细控制，改用 `FEISHU_ALLOWED_USERS=ou_xxx,ou_yyy`（profile `.env` 中生效）。
-- kanban dispatcher 的日志仅在 gateway 运行时产生，重启 gateway 后首次 dispatch tick 在 15 秒后触发。
+- `FEISHU_APP_ID`
+- `FEISHU_APP_SECRET`
+- `FEISHU_BOT_NAME`
+- `GATEWAY_ALLOW_ALL_USERS`
+- `API_SERVER_*`
+- `HERMES_DASHBOARD*`
+
+均存在。
+
+## 安装 Profile
+
+首次安装或修复 source 记录时执行：
+
+```bash
+kubectl exec -n yuexin-ai hermes-agent-0 -- sh -lc '
+  set -eu
+  HERMES=/opt/hermes/.venv/bin/hermes
+  /command/s6-svc -d /run/service/gateway-orchestrator || true
+  chmod -R u+rwX,g+rwX \
+    /opt/data/profiles/orchestrator/skills \
+    /opt/data/profiles/orchestrator/cron \
+    /opt/data/profiles/orchestrator/skins 2>/dev/null || true
+  chmod u+rw,g+rw \
+    /opt/data/profiles/orchestrator/config.yaml \
+    /opt/data/profiles/orchestrator/distribution.yaml 2>/dev/null || true
+  $HERMES profile install /opt/distributions/orchestrator \
+    --name orchestrator \
+    --force \
+    --yes
+  chmod -R u+rwX,g+rwX \
+    /opt/data/profiles/orchestrator/skills \
+    /opt/data/profiles/orchestrator/cron \
+    /opt/data/profiles/orchestrator/skins 2>/dev/null || true
+  /command/s6-svc -u /run/service/gateway-orchestrator
+'
+```
+
+验收命令：
+
+```bash
+kubectl exec -n yuexin-ai hermes-agent-0 -- sh -lc '
+  /opt/hermes/.venv/bin/hermes profile info orchestrator
+'
+```
+
+验收标准：
+
+- `Distribution: orchestrator`
+- `Version: 0.2.0`
+- `Source: /opt/distributions/orchestrator`
+
+## 更新 Profile
+
+distribution 已构建进新镜像后，执行：
+
+```bash
+kubectl exec -n yuexin-ai hermes-agent-0 -- sh -lc '
+  set -eu
+  /command/s6-svc -d /run/service/gateway-orchestrator || true
+  chmod -R u+rwX,g+rwX \
+    /opt/data/profiles/orchestrator/skills \
+    /opt/data/profiles/orchestrator/cron \
+    /opt/data/profiles/orchestrator/skins 2>/dev/null || true
+  /opt/hermes/.venv/bin/hermes profile update orchestrator --yes
+  chmod -R u+rwX,g+rwX \
+    /opt/data/profiles/orchestrator/skills \
+    /opt/data/profiles/orchestrator/cron \
+    /opt/data/profiles/orchestrator/skins 2>/dev/null || true
+  /command/s6-svc -u /run/service/gateway-orchestrator
+'
+```
+
+验收标准：
+
+```text
+✓ Updated 'orchestrator' → v0.2.0
+```
+
+如果报错：
+
+```text
+Profile 'orchestrator' has no recorded source.
+```
+
+说明这个 profile 不是通过 distribution installer 正确安装的，重新执行“安装 Profile”章节中的 `profile install --force`。
+
+## 启动 Gateway
+
+同一个 Feishu App 只能同时有一个 gateway WebSocket 连接。生产调试时由 `orchestrator` 独占 Feishu App，停止 `default` gateway。
+
+```bash
+kubectl exec -n yuexin-ai hermes-agent-0 -- sh -lc '
+  /command/s6-svc -d /run/service/gateway-default || true
+  /command/s6-svc -u /run/service/gateway-orchestrator
+  sleep 10
+  /opt/hermes/.venv/bin/hermes gateway list
+  /opt/hermes/.venv/bin/hermes -p orchestrator gateway status
+'
+```
+
+验收标准：
+
+```text
+Gateways:
+  ✗ default
+  ✓ orchestrator
+```
+
+并且：
+
+```text
+✓ Gateway is running
+```
+
+容器重启恢复依赖 `gateway_state.json`。检查 desired/runtime state：
+
+```bash
+kubectl exec -n yuexin-ai hermes-agent-0 -- sh -lc '
+  cat /opt/data/gateway_state.json
+  echo
+  cat /opt/data/profiles/orchestrator/gateway_state.json
+'
+```
+
+验收标准：
+
+- `/opt/data/gateway_state.json` 中 `desired_state` 为 `stopped`。
+- `/opt/data/profiles/orchestrator/gateway_state.json` 中 `gateway_state` 为 `running`。
+- `platforms.feishu.state` 为 `connected`。
+- `platforms.api_server.state` 为 `connected`。
+
+## Feishu 验证
+
+验证 App token 和 bot 能力：
+
+```bash
+kubectl exec -i -n yuexin-ai hermes-agent-0 -- sh -lc '
+  /opt/hermes/.venv/bin/python -
+' <<'PY'
+from pathlib import Path
+import json
+import urllib.request
+
+def load_env(path):
+    env = {}
+    for line in Path(path).read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        k, v = line.split("=", 1)
+        env[k] = v.strip().strip("\"'")
+    return env
+
+env = load_env("/opt/data/.env")
+body = json.dumps({
+    "app_id": env["FEISHU_APP_ID"],
+    "app_secret": env["FEISHU_APP_SECRET"],
+}).encode()
+req = urllib.request.Request(
+    "https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal",
+    data=body,
+    headers={"Content-Type": "application/json"},
+    method="POST",
+)
+with urllib.request.urlopen(req, timeout=15) as resp:
+    token_data = json.load(resp)
+print({"tenant_token_code": token_data.get("code"), "tenant_token_msg": token_data.get("msg")})
+
+token = token_data["tenant_access_token"]
+req = urllib.request.Request(
+    "https://open.feishu.cn/open-apis/bot/v3/info",
+    headers={"Authorization": f"Bearer {token}"},
+)
+with urllib.request.urlopen(req, timeout=15) as resp:
+    bot_data = json.load(resp)
+bot = bot_data.get("bot") or {}
+print({"bot_info_code": bot_data.get("code"), "bot_info_msg": bot_data.get("msg"), "app_name": bot.get("app_name")})
+PY
+```
+
+验收标准：
+
+```text
+tenant_token_code: 0
+bot_info_code: 0
+app_name: hermes 运维助手
+```
+
+验证 gateway WebSocket：
+
+```bash
+kubectl exec -n yuexin-ai hermes-agent-0 -- sh -lc '
+  tail -n 120 /opt/data/profiles/orchestrator/logs/gateway.log
+'
+```
+
+验收标准：
+
+```text
+[Feishu] Connected in websocket mode
+✓ feishu connected
+Gateway running with 2 platform(s)
+```
+
+验证真实对话：
+
+1. 在飞书中向 `hermes 运维助手` 发送 `hi` 或 `测试`。
+2. 查看日志：
+
+```bash
+kubectl exec -n yuexin-ai hermes-agent-0 -- sh -lc '
+  grep -n "Inbound dm message received\\|response ready\\|Sending response" \
+    /opt/data/profiles/orchestrator/logs/gateway.log | tail -30
+'
+```
+
+验收标准：
+
+```text
+Inbound dm message received ...
+response ready: platform=feishu ...
+[Feishu] Sending response ...
+```
+
+本次已验证的真实入站和回包：
+
+```text
+2026-07-02 10:44:27 Inbound dm message received ... text='hi'
+2026-07-02 10:44:36 Inbound dm message received ... text='测试'
+2026-07-02 10:44:45 response ready ... response=121 chars
+2026-07-02 10:44:45 [Feishu] Sending response ...
+```
+
+## CI / GitOps 流程
+
+代码修改后：
+
+```bash
+git -C /Users/gongxiude/Documents/yuexin/hermes-devops-agent status --short
+git -C /Users/gongxiude/Documents/yuexin/hermes-devops-agent add Dockerfile distributions/orchestrator/README.md
+git -C /Users/gongxiude/Documents/yuexin/hermes-devops-agent commit -m '<message>'
+git -C /Users/gongxiude/Documents/yuexin/hermes-devops-agent push origin main
+```
+
+Jenkins job：
+
+```text
+yuexin-yunwei-hermes-devops-agent
+```
+
+参数：
+
+```text
+BRANCH=origin/main
+SKIP_INFRA_UPDATE=false
+```
+
+Jenkins 只构建镜像、更新 `yuexin-infra` GitOps tag，并触发 ArgoCD refresh。不要让 Jenkins 直接操作 Kubernetes 集群。
+
+本次验证构建：
+
+```text
+Jenkins build: #9
+commit: 9b82a139
+image: yuexinhub-registry-vpc.cn-zhangjiakou.cr.aliyuncs.com/yuexin_ai/hermes-agent:v20260702-p.9-9b82a139
+yuexin-infra commit: 55f2283
+ArgoCD hard-refresh: success
+```
+
+## 常见问题
+
+### `hermes: not found`
+
+Pod 内默认 PATH 不一定包含 Hermes venv。使用绝对路径：
+
+```bash
+/opt/hermes/.venv/bin/hermes profile list
+```
+
+### `lark-oapi not installed or FEISHU_APP_ID/SECRET not set`
+
+分两类确认：
+
+```bash
+kubectl exec -n yuexin-ai hermes-agent-0 -- sh -lc '
+  /opt/hermes/.venv/bin/python -c "import lark_oapi; print(\"lark_oapi=ok\")"
+  awk -F= "{print \$1}" /opt/data/.env | sort
+'
+```
+
+如果缺 `lark_oapi`，修 Dockerfile 并重新构建镜像。
+
+如果缺 `FEISHU_*`，从 ConfigMap 同步 `/opt/data/.env` 和 profile `.env`。
+
+### `Profile 'orchestrator' has no recorded source`
+
+旧 profile 不是通过 distribution installer 安装的。执行：
+
+```bash
+/opt/hermes/.venv/bin/hermes profile install /opt/distributions/orchestrator \
+  --name orchestrator \
+  --force \
+  --yes
+```
+
+然后再执行：
+
+```bash
+/opt/hermes/.venv/bin/hermes profile update orchestrator --yes
+```
+
+### `PermissionError` 删除 skills 文件失败
+
+现象：
+
+```text
+PermissionError: [Errno 13] Permission denied: '/opt/data/profiles/orchestrator/skills/...'
+```
+
+根因：
+
+- PVC 中保留了旧 profile 的 `skills/`。
+- 部分 distribution-owned 文件是只读模式，例如目录 `555`、文件 `444`。
+- `profile install --force` 或 `profile update` 需要删除并重建 distribution-owned 文件。
+
+修复：
+
+```bash
+chmod -R u+rwX,g+rwX /opt/data/profiles/orchestrator/skills
+chmod -R u+rwX,g+rwX /opt/data/profiles/orchestrator/cron /opt/data/profiles/orchestrator/skins 2>/dev/null || true
+/opt/hermes/.venv/bin/hermes profile install /opt/distributions/orchestrator --name orchestrator --force --yes
+/opt/hermes/.venv/bin/hermes profile update orchestrator --yes
+```
+
+长期要求：
+
+- Dockerfile 中 `COPY` distribution 和 plugins 时使用 `--chown=hermes:hermes`。
+- 不要把 profile 的 distribution-owned 文件手工改成只读。
+- 更新 profile 前先确认当前用户是 `hermes`，目标目录 owner 是 `hermes:hermes`。
+
+### 同一个 Feishu App 被多个 gateway 使用
+
+现象：
+
+```text
+Another local Hermes gateway is already using this Feishu app_id
+```
+
+修复：
+
+```bash
+/command/s6-svc -d /run/service/gateway-default || true
+/command/s6-svc -u /run/service/gateway-orchestrator
+```
+
+验收：
+
+```bash
+/opt/hermes/.venv/bin/hermes gateway list
+```
+
+只允许 `orchestrator` running。
+
+### Bot 无法给用户发送消息
+
+如果用 `open_id` 发送时报：
+
+```text
+invalid receive_id
+```
+
+原因通常是 `open_id` 按 App 隔离，其他 App 下的 open_id 不能用于 Hermes App。可以用 `email` 作为 `receive_id_type` 做出站测试，或给 Hermes App 开通通讯录权限后查询该 App 下的 open_id。
+
+## 安全要求
+
+- 不要把 `FEISHU_APP_SECRET`、`API_SERVER_KEY`、dashboard password、私钥、token 写入 README。
+- 调试输出只打印变量名，不打印变量值。
+- Jenkins 不直接操作 Kubernetes 集群。
+- K8s 运行态最终由 ArgoCD/GitOps 收敛；Pod 内手工修复只用于调试和恢复。
