@@ -10,15 +10,15 @@ plugins:
     - kubernetes
 
 terminal:
-  cwd: /Users/gongxiude/Documents/yuexin/hermes-devops-agent
+  cwd: /opt/data/profiles/observability/workspace
 
 # MCP servers — 运行时实际读取此配置（mcp.json 仅为 distribution 交付格式）
 # 注意：Prometheus 已从 MCP 迁移到原生插件 `observability`（见下方 observability: 段）。
 mcp_servers:
   loki-intlsms-prod:
-    command: python3
+    command: /opt/hermes/.venv/bin/python
     args:
-      - /Users/gongxiude/Documents/yuexin/hermes-devops-agent/mcp-servers/loki/src/server.py
+      - /opt/mcp-servers/loki/src/server.py
     env:
       MCP_SERVER_NAME: loki-intlsms-prod
       LOKI_URL: "${OBSERVE_LOKI_BASE_URL_PROD}"
@@ -33,9 +33,9 @@ mcp_servers:
         - loki_label_values
         - loki_series
   # loki-intlsms-test:
-  #   command: python3
+  #   command: /opt/hermes/.venv/bin/python
   #   args:
-  #     - /Users/gongxiude/Documents/yuexin/hermes-devops-agent/mcp-servers/loki/src/server.py
+  #     - /opt/mcp-servers/loki/src/server.py
   #   env:
   #     MCP_SERVER_NAME: loki-intlsms-test
   #     LOKI_URL: "${OBSERVE_LOKI_BASE_URL_TEST}"

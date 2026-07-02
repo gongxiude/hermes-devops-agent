@@ -27,9 +27,9 @@ terminal:
 
 mcp_servers:
   git-codeup:
-    command: python3
+    command: /opt/hermes/.venv/bin/python
     args:
-      - /Users/gongxiude/Documents/yuexin/hermes-devops-agent/mcp-servers/git-codeup/src/server.py
+      - /opt/mcp-servers/git-codeup/src/server.py
     env:
       MCP_SERVER_NAME: git-codeup
       CODEUP_BASE_URL: "${CODEUP_BASE_URL}"
