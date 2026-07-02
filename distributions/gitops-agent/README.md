@@ -5,6 +5,7 @@ Kubernetes 中的 GitOps specialist profile。profile name 固定为 `gitops-age
 职责边界：
 
 - 查询 Codeup、Jenkins、ArgoCD 和 GitOps 配置。
+- 使用 Kubernetes 原生 tools 只读查看当前集群运行态，辅助判断 GitOps 变更影响。
 - 起草 Kustomize、Jenkins pipeline、ArgoCD 相关变更。
 - 通过 Git / MR / ArgoCD 链路交付，不直接操作 Kubernetes。
 - 不常驻 gateway，由 orchestrator 或人工显式调用。
@@ -22,6 +23,7 @@ Kubernetes 中的 GitOps specialist profile。profile name 固定为 `gitops-age
 | MCP 发现 | 成功 | `git-codeup` 发现 6 个工具 |
 | Codeup 只读 | 成功 | Codeup repositories API 可读取 1 条记录 |
 | toolsets | 成功 | `argocd`、`devops_governance` plugin toolsets enabled |
+| Kubernetes tools | 已固化到 distribution | `kubernetes` plugin + `clusters` 注册表；部署后执行 `tools --summary list` 验收 |
 
 ## 安装和更新
 
@@ -77,6 +79,8 @@ kubectl exec -n yuexin-ai hermes-agent-0 -- sh -lc '
 | `GITOPS_JENKINS_PIPELINE_BRANCH` | jenkins-pipeline branch |
 | `ARGOCD_SERVER` | ArgoCD API 地址 |
 | `ARGOCD_TOKEN` | ArgoCD token |
+| `KUBECONFIG_READONLY` | Kubernetes 只读 kubeconfig，容器内使用 `/opt/data/profiles/gitops-agent/home/.kube/config` |
+| `KUBECTL_BIN` | kubectl 路径，容器内使用 `/usr/local/bin/kubectl` |
 
 调试阶段可以从本机 Hermes profile 恢复 `.env`，但不要输出值：
 
@@ -88,6 +92,10 @@ kubectl exec -n yuexin-ai hermes-agent-0 -- sh -lc '
   chmod 600 /opt/data/profiles/gitops-agent/.env
   sed -i "s#^SOFTWARE_DELIVERY_WORKSPACE_ROOT=.*#SOFTWARE_DELIVERY_WORKSPACE_ROOT=/opt/data/profiles/gitops-agent/workspace#" \
     /opt/data/profiles/gitops-agent/.env
+  grep -q "^KUBECONFIG_READONLY=" /opt/data/profiles/gitops-agent/.env \
+    || echo "KUBECONFIG_READONLY=/opt/data/profiles/gitops-agent/home/.kube/config" >> /opt/data/profiles/gitops-agent/.env
+  grep -q "^KUBECTL_BIN=" /opt/data/profiles/gitops-agent/.env \
+    || echo "KUBECTL_BIN=/usr/local/bin/kubectl" >> /opt/data/profiles/gitops-agent/.env
 '
 ```
 
@@ -132,7 +140,23 @@ kubectl exec -n yuexin-ai hermes-agent-0 -- sh -lc '
 
 - `git-codeup` enabled，发现 6 个工具。
 - `argocd` plugin toolset enabled。
+- `kubernetes` plugin toolset enabled。
 - `devops_governance` plugin toolset enabled。
+
+Kubernetes tools 只读验证：
+
+```bash
+kubectl exec -n yuexin-ai hermes-agent-0 -- sh -lc '
+  /opt/hermes/.venv/bin/hermes -p gitops-agent tools --summary list | grep kubernetes
+  export KUBECONFIG=/opt/data/profiles/gitops-agent/home/.kube/config
+  /usr/local/bin/kubectl get pods -n yuexin-ai --no-headers | head
+'
+```
+
+验收标准：
+
+- `kubernetes` 显示为 enabled。
+- `kubectl get pods -n yuexin-ai` 可以读取当前集群 Pod。
 
 Codeup 只读验证只输出状态，不输出 token：
 
@@ -167,6 +191,8 @@ PY
 ## 常见问题
 
 `SOFTWARE_DELIVERY_WORKSPACE_ROOT` 不能使用本机 `/Users/...` 路径，容器内必须使用 `/opt/data/profiles/gitops-agent/workspace`。
+
+`KUBECONFIG_READONLY` 不能使用本机 `/Users/...` 路径，容器内必须使用 `/opt/data/profiles/gitops-agent/home/.kube/config`，并由 Secret/挂载维护真实文件。
 
 Jenkins 不直接操作 Kubernetes。镜像构建由 Jenkins 完成；Kubernetes 变更通过 GitOps/ArgoCD 收敛。
 

@@ -28,6 +28,12 @@ env_requires:
   - name: ARGOCD_TOKEN
     description: "ArgoCD API token"
     required: false
+  - name: KUBECONFIG_READONLY
+    description: "Read-only kubeconfig path used by the native kubernetes tools"
+    required: false
+  - name: KUBECTL_BIN
+    description: "kubectl binary path inside the Hermes container"
+    required: false
 distribution_owned:
   - SOUL.md
   - config.yaml

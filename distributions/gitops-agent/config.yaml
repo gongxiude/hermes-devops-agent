@@ -14,6 +14,7 @@ plugins:
   enabled:
     - devops_agent
     - argocd
+    - kubernetes
 
 toolsets:
   - kanban
@@ -57,6 +58,36 @@ argocd:
         base_url: "${ARGOCD_SERVER}"
         token: "${ARGOCD_TOKEN}"
         auth_scheme: Bearer
+
+# kubernetes 插件只读多集群：用于查看当前集群运行态，辅助判断 GitOps 变更影响。
+# 所有集群访问走只读 kubeconfig；生产写操作必须继续通过 GitOps/ArgoCD。
+kubernetes:
+  default_category: ai
+  default_env: prod
+
+# 共享集群注册表。GitOps agent 主要用于确认 GitOps 目标和当前运行态是否一致。
+clusters:
+  prod-aliyun-zjk-ai:
+    category: ai
+    env: prod
+    cluster: aliyun-zjk
+    server: https://kubernetes.default.svc
+    namespace: yuexin-ai
+    context: prod-aliyun-zjk-ops
+  prod-aliyun-zjk-ops:
+    category: ops
+    env: prod
+    cluster: aliyun-zjk
+    server: https://kubernetes.default.svc
+    namespace: ""
+    context: prod-aliyun-zjk-ops
+  test-aliyun-zjk-datacenter:
+    category: datacenter
+    env: test
+    cluster: aliyun-zjk
+    server: https://47.92.210.170:6443
+    namespace: test
+    context: test-aliyun-zjk-datacenter
 
 kanban:
   dispatch_in_gateway: false
