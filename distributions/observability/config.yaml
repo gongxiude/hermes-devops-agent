@@ -1,6 +1,40 @@
 display:
   skin: slate
 
+
+model:
+  provider: gpt-relay
+  model: gpt-5.5
+  default: gpt-5.5
+  api_mode: chat_completions
+
+fallback_providers:
+- provider: custom
+  model: deepseek-v4-pro
+  base_url: http://llm-relay.yuexin.domain:33033/v1
+  api_key: sk-a64ySCyDInT1mDFsCAVGZ8AlfRJDyAP8yDPoRbP3aoiwAPN9
+  api_mode: chat_completions
+
+
+custom_providers:
+- name: deepseek-relay
+  base_url: http://llm-relay.yuexin.domain:33033/v1
+  api_key: sk-a64ySCyDInT1mDFsCAVGZ8AlfRJDyAP8yDPoRbP3aoiwAPN9
+  model: deepseek-v4-pro
+  api_mode: chat_completions
+  models:
+    deepseek-v4-pro:
+      name: deepseek-v4-pro
+
+- name: gpt-relay
+  base_url: http://llm-relay.yuexin.domain:33033/v1
+  api_key: sk-wMLcU1cEOo122R1K7tceOtmw6f9uOvKQxSfMEYC0E29LKdBy
+  model: gpt-5.5
+  api_mode: chat_completions
+  models:
+    gpt-5.5:
+      name: gpt-5.5
+
 hooks_auto_accept: false
 
 plugins:

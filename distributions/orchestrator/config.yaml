@@ -12,8 +12,8 @@ model:
 fallback_providers:
 - provider: custom
   model: deepseek-v4-pro
-  base_url: ${LLM_RELAY_BASE_URL}
-  api_key: ${LLM_RELAY_DEEPSEEK_API_KEY}
+  base_url: http://llm-relay.yuexin.domain:33033/v1
+  api_key: sk-a64ySCyDInT1mDFsCAVGZ8AlfRJDyAP8yDPoRbP3aoiwAPN9
   api_mode: chat_completions
 
 
