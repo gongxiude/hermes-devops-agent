@@ -41,3 +41,8 @@ htmlcov/
 .idea/
 .vscode/
 *.swp
+
+# >>> vendored-skills (auto-managed by scripts/sync-shared-skills.py) >>>
+distributions/gitops-agent/skills/review-methodology/
+distributions/observability/skills/systematic-debugging/
+# <<< vendored-skills <<<

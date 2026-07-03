@@ -21,6 +21,16 @@ COPY --chown=hermes:hermes mcp-servers /opt/mcp-servers
 
 COPY --chown=hermes:hermes distributions /opt/distributions
 
+# 通用方法论 skill 的 canonical 真源 + 分发脚本。
+# 构建时把 skills/skills-map.yaml 声明的 skill 物理复制进各 distribution/skills/
+# （hermes profile install 接受真实目录、拒绝软连接），随后删除真源与脚本，
+# 使镜像内每个 profile 自带 vendored skill，且不残留重复真源。
+COPY --chown=hermes:hermes skills /opt/skills
+COPY --chown=hermes:hermes scripts /opt/scripts
+
 USER hermes
+
+RUN /opt/hermes/.venv/bin/python /opt/scripts/sync-shared-skills.py \
+    && rm -rf /opt/skills /opt/scripts
 
 WORKDIR /opt/hermes

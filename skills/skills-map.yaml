@@ -1,0 +1,18 @@
+# 通用方法论 skill 的分发映射（canonical → distributions）
+#
+# 真源唯一放在 repo 根的 skills/ 下（不在任何 distribution.yaml 目录内，
+# 因此 hermes profile install 不会扫描到它、也不会触发 symlink 校验）。
+#
+# scripts/sync-shared-skills.py 依据本表，把真源【物理复制】进各 distribution
+# 的 skills/ 下（真实目录，install/update 接受）。
+#
+# 规则：
+#   - 只允许编辑 repo 根 skills/<name>/ 的真源；distribution 内的拷贝是产物。
+#   - 改完真源后跑 `python scripts/sync-shared-skills.py` 同步；
+#     CI 跑 `--check` 确保拷贝与真源一致（防止有人直接改拷贝导致漂移）。
+
+distributions:
+  observability:
+    - systematic-debugging
+  gitops-agent:
+    - review-methodology
