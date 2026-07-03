@@ -83,6 +83,13 @@ def _profile_tier(profile: str) -> int:
 
 
 def _tool_required_tier(tool_name: str) -> int:
+    # Kanban tools are orchestration control-plane operations. They create and
+    # update auditable work items, but do not directly execute production
+    # changes. Specialist profiles remain responsible for policy-gating the
+    # actual downstream tools they call.
+    if tool_name.startswith("kanban_"):
+        return 0
+
     for tier, pattern in _TOOL_TIER_RULES:
         if pattern.search(tool_name):
             return tier

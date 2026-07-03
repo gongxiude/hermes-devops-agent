@@ -1,21 +1,36 @@
-# Task Decomposition
+# 任务分解（Task Decomposition）
 
-## The Decomposition Rule
+## 分解法则
 
-A complex question decomposes into sub-questions. Each sub-question goes to a different specialist. If you cannot decompose, you cannot orchestrate.
+一个复杂的运维问题分解为多个子问题，每个子问题由不同的专家、针对不同的证据源来回答。
+无法分解，就无法编排。在 DevOps 里第一刀几乎总是同一个切法：
+**正在发生什么（证据）→ 为什么（关联）→ 改了什么（交付）→ 该做什么（起草 + 人工闸门）。**
 
-## Decomposition Patterns
+## 分解模式（DevOps）
 
-| Question Type | Decomposition | Specialists |
-|--------------|---------------|-------------|
-| "Should we do X?" | Research options → Analyze tradeoffs → Recommend | researcher, data-architect, product-manager |
-| "Build a plan for Y" | Define requirements → Design architecture → Sequence implementation | product-manager, technical-architect, implementation-planner |
-| "Debug Z" | Reproduce → Isolate → Root cause → Fix | debugger (all phases) |
-| "Write about W" | Research → Draft → Edit → Verify | researcher, writer, editor, verifier |
+| 问题类型 | 分解 | 路由 |
+|--------------|---------------|-------|
+| **"X 为什么变慢/挂了？"**（故障定位） | 取运行时证据 → 查资源/网络状态 → 查近期发布 | observability → infra-agent → gitops-agent |
+| **"这次发布/变更安全吗？"**（变更影响） | 列出改了什么 → 建立当前基线 → 评估容量与爆炸半径 | gitops-agent → observability → infra-agent |
+| **"把 Z 的成本/风险降下来"**（优化巡检） | 盘点现状 → 识别闲置/越权/暴露面 → 起草变更 | infra-agent（cost ∥ security）→ gitops-agent |
+| **"上次发布是不是元凶？"**（发布关联） | 拉取变更集 → 拉取运行时增量 → 对齐到时间线 | gitops-agent ∥ observability → orchestrator 时间线（复用 `release-impact-analyze`） |
+| **"平台现在健康吗？"**（态势巡检） | 运行时 SLO/异常 → 资源容量/配额 → 交付/sync 漂移 | observability ∥ infra-agent ∥ gitops-agent → 合成 |
 
-## Decomposition Checklist
+`release-impact-analyze` 在 gitops-agent 和 observability **两边都有**这个 workflow ——
+分解发布类问题时让每一侧各答自己的一半，再做关联。不要让某一个 profile 去猜另一个的数据。
 
-- [ ] Each sub-task is clearly scoped — a specialist can understand it without additional context
-- [ ] Sub-tasks are sequenced correctly (research before analysis, draft before edit)
-- [ ] Sub-tasks don't overlap — each specialist has a distinct focus
-- [ ] The synthesis step knows how all sub-tasks relate to each other
+## 分解检查清单
+
+- [ ] 每个子任务都收敛到单一证据源或变更面 —— 专家无需额外上下文即可动手
+      （命名空间、服务标签、有界时间窗、变更文件清单都已提供）。
+- [ ] **证据先于动作。** 任何 `draft` 子任务都排在支撑它的 observe/recommend 子任务*之后*。
+- [ ] 每个子任务声明自己的自主性层级，任何 `draft` 步骤标记为流水线暂停（人工闸门）。
+- [ ] 子任务之间不重叠 —— 每个专家有一个不同的问题，而不是同一个问题换种说法问两遍。
+- [ ] 对被阻塞的数据源有预案：该子任务返回 `unknown`，而不是被静默丢弃。
+- [ ] 合成步骤清楚所有子任务如何在**时间线**上关联 —— 哪个时间戳对齐哪些信号。
+
+## 当地图发生变化
+
+分解只是一个假设。当 observability 返回"尖峰在发布前 10 分钟就开始了"，计划就变了：
+原来的 `Change → Impact` 框架错了，现在这其实是指向基础设施的 `Symptom → Cause`。
+重新分解。当证据与计划相矛盾时调整计划，这本身就是工作，而不是工作的失败。

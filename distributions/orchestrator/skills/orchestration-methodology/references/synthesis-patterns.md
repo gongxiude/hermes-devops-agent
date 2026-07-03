@@ -1,22 +1,45 @@
-# Synthesis Patterns
+# 合成模式（Synthesis Patterns）
 
-## The Synthesis Rule
+## 合成法则
 
-The orchestrator does not redo the specialists' work. The orchestrator combines their independent outputs into a coherent whole, resolving conflicts and filling gaps.
+orchestrator 不重做专家的工作。它把各专家独立得到的证据整合为一个连贯的整体 ——
+解决冲突、填补空白，最重要的是**跨源关联信号。** 在 DevOps 里，合成不是调和意见；
+而是把指标、日志、事件和变更对齐到一条时间线上，直到因果链浮现。
 
-## Synthesis Patterns
+## 输出契约
 
-| Pattern | When | Approach |
+每次合成都收敛到同一个三段式形态 —— 也就是 observability profile 输出的那个契约：
+
+```
+evidence（证据）  →  risk level（风险等级）  →  next human action（下一步人工动作）
+```
+
+- **evidence（证据）**：观测到了什么，带来源与时间戳。数据源被阻塞时，`unknown`
+  是一个合法且诚实的取值。
+- **risk level（风险等级）**：orchestrator 基于综合证据的判断，而不是各专家单独风险判断的平均。
+- **next human action（下一步人工动作）**：人接下来最该做的那一件事 —— 尤其是任何
+  `act` 层变更，因为没有任何专家可以执行它。
+
+合成不是一份建议备忘录。它就是这个契约，由一座工件金字塔（artifact pyramid）支撑。
+
+## 合成模式（DevOps）
+
+| 模式 | 何时使用 | 做法 |
 |---------|------|----------|
-| **Consensus** | All specialists agree | Present the shared conclusion with supporting evidence from each |
-| **Divergence** | Specialists disagree | Surface the disagreement honestly, present each position fairly |
-| **Gap** | A question wasn't addressed | Fill the gap directly or route back to a specialist |
-| **Redundancy** | Two specialists said the same thing differently | Merge into one coherent section |
+| **Timeline Correlation（时间线关联）** | 多个来源报告的时间窗接近 | 把每个信号对齐到一条带时间戳的轴上。同一分钟里 Prometheus 尖峰 + Loki 错误爆发 + ArgoCD sync 是一条因果链，而不是三个孤立发现。 |
+| **Signal Triangulation（信号三角验证）** | 一个假设需要被证实 | 从三个独立角度证实同一条主张 —— 指标 + 日志 + 资源状态。单个信号是猜测；三个相互印证才是证据。 |
+| **Consensus（共识）** | 所有来源指向同一方向 | 把共同结论讲一次，引用每个来源的佐证证据。 |
+| **Divergence（分歧）** | 来源之间不一致（指标说健康，日志说报错） | 诚实地把冲突摆出来。分歧通常是线索 —— 局部故障、采样缺口 —— 而不是要被平均掉的噪声。 |
+| **Gap（缺口）** | 某个问题没被回答（数据源宕了） | 明确标记为 `unknown` 并带进 `next human action`。绝不让一个缺口读起来像"没问题"。 |
 
-## Synthesis Protocol
+## 合成协议
 
-1. Read all specialist outputs completely before starting synthesis
-2. Identify points of agreement and disagreement
-3. Resolve disagreements by evaluating the evidence, not by averaging opinions
-4. Flag gaps explicitly — "these questions remain open"
-5. The synthesis should be usable without reading the specialist outputs, but should link to them for depth
+1. 开始之前，完整读完每一份专家输出。记下每一项的来源与时间戳。
+2. 先建时间线。在解读之前，把每个信号都放到同一条轴上。
+3. 寻找关联与三角验证 —— 独立信号在哪里交汇？
+4. 用证据与时序来解决分歧，而不是把风险分数平均。
+5. 把缺口明说为 `unknown`，并把它路由进下一步人工动作。
+6. 输出 `evidence → risk level → next human action` 契约。任何需要的变更执行都是一条
+   人工动作 —— orchestrator 及其舰队永不亲自应用它。
+7. 合成结果应能在不读专家输出的情况下直接使用，但必须链接回它们（path-as-handoff，
+   以路径作为交接）以便深入。

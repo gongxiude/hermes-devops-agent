@@ -10,8 +10,14 @@ ROOT = Path(__file__).resolve().parents[1]
 
 # 自包含编排技能:orchestrator 专属,随 distribution 安装。
 ORCHESTRATOR_SKILLS = [
-    "skills/orchestrator/result-notify/SKILL.md",
-    "skills/orchestrator/kanban-route/SKILL.md",
+    "skills/orchestration-methodology/SKILL.md",
+]
+
+ORCHESTRATION_REFS = [
+    "skills/orchestration-methodology/references/task-decomposition.md",
+    "skills/orchestration-methodology/references/specialist-routing.md",
+    "skills/orchestration-methodology/references/synthesis-patterns.md",
+    "skills/orchestration-methodology/references/devops-orchestration-loop.md",
 ]
 
 
@@ -52,10 +58,13 @@ def main() -> int:
 
     manifest = yaml.safe_load((ROOT / "distribution.yaml").read_text(encoding="utf-8"))
     assert manifest["name"] == "hermes-devops-orchestrator", manifest.get("name")
+    assert "skills/orchestration-methodology/" in manifest["distribution_owned"]
+    assert "skills/orchestrator/" not in manifest["distribution_owned"]
 
     config = yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8"))
     assert config["kanban"]["orchestrator_profile"] == "orchestrator"
     assert "devops_agent" in config["plugins"]["enabled"], "devops_agent plugin must be enabled for kanban reply hook"
+    assert config["toolsets"] == ["kanban", "skills", "memory"], "orchestrator must not carry production toolsets"
 
     for rel in ORCHESTRATOR_SKILLS:
         skill_path = ROOT / rel
@@ -64,7 +73,12 @@ def main() -> int:
         assert meta.get("name"), f"skill missing name: {skill_path}"
         assert meta.get("description"), f"skill missing description: {skill_path}"
 
+    for rel in ORCHESTRATION_REFS:
+        ref_path = ROOT / rel
+        assert ref_path.exists(), f"missing orchestration reference: {ref_path}"
+
     assert not (ROOT / "skills/devops").exists(), "skills/devops shell must not exist"
+    assert not (ROOT / "skills/orchestrator").exists(), "legacy skills/orchestrator shell must not exist"
 
     soul = ROOT / "SOUL.md"
     assert_contains(
@@ -73,9 +87,13 @@ def main() -> int:
             "任务顺序是架构的一部分",
             "先分解，再路由",
             "合成不是摘要",
-            "不在 orchestrator 内直接调用 specialist 工具或 MCP",
-            "必须先调用工具",
-            "不能使用 JSON",
+            "DevOps 边界不可突破",
+            "只创建 Kanban task",
+            "只创建一条 Kanban task",
+            "reply_target:",
+            "idempotency_key",
+            "不执行 kubectl",
+            "不调用 Prometheus",
         ],
     )
     assert_not_contains(
@@ -87,20 +105,22 @@ def main() -> int:
         ],
     )
 
-    route = ROOT / "skills/orchestrator/kanban-route/SKILL.md"
+    route = ROOT / "skills/orchestration-methodology/SKILL.md"
     assert_contains(
         route,
         [
-            "reply_target 设置规则",
-            "fan-out + 汇总",
-            "pipeline",
-            "parents=[...]",
-            "任务图硬约束",
-            "禁止边读边建卡",
-            "不调用 `delegate_task`",
-            "必须先调用 `kanban_create`",
-            "body` 必须使用纯文本 `key: value`",
+            "DECOMPOSE",
+            "ROUTE",
+            "SYNTHESIZE",
+            "observability",
+            "infra-agent",
+            "gitops-agent",
+            "single ordinary observability query",
+            "reply_target:",
             "idempotency_key",
+            "kanban_create",
+            "Do not call kubectl",
+            "Do not call Prometheus",
         ],
     )
     assert_not_contains(
@@ -113,26 +133,25 @@ def main() -> int:
         ],
     )
 
-    observability = ROOT / "skills/orchestrator/kanban-route/references/observability-types.md"
+    routing = ROOT / "skills/orchestration-methodology/references/specialist-routing.md"
     assert_contains(
-        observability,
+        routing,
         [
-            "anomaly-detection",
-            "capacity-forecast",
-            "service-risk-summary",
-            "security-event-detection",
+            "observability",
+            "infra-agent",
+            "gitops-agent",
+            "没有 `act` 层 profile",
         ],
     )
 
-    notify = ROOT / "skills/orchestrator/result-notify/SKILL.md"
+    synthesis = ROOT / "skills/orchestration-methodology/references/synthesis-patterns.md"
     assert_contains(
-        notify,
+        synthesis,
         [
-            "数字对账",
-            "整体风险取最高",
-            "证据保留",
-            "单一出口",
-            "不是简单转述",
+            "evidence",
+            "risk level",
+            "next human action",
+            "unknown",
         ],
     )
 
