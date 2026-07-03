@@ -66,6 +66,19 @@ def main() -> int:
     assert config["kanban"]["orchestrator_profile"] == "orchestrator"
     assert "devops_agent" in config["plugins"]["enabled"], "devops_agent plugin must be enabled for kanban reply hook"
     assert config["toolsets"] == ["kanban", "skills", "memory"], "orchestrator must not carry production toolsets"
+    for platform in ("cli", "feishu", "api_server"):
+        platform_toolsets = set(config["platform_toolsets"][platform])
+        assert {"kanban", "skills", "memory", "devops_governance"} <= platform_toolsets, (
+            f"{platform} must expose kanban/skills/memory/devops_governance"
+        )
+        forbidden = {
+            "kubernetes",
+            "observability",
+            "loki-intlsms-prod",
+            "terminal",
+            "code_execution",
+        }
+        assert not (platform_toolsets & forbidden), f"{platform} must not carry production execution toolsets"
 
     for rel in ORCHESTRATOR_SKILLS:
         skill_path = ROOT / rel

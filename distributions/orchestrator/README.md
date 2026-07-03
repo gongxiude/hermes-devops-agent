@@ -397,6 +397,35 @@ kubectl exec -n yuexin-ai hermes-agent-0 -- sh -lc '
 Feishu DM -> orchestrator gateway -> kanban_create -> observability worker -> kanban_complete -> Feishu notify
 ```
 
+Feishu gateway 的工具权限来自 `platform_toolsets.feishu`，不是只看顶层 `toolsets`。
+先验证 Feishu 平台实际解析出的 toolsets：
+
+```bash
+kubectl exec -n yuexin-ai hermes-agent-0 -- sh -lc '
+  /opt/hermes/.venv/bin/python - <<'"'"'PY'"'"'
+import yaml
+from pathlib import Path
+from hermes_cli.tools_config import _get_platform_tools
+
+cfg = yaml.safe_load(Path("/opt/data/profiles/orchestrator/config.yaml").read_text())
+for platform in ["cli", "feishu", "api_server"]:
+    tools = sorted(_get_platform_tools(cfg, platform))
+    print(platform, tools)
+    assert "kanban" in tools
+    assert "skills" in tools
+PY
+'
+```
+
+验收标准：
+
+- `feishu` 输出中包含 `kanban`。
+- `feishu` 输出中包含 `skills`。
+- `feishu` 输出中不包含 `kubernetes`、`observability`、`terminal`、`code_execution`。
+
+如果飞书回复“当前会话未提供可执行的监控/看板工具调用权限”，先检查
+`platform_toolsets.feishu`，不要只检查顶层 `toolsets`。
+
 验证 dispatcher 归属：
 
 ```bash

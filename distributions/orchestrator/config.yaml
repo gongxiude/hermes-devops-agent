@@ -44,6 +44,23 @@ toolsets:
   - skills
   - memory
 
+platform_toolsets:
+  cli:
+    - devops_governance
+    - kanban
+    - memory
+    - skills
+  feishu:
+    - devops_governance
+    - kanban
+    - memory
+    - skills
+  api_server:
+    - devops_governance
+    - kanban
+    - memory
+    - skills
+
 kanban:
   dispatch_in_gateway: true
   dispatch_interval_seconds: 3     # 降低调度延迟（原 15s）
