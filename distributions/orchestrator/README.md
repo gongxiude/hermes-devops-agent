@@ -397,6 +397,103 @@ kubectl exec -n yuexin-ai hermes-agent-0 -- sh -lc '
 Feishu DM -> orchestrator gateway -> kanban_create -> observability worker -> kanban_complete -> Feishu notify
 ```
 
+固定观测请求走确定性 fastpath，不进入模型循环：
+
+```text
+Feishu DM -> orchestrator gateway pre_gateway_dispatch -> devops_agent fastpath
+  -> create Kanban task -> query observability Prometheus target
+  -> kanban_complete -> Feishu notify
+```
+
+当前固定 fastpath 只覆盖这个任务形态：
+
+```text
+domain: intlsms
+service: gateway
+environment: production/prod
+request_type: metrics_cpu_memory
+window: last_10_minutes/10m
+```
+
+对应飞书提示词：
+
+```text
+查看国际短信生产环境gateway服务近10分钟的内存和CPU
+```
+
+验收 fastpath 解析：
+
+```bash
+kubectl exec -n yuexin-ai hermes-agent-0 -- sh -lc '
+  PYTHONPATH=/opt/hermes/plugins /opt/hermes/.venv/bin/python - <<'"'"'PY'"'"'
+from devops_agent.fastpath import parse_observability_fastpath
+q = "查看国际短信生产环境gateway服务近10分钟的内存和CPU"
+parsed = parse_observability_fastpath(q)
+assert parsed is not None
+print(parsed)
+PY
+'
+```
+
+验收固定观测链路。该命令模拟 Feishu 入站，会创建一张真实 Kanban 任务并触发回传订阅；
+不要打印 `.env`、token 或私钥。
+
+```bash
+kubectl exec -n yuexin-ai hermes-agent-0 -- sh -lc '
+  PYTHONPATH=/opt/hermes/plugins /opt/hermes/.venv/bin/python - <<'"'"'PY'"'"'
+import time
+from enum import Enum
+from types import SimpleNamespace
+from devops_agent.fastpath import maybe_handle_observability_fastpath
+
+class Platform(Enum):
+    feishu = "feishu"
+
+source = SimpleNamespace(
+    platform=Platform.feishu,
+    chat_id="oc_bf35fa31f16719716f7370c0e3d6d232",
+    user_id="runbook-check",
+)
+event = SimpleNamespace(
+    source=source,
+    text="查看国际短信生产环境gateway服务近10分钟的内存和CPU",
+    message_id=f"runbook-check-{int(time.time())}",
+)
+print(maybe_handle_observability_fastpath(event=event, gateway=None, session_store=None))
+PY
+  sleep 6
+  /opt/hermes/.venv/bin/hermes -p orchestrator kanban list | tail -n 10
+  /opt/hermes/.venv/bin/hermes -p orchestrator kanban notify-list
+'
+```
+
+验收标准：
+
+- 输出包含 `action: skip` 和新任务 `task_id`。
+- 新任务状态为 `done`。
+- `kanban show <task_id>` 的 `Result` 包含各 gateway pod 的 CPU mCore 和内存 MiB。
+- `Events` 中只有 `created` 和 `completed`，不应出现 `spawned`。
+- `notify-list` 最终回到 `(no subscriptions)`。
+
+查看任务结果：
+
+```bash
+kubectl exec -n yuexin-ai hermes-agent-0 -- sh -lc '
+  /opt/hermes/.venv/bin/hermes -p orchestrator kanban show t_xxxxxxxx
+'
+```
+
+如果看到 `spawned` 或 observability worker 反复 `kanban_show`，说明没有走同步 fastpath。
+先重启 orchestrator gateway，再重试：
+
+```bash
+kubectl exec -n yuexin-ai hermes-agent-0 -- sh -lc '
+  /command/s6-svc -k /run/service/gateway-orchestrator
+  sleep 6
+  cat /opt/data/profiles/orchestrator/gateway_state.json
+'
+```
+
 Feishu gateway 的工具权限来自 `platform_toolsets.feishu`，不是只看顶层 `toolsets`。
 先验证 Feishu 平台实际解析出的 toolsets：
 

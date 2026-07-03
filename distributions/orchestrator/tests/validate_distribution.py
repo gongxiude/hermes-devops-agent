@@ -101,6 +101,7 @@ def main() -> int:
             "任务顺序是架构的一部分",
             "Mandatory Runtime Gate",
             'skill_view("orchestration-methodology")',
+            "不要先调用 `skill_view`",
             "不能回答“我无法直接访问监控数据”作为最终结果",
             "先分解，再路由",
             "合成不是摘要",

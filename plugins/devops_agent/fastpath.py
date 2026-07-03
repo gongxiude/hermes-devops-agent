@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
+import time
 from dataclasses import dataclass
 from typing import Any, Optional
 
@@ -78,7 +79,14 @@ def _source_platform(event: Any) -> str:
     return str(getattr(platform, "value", platform) or "").strip().lower()
 
 
-def _create_task(parsed: ObservabilityFastPath, *, chat_id: str, actor: str, session_id: str = "") -> str:
+def _create_task(
+    parsed: ObservabilityFastPath,
+    *,
+    chat_id: str,
+    actor: str,
+    session_id: str = "",
+    message_id: str = "",
+) -> str:
     from hermes_cli import kanban_db as kb
 
     body = "\n".join(
@@ -94,9 +102,9 @@ def _create_task(parsed: ObservabilityFastPath, *, chat_id: str, actor: str, ses
             "notes: Query CPU and memory metrics for the production intlsms gateway over the last 10 minutes. Return concise values, trend, and abnormal findings.",
         ]
     )
-    idempotency_key = (
+    idempotency_key = f"feishu-message:{message_id}" if message_id else (
         f"feishu:{chat_id}:{parsed.domain}:{parsed.service}:"
-        f"{parsed.environment}:{parsed.window}:{parsed.request_type}"
+        f"{parsed.environment}:{parsed.window}:{parsed.request_type}:{int(time.time() // 300)}"
     )
     with kb.connect_closing() as conn:
         task_id = kb.create_task(
@@ -166,8 +174,22 @@ def maybe_handle_observability_fastpath(
         except Exception:
             session_id = ""
 
-    task_id = _create_task(parsed, chat_id=chat_id, actor=_source_user_id(event), session_id=session_id)
+    message_id = str(getattr(event, "message_id", "") or "")
+    task_id = _create_task(
+        parsed,
+        chat_id=chat_id,
+        actor=_source_user_id(event),
+        session_id=session_id,
+        message_id=message_id,
+    )
     logger.info("[fastpath] created observability task=%s for Feishu request", task_id)
+
+    try:
+        from . import observability_fastpath
+
+        observability_fastpath.complete(task_id, parsed)
+    except Exception as exc:
+        logger.warning("[fastpath] failed to start observability completion for %s: %s", task_id, exc)
 
     if gateway is not None:
         try:
