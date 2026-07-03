@@ -30,7 +30,12 @@ COPY --chown=hermes:hermes scripts /opt/scripts
 
 USER hermes
 
-RUN /opt/hermes/.venv/bin/python /opt/scripts/sync-shared-skills.py \
-    && rm -rf /opt/skills /opt/scripts
+RUN /opt/hermes/.venv/bin/python /opt/scripts/sync-shared-skills.py
+
+USER root
+
+RUN rm -rf /opt/skills /opt/scripts
+
+USER hermes
 
 WORKDIR /opt/hermes
