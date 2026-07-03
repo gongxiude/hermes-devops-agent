@@ -45,6 +45,10 @@ _NOTIFY_OPT_OUT_RE = re.compile(r"notify_user\s*:\s*false", re.IGNORECASE)
 # Feishu open_id format: oc_<hex> for chats, ou_<hex> for users.
 _FEISHU_OPEN_ID_RE = re.compile(r"^(oc_|ou_)[A-Za-z0-9_-]+$")
 
+# Human-readable kanban_create output can contain a task id without being JSON,
+# for example "Created task t_abc12345" or "Task already exists: t_abc12345".
+_KANBAN_TASK_ID_RE = re.compile(r"\bt_[A-Za-z0-9]+\b")
+
 
 def _kanban_db_path() -> Path:
     """Resolve the kanban board DB path using hermes's own helper.
@@ -95,7 +99,8 @@ def _extract_task_id(result: Any) -> Optional[str]:
         try:
             obj = json.loads(result)
         except (json.JSONDecodeError, ValueError):
-            return None
+            m = _KANBAN_TASK_ID_RE.search(result)
+            return m.group(0) if m else None
         if isinstance(obj, dict):
             tid = obj.get("task_id") or obj.get("id")
             return str(tid) if tid else None

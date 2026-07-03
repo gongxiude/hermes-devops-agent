@@ -22,7 +22,7 @@ toolset 仅包含 `kanban`、`skills`、`memory`。
 | Feishu SDK | 已固化到镜像 | `/opt/hermes/.venv/bin/python -c 'import lark_oapi'` 成功 |
 | profile 安装 | 成功 | `hermes profile install /opt/distributions/orchestrator --name orchestrator --force --yes` |
 | profile 更新 | 成功 | `hermes profile update orchestrator --yes` |
-| gateway | `orchestrator` running，`default` stopped | `hermes gateway list` |
+| gateway | `orchestrator` running；`default` 可运行 API，但不配置 Feishu、不参与 Kanban dispatch | `gateway_state.json` 与 `gateway.log` |
 | 飞书 WebSocket | connected | `gateway_state.json` 中 `platforms.feishu.state=connected` |
 | 飞书入站 | 成功 | 收到真实 DM：`hi`、`测试` |
 | 飞书出站 | 成功 | gateway 日志显示 `Sending response (...) to oc_...` |
@@ -45,8 +45,8 @@ Kubernetes Pod 内的关键目录：
 | `/opt/distributions/orchestrator` | 镜像内置 orchestrator distribution | 否，来自镜像 |
 | `/opt/data` | Hermes HOME，PVC 挂载点 | 是 |
 | `/opt/data/profiles/orchestrator` | orchestrator profile 运行时目录 | 是 |
-| `/opt/data/.env` | gateway 全局环境文件 | 是 |
-| `/opt/data/profiles/orchestrator/.env` | profile 环境文件 | 是 |
+| `/opt/data/.env` | default gateway 全局环境文件；只放 default API/dashboard，不放 Feishu | 是 |
+| `/opt/data/profiles/orchestrator/.env` | orchestrator profile 环境文件；放 Feishu 与 8643 API | 是 |
 
 不要把依赖临时安装到 `/opt/data/python-packages` 作为长期方案。Python 运行时依赖必须在 Dockerfile 构建阶段安装进 `/opt/hermes/.venv`。
 
@@ -102,7 +102,13 @@ Pod 内默认 PATH 不一定包含 `hermes`，不要假定裸 `hermes` 命令可
 
 ## 环境配置
 
-Kubernetes ConfigMap 中维护运行环境，但 s6 子进程实际以 Hermes HOME 下的 `.env` 为准。调试或恢复时，从当前 live ConfigMap 同步到 `/opt/data/.env` 和 profile `.env`。
+Kubernetes ConfigMap 中维护容器通用运行环境，但 s6 子进程实际还会读取 Hermes HOME 下的 `.env`。
+当前设计里 default 和 orchestrator 的边界必须分开：
+
+- `/opt/data/.env`：default gateway 使用，只保留 `API_SERVER_*`、dashboard、TZ 等通用变量。
+- `/opt/data/profiles/orchestrator/.env`：orchestrator 使用，维护 `FEISHU_*`、`API_SERVER_PORT=8643`、profile 需要的模型/API 配置。
+
+不要把 `FEISHU_APP_ID`、`FEISHU_APP_SECRET`、`FEISHU_BOT_NAME` 写回 `/opt/data/.env`，否则 default gateway 会尝试连接同一个 Feishu App。
 
 不要在文档或日志中输出 Secret 原文。
 
@@ -110,9 +116,6 @@ Kubernetes ConfigMap 中维护运行环境，但 s6 子进程实际以 Hermes HO
 kubectl get cm -n yuexin-ai hermes-agent-env-6dbmcdc7h8 -o json \
   | jq -r '.data as $d |
       [
-        "FEISHU_APP_ID",
-        "FEISHU_APP_SECRET",
-        "FEISHU_BOT_NAME",
         "GATEWAY_ALLOW_ALL_USERS",
         "API_SERVER_ENABLED",
         "API_SERVER_HOST",
@@ -134,8 +137,7 @@ kubectl get cm -n yuexin-ai hermes-agent-env-6dbmcdc7h8 -o json \
       tmp=$(mktemp /opt/data/.env.tmp.XXXXXX)
       cat | base64 -d > "$tmp"
       mv "$tmp" /opt/data/.env
-      cp /opt/data/.env /opt/data/profiles/orchestrator/.env
-      chmod 600 /opt/data/.env /opt/data/profiles/orchestrator/.env
+      chmod 600 /opt/data/.env
     '
 ```
 
@@ -158,14 +160,28 @@ kubectl exec -n yuexin-ai hermes-agent-0 -- sh -lc '
 
 验收标准：
 
-- `FEISHU_APP_ID`
-- `FEISHU_APP_SECRET`
-- `FEISHU_BOT_NAME`
 - `GATEWAY_ALLOW_ALL_USERS`
 - `API_SERVER_*`
 - `HERMES_DASHBOARD*`
 
-均存在。
+在 `/opt/data/.env` 中存在。
+
+orchestrator 的飞书配置单独维护在 profile `.env`，验收时只打印变量名：
+
+```bash
+kubectl exec -n yuexin-ai hermes-agent-0 -- sh -lc '
+  awk -F= "/^(FEISHU_|API_SERVER_PORT)/ {print \$1\"=SET\"}" \
+    /opt/data/profiles/orchestrator/.env | sort
+'
+```
+
+验收标准：
+
+- `FEISHU_APP_ID=SET`
+- `FEISHU_APP_SECRET=SET`
+- `FEISHU_BOT_NAME=SET`
+- `FEISHU_HOME_CHANNEL=SET`
+- `API_SERVER_PORT=SET`，值应为 `8643`。
 
 ## 安装 Profile
 
@@ -246,24 +262,54 @@ Profile 'orchestrator' has no recorded source.
 
 ## 启动 Gateway
 
-同一个 Feishu App 只能同时有一个 gateway WebSocket 连接。生产调试时由 `orchestrator` 独占 Feishu App，停止 `default` gateway。
+同一个 Feishu App 只能同时有一个 gateway WebSocket 连接。生产运行时由 `orchestrator`
+独占 Feishu App。`default` gateway 可以保留 8642 API，但必须满足两个条件：
+
+- `/opt/data/.env` 不包含任何 `FEISHU_*`。
+- `/opt/data/config.yaml` 中 `kanban.dispatch_in_gateway=false`，避免 default 抢 `/opt/data/kanban/.dispatcher.lock`。
 
 ```bash
 kubectl exec -n yuexin-ai hermes-agent-0 -- sh -lc '
-  /command/s6-svc -d /run/service/gateway-default || true
-  /command/s6-svc -u /run/service/gateway-orchestrator
+  /opt/hermes/.venv/bin/python - <<'"'"'PY'"'"'
+from pathlib import Path
+import yaml
+
+env = Path("/opt/data/.env")
+if env.exists():
+    remove = {"FEISHU_APP_ID", "FEISHU_APP_SECRET", "FEISHU_BOT_NAME", "FEISHU_HOME_CHANNEL", "FEISHU_ALLOWED_USERS"}
+    kept = []
+    for line in env.read_text().splitlines():
+        key = line.split("=", 1)[0].strip() if "=" in line else ""
+        if key not in remove:
+            kept.append(line)
+    env.write_text("\n".join(kept).rstrip() + "\n")
+
+cfg = Path("/opt/data/config.yaml")
+data = yaml.safe_load(cfg.read_text()) or {}
+data.setdefault("kanban", {})["dispatch_in_gateway"] = False
+cfg.write_text(yaml.safe_dump(data, allow_unicode=True, sort_keys=False))
+PY
+  /command/s6-svc -r /run/service/gateway-default || true
+  sleep 5
+  /command/s6-svc -r /run/service/gateway-orchestrator || true
   sleep 10
-  /opt/hermes/.venv/bin/hermes gateway list
-  /opt/hermes/.venv/bin/hermes -p orchestrator gateway status
+  /opt/hermes/.venv/bin/python - <<'"'"'PY'"'"'
+import json
+from pathlib import Path
+for p in [Path("/opt/data/gateway_state.json"), Path("/opt/data/profiles/orchestrator/gateway_state.json")]:
+    d = json.loads(p.read_text())
+    print(p, d.get("gateway_state"), {k: v.get("state") for k, v in d.get("platforms", {}).items()})
+PY
+  tail -n 60 /opt/data/profiles/orchestrator/logs/gateway.log
 '
 ```
 
 验收标准：
 
 ```text
-Gateways:
-  ✗ default
-  ✓ orchestrator
+default: api_server=connected, feishu=disconnected
+orchestrator: feishu=connected, api_server=connected
+kanban dispatcher: holding singleton dispatcher lock
 ```
 
 并且：
@@ -284,10 +330,66 @@ kubectl exec -n yuexin-ai hermes-agent-0 -- sh -lc '
 
 验收标准：
 
-- `/opt/data/gateway_state.json` 中 `desired_state` 为 `stopped`。
+- `/opt/data/gateway_state.json` 中 `platforms.feishu.state` 为 `disconnected`。
 - `/opt/data/profiles/orchestrator/gateway_state.json` 中 `gateway_state` 为 `running`。
 - `platforms.feishu.state` 为 `connected`。
 - `platforms.api_server.state` 为 `connected`。
+
+## Kanban 路由与回传验证
+
+飞书中的业务问题必须走这条链路：
+
+```text
+Feishu DM -> orchestrator gateway -> kanban_create -> observability worker -> kanban_complete -> Feishu notify
+```
+
+验证 dispatcher 归属：
+
+```bash
+kubectl exec -n yuexin-ai hermes-agent-0 -- sh -lc '
+  tail -n 80 /opt/data/profiles/orchestrator/logs/gateway.log \
+    | grep "kanban dispatcher" | tail -10
+'
+```
+
+验收标准：
+
+```text
+kanban dispatcher: holding singleton dispatcher lock
+kanban dispatcher: embedded in gateway
+```
+
+验证回传订阅：
+
+```bash
+kubectl exec -n yuexin-ai hermes-agent-0 -- sh -lc '
+  /opt/hermes/.venv/bin/hermes -p orchestrator kanban notify-list
+'
+```
+
+任务运行中应出现：
+
+```text
+t_xxxxxxxx  feishu:oc_xxx
+```
+
+任务完成并发送后，订阅会被消费，`notify-list` 应回到：
+
+```text
+(no subscriptions)
+```
+
+如果同一条问题反复命中历史 blocked/done 任务，先归档调试阶段旧任务，再重试飞书入站：
+
+```bash
+kubectl exec -n yuexin-ai hermes-agent-0 -- sh -lc '
+  CHAT=oc_bf35fa31f16719716f7370c0e3d6d232
+  /opt/hermes/.venv/bin/hermes -p orchestrator kanban notify-unsubscribe t_OLD --platform feishu --chat-id "$CHAT" || true
+  /opt/hermes/.venv/bin/hermes -p orchestrator kanban archive t_OLD
+'
+```
+
+不要直接改 SQLite；优先使用 Hermes Kanban CLI。
 
 ## Feishu 验证
 
