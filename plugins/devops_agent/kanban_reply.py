@@ -1,7 +1,7 @@
 """Kanban → Feishu reply auto-subscription.
 
 When the orchestrator calls ``kanban_create``, it writes a line like
-``reply_target: oc_xxx`` into the task body. That line is only a prompt
+``reply_target: oc_xxx`` or ``reply_target: feishu:oc_xxx`` into the task body. That line is only a prompt
 hint for the worker — nothing in hermes core parses it. As a result the
 ``kanban_notify_subs`` table stays empty, and the gateway's notifier
 watcher has nothing to deliver when the worker finishes.
@@ -31,9 +31,8 @@ from typing import Any, Optional
 logger = logging.getLogger(__name__)
 
 # Matches "reply_target: <value>" or legacy "reply_target=<value>"
-# (case-insensitive, value is first non-space token). Orchestrator should emit
-# colon format, but accepting "=" keeps notification delivery fail-open during
-# prompt regressions and manual debug tasks.
+# (case-insensitive, value is first non-space token). Values may be a bare
+# Feishu chat id (oc_xxx / ou_xxx) or an explicit target (feishu:oc_xxx).
 _REPLY_TARGET_RE = re.compile(r"reply_target\s*[:=]\s*(\S+)", re.IGNORECASE)
 
 # Explicit opt-out: a task body may set ``notify_user: false`` to suppress the
@@ -80,9 +79,22 @@ def parse_reply_target(body: str) -> Optional[str]:
     if not m:
         return None
     candidate = m.group(1).strip()
+    if candidate.lower().startswith("feishu:"):
+        candidate = candidate.split(":", 1)[1].strip()
     if not _FEISHU_OPEN_ID_RE.match(candidate):
         return None
     return candidate
+
+
+def _session_reply_target() -> Optional[str]:
+    """Use the current Feishu session as a best-effort notification target."""
+    platform = os.environ.get("HERMES_SESSION_PLATFORM", "").strip().lower()
+    chat_id = os.environ.get("HERMES_SESSION_CHAT_ID", "").strip()
+    if platform != "feishu":
+        return None
+    if not _FEISHU_OPEN_ID_RE.match(chat_id):
+        return None
+    return chat_id
 
 
 def _extract_task_id(result: Any) -> Optional[str]:
@@ -150,7 +162,7 @@ def on_tool_call(
         logger.info("[kanban_reply] notify_user:false — skipping subscription")
         return
 
-    chat_id = parse_reply_target(body)
+    chat_id = parse_reply_target(body) or _session_reply_target()
     if not chat_id:
         return
 

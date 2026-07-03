@@ -198,6 +198,19 @@ def pre_gateway_dispatch(
     if not text:
         return None
 
+    try:
+        from .fastpath import maybe_handle_observability_fastpath
+
+        fastpath_result = maybe_handle_observability_fastpath(
+            event=event,
+            gateway=gateway,
+            session_store=session_store,
+        )
+        if fastpath_result is not None:
+            return fastpath_result
+    except Exception as exc:
+        logger.warning("[fastpath] observability fast path failed (allowing LLM path): %s", exc)
+
     # ── Layer 1: Regex (always, zero cost) ──────────────────────────────
     regex_ok, regex_reason = _regex_check(text)
     if not regex_ok:

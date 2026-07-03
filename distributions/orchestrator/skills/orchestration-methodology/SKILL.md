@@ -44,16 +44,67 @@ DECOMPOSE（分解）→ ROUTE（路由）→ MONITOR（监控）→ SYNTHESIZE�
 Feishu gateway 进入 orchestrator 后，orchestrator 只负责创建 Kanban task、监控任务状态、
 读取专家结果并交付合成结果。不要在 orchestrator 会话里直接查询生产系统。
 
+### Mandatory Routing Fast Path
+
+For a single ordinary observability query, routing is already decided. After
+loading this skill, the next tool call MUST be `kanban_create`.
+
+This skill MUST NOT be loaded repeatedly for the same user request. If the
+previous tool call already loaded `orchestration-methodology`, do not call
+`skill_view` again. The next tool call must be `kanban_create`, or a single
+clarifying response if a required field is genuinely missing.
+
+Do not answer with recognized parameters only.
+Do not answer with "recommended next step".
+Do not ask for confirmation when service, environment, time window, and metric/log intent are inferable.
+Do not spend tool budget on unrelated inspection before creating the task.
+
 For a single ordinary observability query, call `kanban_create` to create exactly one Kanban task:
 
 - assignee: `observability`
 - title: concise service + environment + window + metric intent
 - idempotency_key: stable key from source, service, environment, window, request type
 - body: plain text `key: value` lines, not JSON
-- required body fields: `service`, `environment`, `request_type`, `window`, `original_request`, `reply_target: <feishu chat id>`
+- required body fields: `service`, `environment`, `request_type`, `window`, `original_request`, `reply_target: feishu:<feishu chat id>`
 
 `reply_target:` is the Feishu notify contract. Child or intermediate tasks must omit
 `reply_target:` or set `notify_user: false` unless the task is the single user-facing result.
+Never use placeholders such as `current_conversation`, `<current chat>`, or `<当前会话>` as `reply_target`.
+
+Delivery note (Hermes >= 0.17): the gateway natively auto-subscribes the originating
+Feishu chat when you call `kanban_create` from the session (`auto_subscribe_on_create`,
+default true), so the completed worker result is pushed back to Feishu **as long as the
+task is created**. The single failure mode you control is *not creating the task*. Reply
+delivery is not your job — creating the task is. `reply_target:` is a redundant, harmless
+hint on this version; do not let uncertainty about the chat id stop you from calling
+`kanban_create`.
+
+Chinese ops parsing:
+
+- `生产环境`, `线上`, `prod` => `environment: production`
+- `国际短信` => `domain: intlsms`
+- `近10分钟`, `最近10分钟` => `window: last_10_minutes`
+- `CPU和内存`, `内存和CPU` => `request_type: metrics_cpu_memory`
+- `日志`, `报错日志`, `error日志` => `request_type: logs`
+- `状态`, `健康`, `是否正常` => `request_type: health_check`
+
+Example user request:
+
+`查看国际短信生产环境gateway服务近10分钟的内存和CPU`
+
+Correct action:
+
+- tool: `kanban_create`
+- assignee: `observability`
+- title: `国际短信 gateway production last_10_minutes CPU和内存`
+- body:
+  `service: gateway`
+  `domain: intlsms`
+  `environment: production`
+  `request_type: metrics_cpu_memory`
+  `window: last_10_minutes`
+  `original_request: 查看国际短信生产环境gateway服务近10分钟的内存和CPU`
+  `reply_target: feishu:<current Feishu chat id>`
 
 Do not call kubectl from orchestrator.
 Do not call Prometheus from orchestrator.

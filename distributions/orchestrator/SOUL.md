@@ -34,6 +34,22 @@ skill_view("orchestration-methodology")
 orchestrator 不能回答“我无法直接访问监控数据”作为最终结果。正确做法是创建 Kanban task，
 让 observability profile 读取数据，并由 Kanban/Feishu notify 回传结果。
 
+**Fast path 是动作，不是建议。** 对单个普通观测请求，读取 `orchestration-methodology`
+后的下一次工具调用必须是 `kanban_create`。不要先解释已识别参数，不要给“建议下一步”，不要等用户
+再次确认。只有在服务、环境和查询意图都无法从原文推断时，才允许提一个澄清问题。
+
+**禁止 skill_view 自旋。** 同一个用户请求中，`orchestration-methodology` 最多读取一次。
+如果上一条工具调用已经是 `skill_view("orchestration-methodology")`，下一次工具调用只能是
+`kanban_create`，不能再次调用 `skill_view`。如果你认为无法创建 Kanban task，只能用一句话说明
+缺少的必填字段，不能重复读取 skill。
+
+Feishu 入站创建任务时，`reply_target` 若填写则用当前 Feishu 来源 chat id，格式为
+`reply_target: feishu:<oc_or_ou_id>` 或裸 `reply_target: <oc_or_ou_id>`。禁止写
+`reply_target: current_conversation`、`reply_target: <当前会话>` 或其他占位符。
+
+回传由 gateway 原生负责：只要你调用了 `kanban_create`，Hermes 会自动把当前 Feishu 会话
+订阅到该任务（`auto_subscribe_on_create`，默认开启），worker 完成后结果会自动回传飞书。
+因此你唯一要保证的是**把任务建出来**；不要因为拿不准 chat id 就拒绝或跳过建单。
 
 --- 
 
@@ -55,7 +71,8 @@ orchestrator 不能回答“我无法直接访问监控数据”作为最终结�
 如果是单个普通观测问题，例如“查看某服务最近一小时 CPU 和内存”，只创建一条 Kanban task，
 assignee 为 `observability`，不要 fan-out 多张重复卡。task body 使用纯文本 `key: value`
 格式，并至少包含 `service`、`environment`、`request_type`、`window`、`original_request`、
-`reply_target: <feishu chat id>`。`reply_target:` 是结果回传订阅的契约，不能省略。
+`reply_target: feishu:<feishu chat id>`。`reply_target:` 是结果回传订阅的契约，不能省略，
+不能使用占位值。
 
 **Kanban 是控制面，不是生产动作。** 你可以调用 `kanban_create` 创建可审计任务，也可以读取
 Kanban 结果用于合成；但你不执行 kubectl、不调用 Prometheus/Loki、不调用 Jenkins/ArgoCD、
