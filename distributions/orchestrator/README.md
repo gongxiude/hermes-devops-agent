@@ -225,6 +225,51 @@ kubectl exec -n yuexin-ai hermes-agent-0 -- sh -lc '
 - `Version: 0.2.0`
 - `Source: /opt/distributions/orchestrator`
 
+## Profile Skills 收口
+
+orchestrator 只允许保留两个 profile skill：
+
+- `artifact-pyramids`
+- `orchestration-methodology`
+
+Hermes CLI 默认会在 profile 中同步官方 bundled skills。orchestrator 是路由 profile，
+不需要这些通用 skills。首次安装或发现 `skills/` 下出现大量官方 skill 时，执行 Hermes
+原生 opt-out，不要长期依赖手工删除：
+
+```bash
+kubectl exec -n yuexin-ai hermes-agent-0 -- sh -lc '
+  set -eu
+  HERMES=/opt/hermes/.venv/bin/hermes
+  $HERMES -p orchestrator skills opt-out --remove --yes
+
+  for d in /opt/data/profiles/orchestrator/skills/*; do
+    [ -d "$d" ] || continue
+    if ! find "$d" -name SKILL.md -print -quit | grep -q .; then
+      rm -rf "$d"
+    fi
+  done
+
+  find /opt/data/profiles/orchestrator/skills -name SKILL.md -printf "%P\n" | sort
+  test -f /opt/data/profiles/orchestrator/.no-bundled-skills
+'
+```
+
+验收标准：
+
+```text
+artifact-pyramids/SKILL.md
+orchestration-methodology/SKILL.md
+```
+
+并且 marker 存在：
+
+```text
+/opt/data/profiles/orchestrator/.no-bundled-skills
+```
+
+该 marker 位于 PVC 中。后续执行 `profile install --force` 或 `profile update` 时，
+Hermes 不会再次把 73 个官方 bundled skills 同步进 orchestrator profile。
+
 ## 更新 Profile
 
 distribution 已构建进新镜像后，执行：
@@ -238,6 +283,13 @@ kubectl exec -n yuexin-ai hermes-agent-0 -- sh -lc '
     /opt/data/profiles/orchestrator/cron \
     /opt/data/profiles/orchestrator/skins 2>/dev/null || true
   /opt/hermes/.venv/bin/hermes profile update orchestrator --yes
+  /opt/hermes/.venv/bin/hermes -p orchestrator skills opt-out --remove --yes
+  for d in /opt/data/profiles/orchestrator/skills/*; do
+    [ -d "$d" ] || continue
+    if ! find "$d" -name SKILL.md -print -quit | grep -q .; then
+      rm -rf "$d"
+    fi
+  done
   chmod -R u+rwX,g+rwX \
     /opt/data/profiles/orchestrator/skills \
     /opt/data/profiles/orchestrator/cron \
@@ -250,6 +302,8 @@ kubectl exec -n yuexin-ai hermes-agent-0 -- sh -lc '
 
 ```text
 ✓ Updated 'orchestrator' → v0.2.0
+artifact-pyramids/SKILL.md
+orchestration-methodology/SKILL.md
 ```
 
 如果报错：

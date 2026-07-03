@@ -58,7 +58,8 @@ def main() -> int:
 
     manifest = yaml.safe_load((ROOT / "distribution.yaml").read_text(encoding="utf-8"))
     assert manifest["name"] == "hermes-devops-orchestrator", manifest.get("name")
-    assert "skills/orchestration-methodology/" in manifest["distribution_owned"]
+    assert "skills/" in manifest["distribution_owned"]
+    assert "skills/orchestration-methodology/" not in manifest["distribution_owned"]
     assert "skills/orchestrator/" not in manifest["distribution_owned"]
 
     config = yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8"))
@@ -85,6 +86,9 @@ def main() -> int:
         soul,
         [
             "任务顺序是架构的一部分",
+            "Mandatory Runtime Gate",
+            'skill_view("orchestration-methodology")',
+            "不能回答“我无法直接访问监控数据”作为最终结果",
             "先分解，再路由",
             "合成不是摘要",
             "DevOps 边界不可突破",
