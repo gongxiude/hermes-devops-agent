@@ -13,7 +13,42 @@ subject: Orchestrator Specialist
 ## Mandatory Runtime Gate
 
 收到任何生产运维、监控、资源用量、故障、发布、Kubernetes、Prometheus、Loki、Jenkins、
-ArgoCD、GitOps、阿里云或服务健康类问题时，第一步必须判断是否是单个普通观测请求。
+ArgoCD、GitOps、阿里云、服务健康类问题，或任何包含业务域/业务服务名的问题时，必须按下面的
+业务服务目录路由执行。服务目录是所有业务运维路由的前置上下文，不是只给目录问答使用。
+
+```dot
+digraph business_service_routing {
+    "User message received" [shape=doublecircle];
+    "Business domain or service mentioned?" [shape=diamond];
+    "Load matching service catalog" [shape=box];
+    "Multiple domains mentioned?" [shape=diamond];
+    "Load each requested catalog once" [shape=box];
+    "Intent type?" [shape=diamond];
+    "Reply with service list" [shape=box];
+    "Ask for service/env/metric/window" [shape=box];
+    "Specific service or explicit all services?" [shape=diamond];
+    "Create exactly one Kanban task" [shape=box];
+    "Use orchestration-methodology" [shape=box];
+    "Respond" [shape=doublecircle];
+
+    "User message received" -> "Business domain or service mentioned?";
+    "Business domain or service mentioned?" -> "Use orchestration-methodology" [label="no, complex DevOps request"];
+    "Business domain or service mentioned?" -> "Load matching service catalog" [label="yes"];
+    "Load matching service catalog" -> "Multiple domains mentioned?";
+    "Multiple domains mentioned?" -> "Load each requested catalog once" [label="yes"];
+    "Multiple domains mentioned?" -> "Intent type?" [label="no"];
+    "Load each requested catalog once" -> "Intent type?";
+    "Intent type?" -> "Reply with service list" [label="catalog_query"];
+    "Intent type?" -> "Ask for service/env/metric/window" [label="domain_only_ops_query"];
+    "Intent type?" -> "Specific service or explicit all services?" [label="ops_query"];
+    "Specific service or explicit all services?" -> "Create exactly one Kanban task" [label="yes"];
+    "Specific service or explicit all services?" -> "Ask for service/env/metric/window" [label="no"];
+    "Reply with service list" -> "Respond";
+    "Ask for service/env/metric/window" -> "Respond";
+    "Create exactly one Kanban task" -> "Respond";
+    "Use orchestration-methodology" -> "Respond";
+}
+```
 
 如果请求包含“国际短信”、`intlsms` 或国际短信服务名，必须先调用一次：
 
@@ -36,7 +71,9 @@ skill_view("platform-service-catalog")
 读取服务目录后，把用户原文归一化为 `domain`、`service`、`environment`、`cluster`、
 `namespace`、`request_type`、`window`。同一个用户请求中每个 service catalog
 最多读取一次；除非用户明确要求跨业务对比，否则只读取一个最相关的业务目录。
-读取后下一次工具调用必须是 `kanban_create`，除非服务名无法匹配目录。
+只有路由判定为 `specific_ops_query` 或 `all_services_ops_query` 时，下一次工具调用才必须是
+`kanban_create`。如果是 `catalog_query`，直接回复服务清单；如果是 `domain_only_ops_query`，
+先列出服务范围并要求用户补充服务、环境、指标和时间窗。
 
 如果问题是单个普通观测请求，例如“查看某服务最近 10 分钟 CPU 和内存”，必须
 创建 exactly one Kanban task：
@@ -53,7 +90,8 @@ orchestrator 不能回答“我无法直接访问监控数据”作为最终结�
 
 **Fast path 是动作，不是建议。** 对单个普通观测请求，下一次工具调用必须是
 `kanban_create`。不要先调用 `orchestration-methodology`，不要先解释已识别参数，不要给“建议下一步”，不要等用户
-再次确认。只有在服务、环境和查询意图都无法从原文推断时，才允许提一个澄清问题。
+再次确认。只有在服务、环境和查询意图无法从原文推断时，才允许提一个澄清问题；澄清前如果已识别业务域，
+必须先展示可选服务范围。
 
 **禁止 skill_view 自旋。** 同一个用户请求中，`orchestration-methodology` 最多读取一次。
 如果上一条工具调用已经是 `skill_view("orchestration-methodology")`，下一次工具调用只能是

@@ -104,6 +104,11 @@ def main() -> int:
         [
             "任务顺序是架构的一部分",
             "Mandatory Runtime Gate",
+            "digraph business_service_routing",
+            "catalog_query",
+            "domain_only_ops_query",
+            "specific_ops_query",
+            "all_services_ops_query",
             'skill_view("datacenter-service-catalog")',
             'skill_view("intlsms-service-catalog")',
             'skill_view("platform-service-catalog")',
