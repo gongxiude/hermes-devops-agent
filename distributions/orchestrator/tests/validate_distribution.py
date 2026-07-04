@@ -10,6 +10,9 @@ ROOT = Path(__file__).resolve().parents[1]
 
 # 自包含编排技能:orchestrator 专属,随 distribution 安装。
 ORCHESTRATOR_SKILLS = [
+    "skills/datacenter-service-catalog/SKILL.md",
+    "skills/intlsms-service-catalog/SKILL.md",
+    "skills/platform-service-catalog/SKILL.md",
     "skills/orchestration-methodology/SKILL.md",
 ]
 
@@ -64,14 +67,15 @@ def main() -> int:
 
     config = yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8"))
     assert config["kanban"]["orchestrator_profile"] == "orchestrator"
-    assert "devops_agent" in config["plugins"]["enabled"], "devops_agent plugin must be enabled for kanban reply hook"
+    assert config["plugins"]["enabled"] == [], "orchestrator must rely on Hermes native gateway/kanban behavior"
     assert config["toolsets"] == ["kanban", "skills", "memory"], "orchestrator must not carry production toolsets"
     for platform in ("cli", "feishu", "api_server"):
         platform_toolsets = set(config["platform_toolsets"][platform])
-        assert {"kanban", "skills", "memory", "devops_governance"} <= platform_toolsets, (
-            f"{platform} must expose kanban/skills/memory/devops_governance"
+        assert {"kanban", "skills", "memory"} <= platform_toolsets, (
+            f"{platform} must expose kanban/skills/memory"
         )
         forbidden = {
+            "devops_governance",
             "kubernetes",
             "observability",
             "loki-intlsms-prod",
@@ -100,8 +104,11 @@ def main() -> int:
         [
             "任务顺序是架构的一部分",
             "Mandatory Runtime Gate",
+            'skill_view("datacenter-service-catalog")',
+            'skill_view("intlsms-service-catalog")',
+            'skill_view("platform-service-catalog")',
             'skill_view("orchestration-methodology")',
-            "不要先调用 `skill_view`",
+            "不要先调用 `orchestration-methodology`",
             "不能回答“我无法直接访问监控数据”作为最终结果",
             "先分解，再路由",
             "合成不是摘要",
@@ -148,6 +155,50 @@ def main() -> int:
             "mcp-loki-intlsms-prod",
             "mcp-k8s-intlsms-prod",
             "body=json.dumps",
+        ],
+    )
+
+    catalog = ROOT / "skills/intlsms-service-catalog/SKILL.md"
+    assert_contains(
+        catalog,
+        [
+            "intlsms.json",
+            "prod-aliyun-sg-intlsms",
+            "test-aliyun-zjk-datacenter",
+            "gateway",
+            "gateway-http",
+            "billing-system-backend",
+            "domain: intlsms",
+            "namespace: <namespace>",
+            "reply_target: feishu:<chat_id>",
+        ],
+    )
+
+    catalog = ROOT / "skills/datacenter-service-catalog/SKILL.md"
+    assert_contains(
+        catalog,
+        [
+            "datacenter.json",
+            "prod-aliyun-sh-datacenter",
+            "test-aliyun-zjk-datacenter",
+            "sms-commons",
+            "yuexin-data-center-store-service",
+            "domain: datacenter",
+            "reply_target: feishu:<chat_id>",
+        ],
+    )
+
+    catalog = ROOT / "skills/platform-service-catalog/SKILL.md"
+    assert_contains(
+        catalog,
+        [
+            "jobs/platform/config_prod.json",
+            "prod-aliyun-sh-platform",
+            "test-onprem-local-platform",
+            "apiserver",
+            "httpserver",
+            "domain: platform",
+            "reply_target: feishu:<chat_id>",
         ],
     )
 

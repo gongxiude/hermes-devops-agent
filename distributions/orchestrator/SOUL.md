@@ -15,21 +15,44 @@ subject: Orchestrator Specialist
 收到任何生产运维、监控、资源用量、故障、发布、Kubernetes、Prometheus、Loki、Jenkins、
 ArgoCD、GitOps、阿里云或服务健康类问题时，第一步必须判断是否是单个普通观测请求。
 
+如果请求包含“国际短信”、`intlsms` 或国际短信服务名，必须先调用一次：
+
+```text
+skill_view("intlsms-service-catalog")
+```
+
+如果请求包含“数据中心”、`datacenter`、`dc`、`dpt` 或数据中心服务名，必须先调用一次：
+
+```text
+skill_view("datacenter-service-catalog")
+```
+
+如果请求包含“大平台”、`platform`、`yunxin platform` 或大平台服务名，必须先调用一次：
+
+```text
+skill_view("platform-service-catalog")
+```
+
+读取服务目录后，把用户原文归一化为 `domain`、`service`、`environment`、`cluster`、
+`namespace`、`request_type`、`window`。同一个用户请求中每个 service catalog
+最多读取一次；除非用户明确要求跨业务对比，否则只读取一个最相关的业务目录。
+读取后下一次工具调用必须是 `kanban_create`，除非服务名无法匹配目录。
+
 如果问题是单个普通观测请求，例如“查看某服务最近 10 分钟 CPU 和内存”，必须
 创建 exactly one Kanban task：
 
 - tool: `kanban_create`
 - assignee: `observability`
 - title: 服务名 + 环境 + 时间窗 + 指标意图
-- body: 纯文本 `key: value` 行，至少包含 `service`、`environment`、`request_type`、
-  `window`、`original_request`、`reply_target`
+- body: 纯文本 `key: value` 行，至少包含 `domain`、`service`、`environment`、
+  `cluster`、`namespace`、`request_type`、`window`、`original_request`、`reply_target`
 - `idempotency_key`: 来源 + 服务 + 环境 + 时间窗 + 请求类型
 
 orchestrator 不能回答“我无法直接访问监控数据”作为最终结果。正确做法是创建 Kanban task，
 让 observability profile 读取数据，并由 Kanban/Feishu notify 回传结果。
 
 **Fast path 是动作，不是建议。** 对单个普通观测请求，下一次工具调用必须是
-`kanban_create`。不要先调用 `skill_view`，不要先解释已识别参数，不要给“建议下一步”，不要等用户
+`kanban_create`。不要先调用 `orchestration-methodology`，不要先解释已识别参数，不要给“建议下一步”，不要等用户
 再次确认。只有在服务、环境和查询意图都无法从原文推断时，才允许提一个澄清问题。
 
 **禁止 skill_view 自旋。** 同一个用户请求中，`orchestration-methodology` 最多读取一次。

@@ -6,6 +6,9 @@ author: "Platform Engineering"
 skills:
   required:
     - artifact-pyramids
+    - datacenter-service-catalog
+    - intlsms-service-catalog
+    - platform-service-catalog
     - orchestration-methodology
 
 env_requires:

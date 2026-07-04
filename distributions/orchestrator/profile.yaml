@@ -2,4 +2,7 @@ description: "Orchestrator — decomposes complex questions into specialist work
 skills:
   required:
     - artifact-pyramids
+    - datacenter-service-catalog
+    - intlsms-service-catalog
+    - platform-service-catalog
     - orchestration-methodology
