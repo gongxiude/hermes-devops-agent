@@ -46,22 +46,38 @@ Feishu gateway 进入 orchestrator 后，orchestrator 只负责创建 Kanban tas
 
 ### Mandatory Routing Fast Path
 
-For a single ordinary observability query, routing is already decided. After
-loading this skill, the next tool call MUST be `kanban_create`.
+For a single ordinary DevOps query, routing is already decided only when
+SOUL.md has classified the current user message as `specific_ops_query` or
+`all_services_ops_query` and selected the specialist profile by intent. After
+loading this skill for that case, the next tool call MUST be `kanban_create`.
+
+This fast path does not apply to `catalog_query` or `domain_only_ops_query`.
+If the latest user message asks which services a business domain contains, or
+only names a business domain without a specific service / metric / time window,
+do not call `kanban_create`; answer from the already loaded service catalog or
+ask for the missing routing fields.
+
+Do not default every concrete request to `observability`. Choose the assignee by
+intent:
+
+- runtime metrics, logs, pod status, health, K8s readonly diagnosis -> `observability`
+- Jenkins, image build, release pipeline, ArgoCD, Kustomize, GitOps config -> `gitops-agent`
+- Alicloud resources, network, cluster capacity, cloud cost, security/compliance -> `infra-agent`
 
 This skill MUST NOT be loaded repeatedly for the same user request. If the
 previous tool call already loaded `orchestration-methodology`, do not call
-`skill_view` again. The next tool call must be `kanban_create`, or a single
-clarifying response if a required field is genuinely missing.
+`skill_view` again. For `specific_ops_query`, the next tool call must be
+`kanban_create`, or a single clarifying response if a required field is
+genuinely missing.
 
 Do not answer with recognized parameters only.
 Do not answer with "recommended next step".
 Do not ask for confirmation when service, environment, time window, and metric/log intent are inferable.
 Do not spend tool budget on unrelated inspection before creating the task.
 
-For a single ordinary observability query, call `kanban_create` to create exactly one Kanban task:
+For a single ordinary DevOps query, call `kanban_create` to create exactly one Kanban task:
 
-- assignee: `observability`
+- assignee: selected specialist profile by intent
 - title: concise service + environment + window + metric intent
 - idempotency_key: stable key from source, service, environment, window, request type
 - body: plain text `key: value` lines, not JSON
