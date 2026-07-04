@@ -105,6 +105,8 @@ def main() -> int:
             "任务顺序是架构的一部分",
             "Mandatory Runtime Gate",
             "digraph business_service_routing",
+            '"Intent type?" -> "Built-in catalog quick reply" [label="catalog_query"]',
+            '"Built-in catalog quick reply" -> "Respond"',
             "catalog_query",
             "domain_only_ops_query",
             "specific_ops_query",

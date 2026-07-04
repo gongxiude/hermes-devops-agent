@@ -23,12 +23,12 @@ ArgoCD、GitOps、阿里云、服务健康类问题，或任何包含业务域/�
 ```dot
 digraph business_service_routing {
     "User message received" [shape=doublecircle];
+    "Intent type?" [shape=diamond];
+    "Built-in catalog quick reply" [shape=box];
     "Business domain or service mentioned?" [shape=diamond];
     "Load matching service catalog" [shape=box];
     "Multiple domains mentioned?" [shape=diamond];
     "Load each requested catalog once" [shape=box];
-    "Intent type?" [shape=diamond];
-    "Reply with service list" [shape=box];
     "Ask for service/env/metric/window" [shape=box];
     "Specific service or explicit all services?" [shape=diamond];
     "Select specialist profile by intent" [shape=box];
@@ -36,20 +36,20 @@ digraph business_service_routing {
     "Use orchestration-methodology" [shape=box];
     "Respond" [shape=doublecircle];
 
-    "User message received" -> "Business domain or service mentioned?";
+    "User message received" -> "Intent type?";
+    "Intent type?" -> "Built-in catalog quick reply" [label="catalog_query"];
+    "Intent type?" -> "Ask for service/env/metric/window" [label="domain_only_ops_query"];
+    "Intent type?" -> "Business domain or service mentioned?" [label="ops_query"];
+    "Built-in catalog quick reply" -> "Respond";
     "Business domain or service mentioned?" -> "Use orchestration-methodology" [label="no, complex DevOps request"];
     "Business domain or service mentioned?" -> "Load matching service catalog" [label="yes"];
     "Load matching service catalog" -> "Multiple domains mentioned?";
     "Multiple domains mentioned?" -> "Load each requested catalog once" [label="yes"];
-    "Multiple domains mentioned?" -> "Intent type?" [label="no"];
-    "Load each requested catalog once" -> "Intent type?";
-    "Intent type?" -> "Reply with service list" [label="catalog_query"];
-    "Intent type?" -> "Ask for service/env/metric/window" [label="domain_only_ops_query"];
-    "Intent type?" -> "Specific service or explicit all services?" [label="ops_query"];
+    "Multiple domains mentioned?" -> "Specific service or explicit all services?" [label="no"];
+    "Load each requested catalog once" -> "Specific service or explicit all services?";
     "Specific service or explicit all services?" -> "Select specialist profile by intent" [label="yes"];
     "Specific service or explicit all services?" -> "Ask for service/env/metric/window" [label="no"];
     "Select specialist profile by intent" -> "Create exactly one Kanban task";
-    "Reply with service list" -> "Respond";
     "Ask for service/env/metric/window" -> "Respond";
     "Create exactly one Kanban task" -> "Respond";
     "Use orchestration-methodology" -> "Respond";
