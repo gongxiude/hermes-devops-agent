@@ -13,6 +13,9 @@ metadata:
 
 本 skill 只给 `orchestrator` 使用，用来识别“国际短信”业务域下的服务名、别名、环境和路由字段。它不执行查询，不调用 Kubernetes、Prometheus、Loki、Jenkins 或 ArgoCD。
 
+调用者读取本 skill 后，必须直接使用下方“服务清单”回答目录查询或构造 Kanban task body。
+禁止再次调用 `skill_view("intlsms-service-catalog")` 来确认同一份内容。
+
 ## 真源
 
 服务列表真源来自 Jenkins Pipeline 配置：

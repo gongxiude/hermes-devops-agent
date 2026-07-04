@@ -115,6 +115,14 @@ def main() -> int:
             "infra-agent",
             "判定优先于历史会话",
             "禁止调用 `kanban_create`",
+            "如果当前请求是 `catalog_query`，不要调用任何工具",
+            "`intlsms` / 国际短信服务清单",
+            "billing-system-frontend",
+            "pigeon-mcp",
+            "禁止回复“未加载到 service catalog / 未加载到目录资源 / 请确认 skill 是否启用”",
+            "就必须直接回答对应业务域的服务清单",
+            "禁止 service catalog 自旋",
+            "每个 service catalog 最多调用一次",
             "国际短信包括哪些服务",
             'skill_view("datacenter-service-catalog")',
             'skill_view("intlsms-service-catalog")',
@@ -187,6 +195,7 @@ def main() -> int:
             "domain: intlsms",
             "namespace: <namespace>",
             "reply_target: feishu:<chat_id>",
+            "禁止再次调用 `skill_view(\"intlsms-service-catalog\")`",
         ],
     )
 

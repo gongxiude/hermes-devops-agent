@@ -46,17 +46,14 @@ toolsets:
 
 platform_toolsets:
   cli:
-    - devops_governance
     - kanban
     - memory
     - skills
   feishu:
-    - devops_governance
     - kanban
     - memory
     - skills
   api_server:
-    - devops_governance
     - kanban
     - memory
     - skills
@@ -65,7 +62,8 @@ kanban:
   dispatch_in_gateway: true
   dispatch_interval_seconds: 3     # 降低调度延迟（原 15s）
   max_in_progress: 10
-  max_in_progress_per_profile: 3
+  max_in_progress_per_profile: 1
+  max_spawn: 1
   failure_limit: 2
   auto_promote_children: true
   auto_decompose: false             # 关闭自动任务拆解，减少调度噪音
@@ -83,6 +81,6 @@ platforms:
       default_group_policy: open
 
 plugins:
-  enabled:
+  enabled: []
+  disabled:
     - devops_agent
-  disabled: []

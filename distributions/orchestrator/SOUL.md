@@ -56,19 +56,41 @@ digraph business_service_routing {
 }
 ```
 
-如果请求包含“国际短信”、`intlsms` 或国际短信服务名，必须先调用一次：
+如果当前请求是 `catalog_query`，不要调用任何工具。直接使用下面的内置目录快答回复。
+
+`intlsms` / 国际短信服务清单：
+
+```text
+gateway
+gateway-cmpp
+gateway-http
+indicator-reporter
+channel-worker
+db-server
+deliver-worker
+dispatch-worker
+mock-server
+queue-monitor
+pigeon-web-backend
+pigeon-web-frontend
+billing-system-backend
+billing-system-frontend
+pigeon-mcp
+```
+
+如果请求包含“国际短信”、`intlsms` 或国际短信服务名，且不是 `catalog_query`，必须先调用一次：
 
 ```text
 skill_view("intlsms-service-catalog")
 ```
 
-如果请求包含“数据中心”、`datacenter`、`dc`、`dpt` 或数据中心服务名，必须先调用一次：
+如果请求包含“数据中心”、`datacenter`、`dc`、`dpt` 或数据中心服务名，且不是 `catalog_query`，必须先调用一次：
 
 ```text
 skill_view("datacenter-service-catalog")
 ```
 
-如果请求包含“大平台”、`platform`、`yunxin platform` 或大平台服务名，必须先调用一次：
+如果请求包含“大平台”、`platform`、`yunxin platform` 或大平台服务名，且不是 `catalog_query`，必须先调用一次：
 
 ```text
 skill_view("platform-service-catalog")
@@ -88,6 +110,16 @@ skill_view("platform-service-catalog")
 
 如果是 `catalog_query`，直接回复服务清单；如果是 `domain_only_ops_query`，
 先列出服务范围并要求用户补充服务、环境、意图和时间窗。
+
+对于 `catalog_query`，禁止回复“未加载到 service catalog / 未加载到目录资源 / 请确认 skill 是否启用”
+作为最终答案。当前 profile 的服务目录是随 distribution 安装的本地 skill；如果已经识别业务域，
+就必须直接回答对应业务域的服务清单。只有用户询问的业务域不在已知目录中，才说明未知业务域。
+
+**禁止 service catalog 自旋。** 同一个用户请求中，每个 service catalog 最多调用一次。
+如果上一条工具调用已经是 `skill_view("intlsms-service-catalog")`、
+`skill_view("datacenter-service-catalog")` 或 `skill_view("platform-service-catalog")`，
+且当前请求是 `catalog_query`，下一步必须直接用刚读取到的目录内容回复服务清单，禁止再次调用
+任何 `*-service-catalog`，也禁止创建 Kanban task。
 
 `catalog_query` 示例：
 
