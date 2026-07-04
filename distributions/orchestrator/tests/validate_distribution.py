@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 # 自包含编排技能:orchestrator 专属,随 distribution 安装。
 ORCHESTRATOR_SKILLS = [
     "skills/datacenter-service-catalog/SKILL.md",
+    "skills/hermes-profile-change-delivery/SKILL.md",
     "skills/intlsms-service-catalog/SKILL.md",
     "skills/platform-service-catalog/SKILL.md",
     "skills/orchestration-methodology/SKILL.md",
@@ -104,6 +105,8 @@ def main() -> int:
         [
             "任务顺序是架构的一部分",
             "Mandatory Runtime Gate",
+            'skill_view("hermes-profile-change-delivery")',
+            "必须完成 build、rollout、`hermes profile update`、gateway reload",
             "digraph business_service_routing",
             "catalog_query",
             "domain_only_ops_query",
@@ -171,6 +174,22 @@ def main() -> int:
             "mcp-loki-intlsms-prod",
             "mcp-k8s-intlsms-prod",
             "body=json.dumps",
+        ],
+    )
+
+    delivery = ROOT / "skills/hermes-profile-change-delivery/SKILL.md"
+    assert_contains(
+        delivery,
+        [
+            "digraph hermes_profile_change_delivery",
+            "Trigger Jenkins build",
+            "Wait for Kubernetes rollout",
+            "Run hermes profile update",
+            "Restart affected gateway",
+            "Run acceptance through real entrypoint",
+            "Acceptance passed?",
+            "/opt/hermes/.venv/bin/hermes -p orchestrator skills list --enabled-only",
+            "/package/admin/s6/command/s6-svc -t /run/service/gateway-orchestrator",
         ],
     )
 
