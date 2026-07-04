@@ -3,10 +3,13 @@ display:
 
 hooks_auto_accept: false
 
+agent:
+  max_turns: 2
+
 model:
-  provider: gpt-relay
-  model: gpt-5.5
-  default: gpt-5.5
+  provider: deepseek-relay
+  model: deepseek-v4-pro
+  default: deepseek-v4-pro
   api_mode: chat_completions
 
 fallback_providers:

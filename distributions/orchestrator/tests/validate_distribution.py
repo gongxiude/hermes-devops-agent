@@ -66,6 +66,9 @@ def main() -> int:
     assert "skills/orchestrator/" not in manifest["distribution_owned"]
 
     config = yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8"))
+    assert config["agent"]["max_turns"] == 2, "orchestrator gateway must fail fast instead of spinning"
+    assert config["model"]["provider"] == "deepseek-relay"
+    assert config["model"]["model"] == "deepseek-v4-pro"
     assert config["kanban"]["orchestrator_profile"] == "orchestrator"
     assert config["plugins"]["enabled"] == [], "orchestrator must rely on Hermes native gateway/kanban behavior"
     assert config["toolsets"] == ["kanban", "skills", "memory"], "orchestrator must not carry production toolsets"
@@ -107,6 +110,8 @@ def main() -> int:
             "digraph business_service_routing",
             '"Intent type?" -> "Built-in catalog quick reply" [label="catalog_query"]',
             '"Built-in catalog quick reply" -> "Respond"',
+            '"Need service catalog?" -> "Select specialist profile by intent" [label="no, fields inferable"]',
+            '"Create exactly one Kanban task" -> "Acknowledge task creation"',
             "catalog_query",
             "domain_only_ops_query",
             "specific_ops_query",
@@ -125,12 +130,23 @@ def main() -> int:
             "就必须直接回答对应业务域的服务清单",
             "禁止 service catalog 自旋",
             "每个 service catalog 最多调用一次",
+            "service catalog 读取次数必须为 0",
             "国际短信包括哪些服务",
+            "查看国际短信 gateway 最近 10 分钟 CPU 和内存",
+            "这些都是 `specific_ops_query`，下一步必须是 `kanban_create`",
+            "硬编码快路由",
+            "request_type: metrics_cpu_memory",
+            "如果一条消息同时命中上表中的业务域、服务、时间窗和指标，禁止调用任何 `skill_view`",
+            "建单后立即停止",
+            "如果上一条工具调用已经是 `kanban_create`，下一步只能 `Respond`",
+            "上一条工具调用已经是任意 `skill_view(\"*-service-catalog\")`",
             'skill_view("datacenter-service-catalog")',
             'skill_view("intlsms-service-catalog")',
             'skill_view("platform-service-catalog")',
             'skill_view("orchestration-methodology")',
-            "不要先调用 `orchestration-methodology`",
+            "`orchestration-methodology`，不要先解释已识别参数",
+            "当前 turn 还没有任何一次",
+            "`specific_ops_query` 的 fast path 也已经结束",
             "不能回答“我无法直接访问生产系统”作为最终结果",
             "先分解，再路由",
             "合成不是摘要",
