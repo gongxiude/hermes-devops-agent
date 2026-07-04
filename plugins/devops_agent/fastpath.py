@@ -148,6 +148,22 @@ async def _send_receipt(gateway: Any, event: Any, task_id: str) -> None:
         logger.warning("[fastpath] failed to send Feishu receipt for %s: %s", task_id, exc)
 
 
+async def _send_result(gateway: Any, event: Any, task_id: str, result: str) -> None:
+    source = getattr(event, "source", None)
+    adapter = getattr(gateway, "adapters", {}).get(getattr(source, "platform", None))
+    if adapter is None:
+        return
+    try:
+        await adapter.send(
+            chat_id=getattr(source, "chat_id", ""),
+            content=f"观测任务 {task_id} 查询结果：\n\n{result}",
+            reply_to=getattr(event, "message_id", None),
+            metadata={"notify": True, "task_id": task_id},
+        )
+    except Exception as exc:
+        logger.warning("[fastpath] failed to send Feishu result for %s: %s", task_id, exc)
+
+
 def maybe_handle_observability_fastpath(
     *,
     event: Any = None,
@@ -187,14 +203,17 @@ def maybe_handle_observability_fastpath(
     try:
         from . import observability_fastpath
 
-        observability_fastpath.complete(task_id, parsed)
+        result = observability_fastpath.complete(task_id, parsed)
     except Exception as exc:
         logger.warning("[fastpath] failed to start observability completion for %s: %s", task_id, exc)
+        result = ""
 
     if gateway is not None:
         try:
             loop = asyncio.get_running_loop()
             loop.create_task(_send_receipt(gateway, event, task_id))
+            if result:
+                loop.create_task(_send_result(gateway, event, task_id, result))
         except RuntimeError:
             pass
 

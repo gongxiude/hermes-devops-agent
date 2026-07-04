@@ -47,12 +47,12 @@ def complete_async(task_id: str, parsed: Any, *, profile_dir: str = "/opt/data/p
     thread.start()
 
 
-def complete(task_id: str, parsed: Any, *, profile_dir: str = "/opt/data/profiles/observability") -> None:
+def complete(task_id: str, parsed: Any, *, profile_dir: str = "/opt/data/profiles/observability") -> str:
     """Complete a supported observability task before the dispatcher spawns a worker."""
-    _complete_task(task_id, parsed, profile_dir)
+    return _complete_task(task_id, parsed, profile_dir)
 
 
-def _complete_task(task_id: str, parsed: Any, profile_dir: str) -> None:
+def _complete_task(task_id: str, parsed: Any, profile_dir: str) -> str:
     from hermes_cli import kanban_db as kb
 
     try:
@@ -70,6 +70,7 @@ def _complete_task(task_id: str, parsed: Any, profile_dir: str) -> None:
 
     with kb.connect_closing() as conn:
         kb.complete_task(conn, task_id, result=result, summary=summary, metadata=metadata)
+    return result
 
 
 def run_gateway_cpu_memory_query(*, profile_dir: str) -> str:
