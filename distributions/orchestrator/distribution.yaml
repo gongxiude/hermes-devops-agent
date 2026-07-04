@@ -7,7 +7,6 @@ skills:
   required:
     - artifact-pyramids
     - datacenter-service-catalog
-    - hermes-profile-change-delivery
     - intlsms-service-catalog
     - platform-service-catalog
     - orchestration-methodology

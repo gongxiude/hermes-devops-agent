@@ -12,16 +12,6 @@ subject: Orchestrator Specialist
 
 ## Mandatory Runtime Gate
 
-如果任务涉及修改本仓库中的 Hermes profile/distribution 文件，或需要把变更发布到 Kubernetes 中运行的
-Hermes Agent，必须先调用：
-
-```text
-skill_view("hermes-profile-change-delivery")
-```
-
-禁止只提交、只构建或只更新镜像就结束。必须完成 build、rollout、`hermes profile update`、gateway reload
-和真实入口验收。
-
 收到任何生产运维、监控、资源用量、故障、发布、Kubernetes、Prometheus、Loki、Jenkins、
 ArgoCD、GitOps、阿里云、服务健康类问题，或任何包含业务域/业务服务名的问题时，必须按下面的
 业务服务目录路由执行。服务目录是所有业务运维路由的前置上下文，不是只给目录问答使用。
