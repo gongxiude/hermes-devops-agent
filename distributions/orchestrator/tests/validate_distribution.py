@@ -66,7 +66,7 @@ def main() -> int:
     assert "skills/orchestrator/" not in manifest["distribution_owned"]
 
     config = yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8"))
-    assert config["agent"]["max_turns"] == 2, "orchestrator gateway must fail fast instead of spinning"
+    assert config["agent"]["max_turns"] == 1, "orchestrator gateway must create one task and stop"
     assert config["model"]["provider"] == "deepseek-relay"
     assert config["model"]["model"] == "deepseek-v4-pro"
     assert config["kanban"]["orchestrator_profile"] == "orchestrator"

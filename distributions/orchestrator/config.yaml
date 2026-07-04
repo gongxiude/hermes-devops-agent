@@ -4,7 +4,7 @@ display:
 hooks_auto_accept: false
 
 agent:
-  max_turns: 2
+  max_turns: 1
 
 model:
   provider: deepseek-relay
