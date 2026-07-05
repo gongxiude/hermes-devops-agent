@@ -60,6 +60,28 @@ DEVOPS_SKILLS = [
     "kanban-worker",
 ]
 
+JENKINS_READONLY_TOOLS = {
+    "whoAmI",
+    "getStatus",
+    "getJobs",
+    "findJobsWithScmUrl",
+    "getJob",
+    "getJobScm",
+    "getBuild",
+    "getBuildScm",
+    "getBuildChangeSets",
+    "getBuildLog",
+    "searchBuildLog",
+    "getQueueItem",
+    "getTestResults",
+    "getFlakyFailures",
+}
+
+JENKINS_DENIED_TOOLS = {
+    "triggerBuild",
+    "updateBuild",
+}
+
 
 def load_yaml(path: Path) -> dict:
     data = yaml.safe_load(path.read_text(encoding="utf-8"))
@@ -145,18 +167,32 @@ def main() -> int:
 
     mcp_servers = config.get("mcp_servers", {})
     assert "git-workspace" not in mcp_servers, "gitops-agent must not enable git-workspace MCP"
-    assert set(mcp_servers) == {"git-codeup"}, "gitops-agent MCP scope must stay explicit"
+    assert set(mcp_servers) == {"git-codeup", "jenkins"}, "gitops-agent MCP scope must stay explicit"
+    jenkins = mcp_servers["jenkins"]
+    assert jenkins.get("transport") == "streamable_http"
+    assert jenkins.get("url") == "${JENKINS_MCP_URL}"
+    assert jenkins.get("headers", {}).get("Authorization") == "${JENKINS_MCP_AUTHORIZATION}"
+    jenkins_tools = set(jenkins.get("tools", {}).get("include", []))
+    assert jenkins_tools == JENKINS_READONLY_TOOLS, f"unexpected Jenkins MCP tools: {jenkins_tools}"
+    assert not (jenkins_tools & JENKINS_DENIED_TOOLS), "Jenkins write tools must not be exposed"
 
     mcp_json = json.loads((ROOT / "mcp.json").read_text(encoding="utf-8"))
     mcp_json_servers = mcp_json.get("mcpServers", {})
     assert "git-workspace" not in mcp_json_servers, "mcp.json must not register git-workspace"
-    assert set(mcp_json_servers) == {"git-codeup"}
+    assert set(mcp_json_servers) == {"git-codeup", "jenkins"}
+    mcp_json_jenkins = mcp_json_servers["jenkins"]
+    assert mcp_json_jenkins.get("transport") == "streamable_http"
+    assert mcp_json_jenkins.get("url") == "${JENKINS_MCP_URL}"
+    assert mcp_json_jenkins.get("headers", {}).get("Authorization") == "${JENKINS_MCP_AUTHORIZATION}"
+    assert set(mcp_json_jenkins.get("tools", {}).get("include", [])) == JENKINS_READONLY_TOOLS
 
     distribution = load_yaml(ROOT / "distribution.yaml")
     env_names = {item["name"] for item in distribution.get("env_requires", [])}
     assert "DEEPSEEK_RELAY_API_KEY" in env_names
     assert "GPT_RELAY_API_KEY" in env_names
     assert "LLM_RELAY_API_KEY" not in env_names
+    assert "JENKINS_MCP_URL" in env_names
+    assert "JENKINS_MCP_AUTHORIZATION" in env_names
     assert "SOFTWARE_DELIVERY_WORKSPACE_ROOT" in env_names
     assert "GIT_WORKSPACE_ENABLE_PUSH" not in env_names
 
@@ -165,8 +201,15 @@ def main() -> int:
     assert "my-world" in profile["runtime_boundary"]["previous_workspace_forbidden"]
     assert "git-command-workflow" in profile["allowed_skill_categories"]["tool_contracts"]
     assert "git-workspace-draft-tool" not in str(profile)
+    assert "jenkins" in profile.get("mcp_servers", [])
     assert "git-workspace" not in profile.get("mcp_servers", [])
     assert "git_mcp_for_clone_fetch_pull_commit_push" in profile.get("denied", [])
+    assert "jenkins_build_trigger_without_release_gate" in profile.get("denied", [])
+
+    jenkins_subagent = load_yaml(ROOT / "specs/subagents/jenkins-pipeline.yaml")
+    assert "jenkins" in jenkins_subagent.get("allowed_mcp_servers", [])
+    assert "triggerBuild" in jenkins_subagent.get("denied_tools", [])
+    assert "updateBuild" in jenkins_subagent.get("denied_tools", [])
 
     domain = load_yaml(ROOT / "specs/domains/gitops-agent-domain.yaml")
     terminal_rules = "\n".join(domain["rules"]["terminal_git"])
@@ -189,6 +232,11 @@ def main() -> int:
     assert "profile update gitops-agent --yes" in readme
     assert "hermes -p gitops-agent tools --summary list" in readme
     assert "hermes -p gitops-agent mcp test git-codeup" in readme
+    assert "hermes -p gitops-agent mcp test jenkins" in readme
+    assert "JENKINS_MCP_URL" in readme
+    assert "JENKINS_MCP_AUTHORIZATION" in readme
+    assert "triggerBuild" in readme
+    assert "updateBuild" in readme
     assert "https://hermes-agent.nousresearch.com/docs/user-guide/git-worktrees" in readme
     assert "worktree add" in readme
     assert "`config.yaml` 只放 Hermes 原生配置项" in readme
@@ -216,6 +264,8 @@ def main() -> int:
     assert "codeup_create_change_request" in soul
     assert "repository_id=6390496" in soul
     assert "source_project_id=6390496" in soul
+    assert "Use Jenkins MCP only for read-only Jenkins evidence" in soul
+    assert "Do not use Jenkins MCP `triggerBuild` or `updateBuild`" in soul
 
     kanban_worker = (ROOT / "skills/devops/kanban-worker/SKILL.md").read_text(encoding="utf-8")
     assert "Call `kanban_show` at most once" in kanban_worker
@@ -229,6 +279,12 @@ def main() -> int:
     assert "codeup_create_change_request" in kanban_worker
     assert "repository_id=6390496" in kanban_worker
     assert "source_project_id=6390496" in kanban_worker
+
+    jenkins_contract = (ROOT / "skills/tool_contracts/jenkins-readonly-tool/SKILL.md").read_text(encoding="utf-8")
+    for tool in JENKINS_READONLY_TOOLS:
+        assert f"`jenkins:{tool}`" in jenkins_contract
+    for tool in JENKINS_DENIED_TOOLS:
+        assert f"`{tool}`" in jenkins_contract
 
     assert "${SOFTWARE_DELIVERY_WORKSPACE_ROOT}/yuexin-infra" in (
         ROOT / "skills/contexts/yuexin-infra-domain-context/SKILL.md"

@@ -74,6 +74,27 @@ mcp_servers:
         - codeup_list_commits
         - git_repo_status
         - codeup_create_change_request
+  jenkins:
+    transport: streamable_http
+    url: "${JENKINS_MCP_URL}"
+    headers:
+      Authorization: "${JENKINS_MCP_AUTHORIZATION}"
+    tools:
+      include:
+        - whoAmI
+        - getStatus
+        - getJobs
+        - findJobsWithScmUrl
+        - getJob
+        - getJobScm
+        - getBuild
+        - getBuildScm
+        - getBuildChangeSets
+        - getBuildLog
+        - searchBuildLog
+        - getQueueItem
+        - getTestResults
+        - getFlakyFailures
   # argocd 已从 MCP 迁移到原生 argocd 插件(plugins.enabled + 下方 argocd: catalog)
 
 # argocd 插件 catalog(单控制面,只读)。连接走 ${ARGOCD_SERVER}/${ARGOCD_TOKEN}。

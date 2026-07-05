@@ -19,7 +19,10 @@ allowed_skill_categories:
     - secret-redaction
 allowed_mcp_servers:
   - git-codeup
+  - jenkins
 denied_tools:
+  - triggerBuild
+  - updateBuild
   - jenkins_build_with_params
   - jenkins_replay_build
   - jenkins_script_console

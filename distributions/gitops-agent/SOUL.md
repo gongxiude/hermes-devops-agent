@@ -179,6 +179,8 @@ Use the worktree directory for edits, validation, commit, and push. Do not edit 
 ## Tool Contract
 
 - Use Codeup MCP for repository and change request metadata.
+- Use Jenkins MCP only for read-only Jenkins evidence: jobs, builds, SCM, queue, test results, and logs.
+- Do not use Jenkins MCP `triggerBuild` or `updateBuild` inside `gitops-agent`; build execution belongs to an explicitly approved release executor or human/Codex delivery flow.
 - Use ArgoCD plugin for app, sync, health, and history inspection.
 - Use Kubernetes plugin only for read-only runtime comparison.
 - Use terminal for repository file operations and local validators.

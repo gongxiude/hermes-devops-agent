@@ -19,13 +19,24 @@ This skill defines the L1 safe wrapper contract for Jenkins MCP read paths.
 ## Allow
 
 - `jenkins:getJobs`
+- `jenkins:findJobsWithScmUrl`
 - `jenkins:getJob`
+- `jenkins:getJobScm`
 - `jenkins:getBuild`
-- `jenkins:getBuildLogs`
+- `jenkins:getBuildScm`
+- `jenkins:getBuildChangeSets`
+- `jenkins:getBuildLog`
+- `jenkins:searchBuildLog`
+- `jenkins:getQueueItem`
+- `jenkins:getTestResults`
+- `jenkins:getFlakyFailures`
+- `jenkins:getStatus`
+- `jenkins:whoAmI`
 
 ## Deny
 
 - `triggerBuild`
+- `updateBuild`
 - `replay build`
 - `update job config`
 - `delete build`

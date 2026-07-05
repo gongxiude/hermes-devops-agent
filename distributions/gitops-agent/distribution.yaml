@@ -22,6 +22,12 @@ env_requires:
   - name: CODEUP_ORGANIZATION_ID
     description: "Codeup organization id"
     required: true
+  - name: JENKINS_MCP_URL
+    description: "Jenkins MCP streamable HTTP endpoint"
+    required: true
+  - name: JENKINS_MCP_AUTHORIZATION
+    description: "Full Jenkins MCP Authorization header value"
+    required: true
   - name: SOFTWARE_DELIVERY_WORKSPACE_ROOT
     description: "Runtime root for direct git command checkouts owned by gitops-agent"
     required: true

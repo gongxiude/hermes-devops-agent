@@ -73,6 +73,8 @@ kubectl exec -n yuexin-ai hermes-agent-0 -- sh -lc '
 | `CODEUP_BASE_URL` | Codeup OpenAPI 地址 |
 | `CODEUP_ACCESS_TOKEN` | Codeup API token |
 | `CODEUP_ORGANIZATION_ID` | Codeup organization id |
+| `JENKINS_MCP_URL` | Jenkins MCP streamable HTTP endpoint |
+| `JENKINS_MCP_AUTHORIZATION` | Jenkins MCP `Authorization` header 完整值 |
 | `SOFTWARE_DELIVERY_WORKSPACE_ROOT` | Git 工作目录，容器内使用 `/opt/data/profiles/gitops-agent/workspace` |
 | `GITOPS_YUEXIN_INFRA_REMOTE` | yuexin-infra remote |
 | `GITOPS_YUEXIN_INFRA_BRANCH` | yuexin-infra branch |
@@ -187,12 +189,14 @@ kubectl exec -n yuexin-ai hermes-agent-0 -- sh -lc '
   /opt/hermes/.venv/bin/hermes -p gitops-agent tools --summary list
   /opt/hermes/.venv/bin/hermes -p gitops-agent mcp list
   /opt/hermes/.venv/bin/hermes -p gitops-agent mcp test git-codeup
+  /opt/hermes/.venv/bin/hermes -p gitops-agent mcp test jenkins
 '
 ```
 
 验收标准：
 
 - `git-codeup` enabled，发现 6 个工具。
+- `jenkins` enabled，发现只读 Jenkins 查询工具；不暴露 `triggerBuild` / `updateBuild`。
 - `argocd` plugin toolset enabled。
 - `kubernetes` plugin toolset enabled。
 
