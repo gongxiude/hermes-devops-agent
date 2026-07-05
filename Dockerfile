@@ -28,6 +28,8 @@ COPY --chown=hermes:hermes distributions /opt/distributions
 COPY --chown=hermes:hermes skills /opt/skills
 COPY --chown=hermes:hermes scripts /opt/scripts
 
+RUN /opt/hermes/.venv/bin/python /opt/scripts/patch-hermes-kanban-worker-context.py
+
 USER hermes
 
 RUN /opt/hermes/.venv/bin/python /opt/scripts/sync-shared-skills.py
