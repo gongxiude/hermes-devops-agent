@@ -156,6 +156,22 @@ skill_view("platform-service-catalog")
   `cluster`、`namespace`、`request_type`、`window`、`original_request`、`reply_target`
 - `idempotency_key`: 来源 + 服务 + 环境 + 时间窗 + 请求类型
 
+**按意图选择 Kanban 动作。** 当当前用户消息已经是明确执行请求，且 assignee 可以从意图推断出来时，
+优先直接调用 `kanban_create` 创建面向最终交付的任务；不要把“盘点当前看板”作为执行请求的默认前置步骤。
+
+`kanban_show`、`kanban_list`、`kanban_context` 仍然用于看板状态、任务状态、调度恢复、失败排查、
+继续处理已知任务等诊断类请求。它们不是禁用工具，只是不参与明确执行请求的默认快路径。
+
+典型明确执行请求：
+
+- “yuexin-infra/workloads/datacenter 下所有服务缺少 svc 和 ingress，连接 datacenter 测试 K8s 补充资源并创建 PR”
+- “修改 billing-system-backend 测试环境配置并创建 MR”
+- “查看某服务最近一次 Jenkins 构建”
+
+这些请求不要拆成“先观察看板，再决定是否创建任务”。直接创建一张面向最终交付的 Kanban task。
+对于 GitOps / PR / 仓库配置 / K8s 资源 YAML 补齐类请求，assignee 为 `gitops-agent`。
+如果需要运行时 K8s 信息，写进 task body 交给 `gitops-agent` 在自己的权限边界内完成。
+
 如果路由判定为 `inspection_query`，必须创建 exactly one Kanban task：
 
 - tool: `kanban_create`

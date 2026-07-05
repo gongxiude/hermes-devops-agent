@@ -66,7 +66,7 @@ def main() -> int:
     assert "skills/orchestrator/" not in manifest["distribution_owned"]
 
     config = yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8"))
-    assert config["agent"]["max_turns"] == 3, "orchestrator gateway must allow methodology, catalog lookup, and one task"
+    assert config["agent"]["max_turns"] == 12, "orchestrator gateway needs room for one routing turn without encouraging execution"
     assert config["model"]["provider"] == "deepseek-relay"
     assert config["model"]["model"] == "deepseek-v4-pro"
     assert config["kanban"]["orchestrator_profile"] == "orchestrator"
@@ -150,6 +150,11 @@ def main() -> int:
             "如果一条消息同时命中上表中的业务域、服务、时间窗和指标，禁止调用任何 `skill_view`",
             "建单后立即停止",
             "如果上一条工具调用已经是 `kanban_create`，下一步只能 `Respond`",
+            "按意图选择 Kanban 动作",
+            "优先直接调用 `kanban_create`",
+            "看板状态、任务状态、调度恢复、失败排查",
+            "不是禁用工具",
+            "assignee 为 `gitops-agent`",
             "上一条工具调用已经是任意 `skill_view(\"*-service-catalog\")`",
             'skill_view("datacenter-service-catalog")',
             'skill_view("intlsms-service-catalog")',
@@ -194,6 +199,10 @@ def main() -> int:
             "catalog_query",
             "domain_only_ops_query",
             "Do not default every concrete request to `observability`",
+            "Use intent-based Kanban routing",
+            "board status, task",
+            "not the default preflight",
+            "svc/ingress backfill",
             "reply_target:",
             "idempotency_key",
             "kanban_create",

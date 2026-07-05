@@ -62,6 +62,7 @@ intent:
 
 - runtime metrics, logs, pod status, health, K8s readonly diagnosis -> `observability`
 - Jenkins, image build, release pipeline, ArgoCD, Kustomize, GitOps config -> `gitops-agent`
+- GitOps repository edits, Kubernetes YAML generation, svc/ingress backfill, and PR/MR drafting -> `gitops-agent`
 - Alicloud resources, network, cluster capacity, cloud cost, security/compliance -> `infra-agent`
 
 This skill MUST NOT be loaded repeatedly for the same user request. If the
@@ -74,6 +75,11 @@ Do not answer with recognized parameters only.
 Do not answer with "recommended next step".
 Do not ask for confirmation when service, environment, time window, and metric/log intent are inferable.
 Do not spend tool budget on unrelated inspection before creating the task.
+Use intent-based Kanban routing: for an explicit execution or delivery request,
+create the task directly when the assignee and requested outcome are inferable.
+Use `kanban_show`, `kanban_list`, or `kanban_context` for board status, task
+status, dispatcher recovery, failure diagnosis, or continuation of a known task;
+they are not the default preflight for a new execution request.
 
 For a single ordinary DevOps query, call `kanban_create` to create exactly one Kanban task:
 
