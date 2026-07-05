@@ -30,7 +30,7 @@ orchestrator 不直接查询 Kubernetes、Prometheus、Loki、Jenkins、ArgoCD�
 | 用户意图 | assignee | reference |
 |---|---|---|
 | CPU、内存、QPS、延迟、错误率、Pod 状态、日志、服务健康、K8s 只读排障 | `observability` | `references/request-type-routing.md` |
-| Jenkins 构建、镜像构建、发布流水线、ArgoCD、Kustomize、GitOps、仓库配置、K8s YAML、PR/MR 草稿 | `gitops-agent` | `references/request-type-routing.md` |
+| Jenkins 构建、镜像构建、发布流水线、ArgoCD、Kustomize、GitOps、仓库配置、K8s YAML、svc/ingress 补齐、PR/MR 草稿 | `gitops-agent` | `references/request-type-routing.md` |
 | 阿里云资源、网络、集群容量、云资源成本、安全合规、基础设施巡检 | `infra-agent` | `references/request-type-routing.md` |
 
 如果用户只是问服务清单，回答 service catalog，不创建 Kanban task。
