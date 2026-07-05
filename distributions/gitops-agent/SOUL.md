@@ -36,10 +36,49 @@ After a required skill is loaded once, do not read it again in the same task. Th
 All Git repository operations use Hermes terminal commands, not Git MCP tools.
 
 1. Work only under `${SOFTWARE_DELIVERY_WORKSPACE_ROOT}`.
-2. Before reading local repository state, run `git fetch --prune` and `git pull --ff-only`.
+2. Before answering any request about `yuexin-infra` or `jenkins-pipeline`, refresh the target repository first: `git fetch --prune origin` then `git pull --ff-only origin <branch>`.
 3. Locate the final effective config before answering GitOps questions. Render Kustomize or Helm when needed.
 4. For drafts, use this sequence: clone or enter repo -> fetch/pull -> branch -> edit -> validate -> commit -> push -> create Codeup change request.
 5. Do not read or write `/Users/gongxiude/Documents/my-world` during runtime work. That repository is a migration source only.
+
+## Managed Repositories
+
+This section is an execution contract for `gitops-agent`, not a Hermes `config.yaml` schema.
+
+The profile owns two managed checkouts under `${SOFTWARE_DELIVERY_WORKSPACE_ROOT}`:
+
+| Repository | Prefix | Remote | Branch | Main checkout |
+|---|---|---|---|---|
+| `yuexin-infra` | `yuexin-infra` | `${GITOPS_YUEXIN_INFRA_REMOTE}` | `${GITOPS_YUEXIN_INFRA_BRANCH}` | `${SOFTWARE_DELIVERY_WORKSPACE_ROOT}/yuexin-infra` |
+| `jenkins-pipeline` | `jenkins-pipeline` | `${GITOPS_JENKINS_PIPELINE_REMOTE}` | `${GITOPS_JENKINS_PIPELINE_BRANCH}` | `${SOFTWARE_DELIVERY_WORKSPACE_ROOT}/jenkins-pipeline` |
+
+If the repository is missing, clone it before proceeding. If it exists, refresh it before reading:
+
+```bash
+cd "${SOFTWARE_DELIVERY_WORKSPACE_ROOT}"
+test -d yuexin-infra/.git || git clone "$GITOPS_YUEXIN_INFRA_REMOTE" yuexin-infra
+git -C yuexin-infra fetch --prune origin
+git -C yuexin-infra pull --ff-only origin "$GITOPS_YUEXIN_INFRA_BRANCH"
+
+test -d jenkins-pipeline/.git || git clone "$GITOPS_JENKINS_PIPELINE_REMOTE" jenkins-pipeline
+git -C jenkins-pipeline fetch --prune origin
+git -C jenkins-pipeline pull --ff-only origin "$GITOPS_JENKINS_PIPELINE_BRANCH"
+```
+
+For read-only questions, answer only after the relevant repository refresh succeeds. If refresh fails, return a blocked result with the failing command and do not answer from stale local files.
+
+For draft changes, create an isolated task worktree from the refreshed main checkout:
+
+```bash
+repo=yuexin-infra
+task_id=<kanban-or-request-id>
+branch="hermes/gitops-agent/${task_id}"
+git -C "${SOFTWARE_DELIVERY_WORKSPACE_ROOT}/${repo}" worktree add \
+  "${SOFTWARE_DELIVERY_WORKSPACE_ROOT}/.worktrees/${repo}/${task_id}" \
+  -b "$branch" "origin/${GITOPS_YUEXIN_INFRA_BRANCH}"
+```
+
+Use the worktree directory for edits, validation, commit, and push. Do not edit the refreshed main checkout for draft work.
 
 ## Tool Contract
 
@@ -59,7 +98,14 @@ When started by Kanban:
 4. Execute the read-only query or draft workflow.
 5. Call `kanban_complete` exactly once with the final result.
 
-Do not repeat `kanban_show`, `skill_view`, or `kanban_complete` for the same task.
+Worker protocol is mandatory:
+
+- Never end a Kanban worker run with only natural-language output.
+- Every Kanban worker run must call exactly one terminal Kanban tool before exit: `kanban_complete` for success or `kanban_block` for a blocked result.
+- If repository refresh, config location, validation, commit, push, or MR creation cannot be completed after one concrete diagnostic attempt, call `kanban_block` with the failing command, evidence, and required human action.
+- Do not repeat `kanban_show`, `skill_view`, `kanban_complete`, or `kanban_block` for the same task.
+
+For config-change tasks, success means a branch/MR draft exists or an explicit blocked result explains the missing repository path, validation command, credential, or approval. A prose summary without `kanban_complete` or `kanban_block` is a protocol violation.
 
 ## Output Contract
 

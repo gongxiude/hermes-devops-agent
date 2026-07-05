@@ -22,7 +22,7 @@ Kubernetes 中的 GitOps specialist profile。profile name 固定为 `gitops-age
 | gateway | 不需要，当前 stopped | `hermes profile list` 显示 `gitops-agent` gateway stopped |
 | MCP 发现 | 成功 | `git-codeup` 发现 6 个工具 |
 | Codeup 只读 | 成功 | Codeup repositories API 可读取 1 条记录 |
-| toolsets | 成功 | `argocd`、`devops_governance` plugin toolsets enabled |
+| toolsets | 成功 | `argocd`、`kubernetes` plugin toolsets enabled |
 | Kubernetes tools | 已固化到 distribution | `kubernetes` plugin + `clusters` 注册表；部署后执行 `tools --summary list` 验收 |
 
 ## 安装和更新
@@ -126,6 +126,59 @@ kubectl exec -n yuexin-ai hermes-agent-0 -- sh -lc '
 '
 ```
 
+## Git Worktree 接入方式
+
+官方 Hermes Git worktrees 文档说明：Hermes 会把当前工作目录作为项目根；gateway 场景下项目根来自 `terminal.cwd`。worktree 的价值是让每个 agent/session 拥有独立 branch 和 working directory，避免并发修改互相影响。参考：https://hermes-agent.nousresearch.com/docs/user-guide/git-worktrees
+
+`config.yaml` 只放 Hermes 原生配置项，不放 `gitops_agent.repositories` 这类自定义 schema。下面的仓库清单和操作顺序是 `gitops-agent` 的执行约束，落在 `SOUL.md`、README 和 validator 中。
+
+`gitops-agent` 不把 gateway 直接启动在某个业务仓库里，而是把 `terminal.cwd` 固定为：
+
+```bash
+${SOFTWARE_DELIVERY_WORKSPACE_ROOT}
+```
+
+在这个 workspace 下维护两个主 checkout：
+
+| 仓库 | prefix | remote | branch | 主 checkout |
+|---|---|---|---|---|
+| `jenkins-pipeline` | `jenkins-pipeline` | `git@codeup.aliyun.com:6316fd51cb9d00684879aa3a/devops/jenkins-pipeline.git` | `master` | `${SOFTWARE_DELIVERY_WORKSPACE_ROOT}/jenkins-pipeline` |
+| `yuexin-infra` | `yuexin-infra` | `git@codeup.aliyun.com:6316fd51cb9d00684879aa3a/devops/yuexin-infra.git` | `master` | `${SOFTWARE_DELIVERY_WORKSPACE_ROOT}/yuexin-infra` |
+
+规则：
+
+- 查询类请求：先刷新目标仓库，再读取文件和回答。
+- 变更草稿：先刷新目标仓库，再从主 checkout 创建任务级 worktree，在 worktree 中编辑、验证、提交。
+- 主 checkout 只作为同步基准，不直接承载草稿修改。
+- 如果 `fetch` 或 `pull --ff-only` 失败，停止并返回 blocked，不允许用旧本地文件回答。
+
+查询前刷新命令：
+
+```bash
+cd "$SOFTWARE_DELIVERY_WORKSPACE_ROOT"
+
+test -d yuexin-infra/.git || git clone "$GITOPS_YUEXIN_INFRA_REMOTE" yuexin-infra
+git -C yuexin-infra fetch --prune origin
+git -C yuexin-infra pull --ff-only origin "$GITOPS_YUEXIN_INFRA_BRANCH"
+
+test -d jenkins-pipeline/.git || git clone "$GITOPS_JENKINS_PIPELINE_REMOTE" jenkins-pipeline
+git -C jenkins-pipeline fetch --prune origin
+git -C jenkins-pipeline pull --ff-only origin "$GITOPS_JENKINS_PIPELINE_BRANCH"
+```
+
+任务级 worktree 示例：
+
+```bash
+repo=yuexin-infra
+branch="hermes/gitops-agent/${KANBAN_TASK_ID:-manual}"
+worktree="$SOFTWARE_DELIVERY_WORKSPACE_ROOT/.worktrees/$repo/${KANBAN_TASK_ID:-manual}"
+
+git -C "$SOFTWARE_DELIVERY_WORKSPACE_ROOT/$repo" fetch --prune origin
+git -C "$SOFTWARE_DELIVERY_WORKSPACE_ROOT/$repo" pull --ff-only origin "$GITOPS_YUEXIN_INFRA_BRANCH"
+git -C "$SOFTWARE_DELIVERY_WORKSPACE_ROOT/$repo" worktree add "$worktree" -b "$branch" "origin/$GITOPS_YUEXIN_INFRA_BRANCH"
+cd "$worktree"
+```
+
 ## MCP 和工具
 
 ```bash
@@ -141,7 +194,6 @@ kubectl exec -n yuexin-ai hermes-agent-0 -- sh -lc '
 - `git-codeup` enabled，发现 6 个工具。
 - `argocd` plugin toolset enabled。
 - `kubernetes` plugin toolset enabled。
-- `devops_governance` plugin toolset enabled。
 
 Kubernetes tools 只读验证：
 

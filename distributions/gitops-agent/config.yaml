@@ -4,9 +4,9 @@ display:
 hooks_auto_accept: false
 
 model:
-  provider: deepseek-relay
-  model: deepseek-v4-pro
-  default: deepseek-v4-pro
+  provider: gpt-relay
+  model: gpt-5.5
+  default: gpt-5.5
   api_mode: chat_completions
 
 fallback_providers:
@@ -119,16 +119,3 @@ clusters:
 
 kanban:
   dispatch_in_gateway: false
-
-gitops_agent:
-  profile: gitops-agent
-  service_domain: software-delivery
-  autonomy:
-    - observe
-    - recommend
-    - draft
-  repositories:
-    - yuexin-infra
-    - jenkins-pipeline
-  git_execution: terminal_git_command
-  readonly_in_production: true
