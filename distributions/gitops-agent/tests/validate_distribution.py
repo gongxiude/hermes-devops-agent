@@ -134,6 +134,10 @@ def main() -> int:
     config = load_yaml(ROOT / "config.yaml")
     assert config.get("model", {}).get("provider") == "gpt-relay"
     assert config.get("model", {}).get("model") == "gpt-5.5"
+    assert config["fallback_providers"][0]["api_key"] == "${DEEPSEEK_RELAY_API_KEY}"
+    providers = {item["name"]: item for item in config.get("custom_providers", [])}
+    assert providers["deepseek-relay"]["api_key"] == "${DEEPSEEK_RELAY_API_KEY}"
+    assert providers["gpt-relay"]["api_key"] == "${GPT_RELAY_API_KEY}"
     assert config.get("agent", {}).get("max_turns") == 24
     assert "terminal" in config.get("toolsets", []), "gitops-agent must enable Hermes terminal toolset"
     assert config.get("terminal", {}).get("cwd") == "${SOFTWARE_DELIVERY_WORKSPACE_ROOT}"
@@ -150,6 +154,9 @@ def main() -> int:
 
     distribution = load_yaml(ROOT / "distribution.yaml")
     env_names = {item["name"] for item in distribution.get("env_requires", [])}
+    assert "DEEPSEEK_RELAY_API_KEY" in env_names
+    assert "GPT_RELAY_API_KEY" in env_names
+    assert "LLM_RELAY_API_KEY" not in env_names
     assert "SOFTWARE_DELIVERY_WORKSPACE_ROOT" in env_names
     assert "GIT_WORKSPACE_ENABLE_PUSH" not in env_names
 

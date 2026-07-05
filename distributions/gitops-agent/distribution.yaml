@@ -7,8 +7,11 @@ env_requires:
   - name: LLM_RELAY_BASE_URL
     description: "OpenAI-compatible LLM relay base URL"
     required: true
-  - name: LLM_RELAY_API_KEY
-    description: "LLM relay API key"
+  - name: DEEPSEEK_RELAY_API_KEY
+    description: "LLM relay API key for deepseek-relay"
+    required: true
+  - name: GPT_RELAY_API_KEY
+    description: "LLM relay API key for gpt-relay"
     required: true
   - name: CODEUP_BASE_URL
     description: "Codeup OpenAPI base URL"

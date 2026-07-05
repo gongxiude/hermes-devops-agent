@@ -13,14 +13,14 @@ fallback_providers:
 - provider: custom
   model: deepseek-v4-pro
   base_url: "${LLM_RELAY_BASE_URL}"
-  api_key: "${LLM_RELAY_API_KEY}"
+  api_key: "${DEEPSEEK_RELAY_API_KEY}"
   api_mode: chat_completions
 
 
 custom_providers:
 - name: deepseek-relay
   base_url: "${LLM_RELAY_BASE_URL}"
-  api_key: "${LLM_RELAY_API_KEY}"
+  api_key: "${DEEPSEEK_RELAY_API_KEY}"
   model: deepseek-v4-pro
   api_mode: chat_completions
   models:
@@ -29,7 +29,7 @@ custom_providers:
 
 - name: gpt-relay
   base_url: "${LLM_RELAY_BASE_URL}"
-  api_key: "${LLM_RELAY_API_KEY}"
+  api_key: "${GPT_RELAY_API_KEY}"
   model: gpt-5.5
   api_mode: chat_completions
   models:

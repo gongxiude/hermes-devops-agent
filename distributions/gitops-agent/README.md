@@ -68,7 +68,8 @@ kubectl exec -n yuexin-ai hermes-agent-0 -- sh -lc '
 | 变量 | 用途 |
 |---|---|
 | `LLM_RELAY_BASE_URL` | LLM relay 地址 |
-| `LLM_RELAY_API_KEY` | LLM relay key |
+| `DEEPSEEK_RELAY_API_KEY` | deepseek-relay key |
+| `GPT_RELAY_API_KEY` | gpt-relay key |
 | `CODEUP_BASE_URL` | Codeup OpenAPI 地址 |
 | `CODEUP_ACCESS_TOKEN` | Codeup API token |
 | `CODEUP_ORGANIZATION_ID` | Codeup organization id |
