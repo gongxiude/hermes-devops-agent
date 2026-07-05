@@ -66,7 +66,7 @@ def main() -> int:
     assert "skills/orchestrator/" not in manifest["distribution_owned"]
 
     config = yaml.safe_load((ROOT / "config.yaml").read_text(encoding="utf-8"))
-    assert config["agent"]["max_turns"] == 1, "orchestrator gateway must create one task and stop"
+    assert config["agent"]["max_turns"] == 3, "orchestrator gateway must allow methodology, catalog lookup, and one task"
     assert config["model"]["provider"] == "deepseek-relay"
     assert config["model"]["model"] == "deepseek-v4-pro"
     assert config["kanban"]["orchestrator_profile"] == "orchestrator"
@@ -109,10 +109,13 @@ def main() -> int:
             "Mandatory Runtime Gate",
             "digraph business_service_routing",
             '"Intent type?" -> "Built-in catalog quick reply" [label="catalog_query"]',
+            '"Intent type?" -> "Use orchestration-methodology" [label="inspection_query"]',
+            '"Use orchestration-methodology" -> "Load matching service catalog at most once" [label="inspection_query"]',
             '"Built-in catalog quick reply" -> "Respond"',
             '"Need service catalog?" -> "Select specialist profile by intent" [label="no, fields inferable"]',
             '"Create exactly one Kanban task" -> "Acknowledge task creation"',
             "catalog_query",
+            "inspection_query",
             "domain_only_ops_query",
             "specific_ops_query",
             "all_services_ops_query",
@@ -131,7 +134,15 @@ def main() -> int:
             "禁止 service catalog 自旋",
             "每个 service catalog 最多调用一次",
             "service catalog 读取次数必须为 0",
+            "但 `inspection_query` 例外",
             "国际短信包括哪些服务",
+            "国际短信生产环境进行巡检",
+            "调用 `skill_view(\"orchestration-methodology\")` 是正常的",
+            "下一次工具调用必须是对应业务的 service catalog",
+            "request_type: inspection",
+            "pod_health,cpu_memory,restarts,error_logs,last_30_minutes,key_metrics",
+            "禁止只回复巡检计划",
+            "禁止要求用户“是否继续”",
             "查看国际短信 gateway 最近 10 分钟 CPU 和内存",
             "这些都是 `specific_ops_query`，下一步必须是 `kanban_create`",
             "硬编码快路由",
