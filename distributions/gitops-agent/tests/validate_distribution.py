@@ -209,8 +209,11 @@ def main() -> int:
     assert "`kanban_complete` for success or `kanban_block` for a blocked result" in soul
     assert "A prose summary without `kanban_complete` or `kanban_block` is a protocol violation" in soul
     assert "Config Change Fast Path" in soul
-    assert "hermes/gitops-agent/<task_id>-billing-minute-refresh-300" in soul
-    assert "If the remote branch already exists" in soul
+    assert "branch=\"hermes/gitops-agent/${task_id}-billing-minute-refresh-300\"" in soul
+    assert "ls-remote --exit-code --heads origin \"$branch\"" in soul
+    assert "single execution block" in soul
+    assert "Do not create a todo list" in soul
+    assert "codeup_create_change_request" in soul
 
     kanban_worker = (ROOT / "skills/devops/kanban-worker/SKILL.md").read_text(encoding="utf-8")
     assert "Call `kanban_show` at most once" in kanban_worker
@@ -218,7 +221,10 @@ def main() -> int:
     assert "call exactly one terminal Kanban tool" in kanban_worker
     assert "MINUTE_STATS_TEMP_TABLE_REFRESH_SECONDS" in kanban_worker
     assert "billing-system-backend/test/resources/env.tpl" in kanban_worker
-    assert "If the remote branch already exists" in kanban_worker
+    assert "ls-remote --exit-code --heads origin \"$branch\"" in kanban_worker
+    assert "single terminal block" in kanban_worker
+    assert "Do not create a todo list" in kanban_worker
+    assert "codeup_create_change_request" in kanban_worker
 
     assert "${SOFTWARE_DELIVERY_WORKSPACE_ROOT}/yuexin-infra" in (
         ROOT / "skills/contexts/yuexin-infra-domain-context/SKILL.md"

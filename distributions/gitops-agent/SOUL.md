@@ -48,25 +48,84 @@ For a Kanban task that requests a single GitOps configuration value change, such
 - `domain: intlsms`
 - `service: billing-system-backend`
 - `environment: test`
-- `request_type: config_change`
+- `request_type: config_modify` or `request_type: config_change`
 - `MINUTE_STATS_TEMP_TABLE_REFRESH_SECONDS=300`
 
 use this fast path instead of broad investigation:
 
-1. Call `kanban_show` once.
+This path is deterministic. Do not create a todo list, do not run preliminary
+probes, and do not repeat repository refresh or grep commands. The first
+terminal action for this fast path must be the single execution block below.
+
+1. Call `kanban_show` at most once.
 2. Do not call `kanban_show` again.
-3. Do not call `skill_view` unless the target path cannot be found after the search below.
-4. Refresh `yuexin-infra` in `${SOFTWARE_DELIVERY_WORKSPACE_ROOT}` with clone/fetch/pull.
-5. Locate the target with:
+3. Do not call `skill_view` unless the execution block fails.
+4. Run this exact terminal block once:
 
 ```bash
-git -C "$SOFTWARE_DELIVERY_WORKSPACE_ROOT/yuexin-infra" grep -n "MINUTE_STATS_TEMP_TABLE_REFRESH_SECONDS" -- workloads/intlsms/billing-system-backend
+set -euo pipefail
+
+repo=yuexin-infra
+task_id="${HERMES_KANBAN_TASK:-<task_id>}"
+branch="hermes/gitops-agent/${task_id}-billing-minute-refresh-300"
+base_branch="${GITOPS_YUEXIN_INFRA_BRANCH:-master}"
+root="${SOFTWARE_DELIVERY_WORKSPACE_ROOT:?SOFTWARE_DELIVERY_WORKSPACE_ROOT missing}"
+main="$root/$repo"
+worktree="$root/.worktrees/$repo/$task_id"
+target="workloads/intlsms/billing-system-backend/test/resources/env.tpl"
+
+cd "$root"
+test -d "$main/.git" || git clone "${GITOPS_YUEXIN_INFRA_REMOTE:?GITOPS_YUEXIN_INFRA_REMOTE missing}" "$repo"
+git -C "$main" fetch --prune origin
+git -C "$main" pull --ff-only origin "$base_branch"
+
+rm -rf "$worktree"
+if git -C "$main" ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
+  git -C "$main" worktree add "$worktree" "origin/$branch"
+else
+  git -C "$main" worktree add "$worktree" -b "$branch" "origin/$base_branch"
+fi
+
+test -f "$worktree/$target"
+grep -n "MINUTE_STATS_TEMP_TABLE_REFRESH_SECONDS" "$worktree/$target"
+
+/opt/hermes/.venv/bin/python - <<'PY' "$worktree/$target"
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+text = path.read_text()
+old = "MINUTE_STATS_TEMP_TABLE_REFRESH_SECONDS=86400"
+new = "MINUTE_STATS_TEMP_TABLE_REFRESH_SECONDS=300"
+if new not in text:
+    if old not in text:
+        raise SystemExit(f"expected key/value not found in {path}")
+    text = text.replace(old, new, 1)
+    path.write_text(text)
+PY
+
+grep -n "MINUTE_STATS_TEMP_TABLE_REFRESH_SECONDS=300" "$worktree/$target"
+git -C "$worktree" diff -- "$target"
+git -C "$worktree" status --short
+
+if ! git -C "$worktree" diff --quiet -- "$target"; then
+  git -C "$worktree" add "$target"
+  git -C "$worktree" commit -m "fix(intlsms): update billing minute refresh in test"
+fi
+
+git -C "$worktree" push -u origin "$branch"
+commit="$(git -C "$worktree" rev-parse HEAD)"
+printf 'BRANCH=%s\nCOMMIT=%s\nFILE=%s\nVALIDATION=grep target value ok; git push ok\n' "$branch" "$commit" "$target"
 ```
 
-6. For `billing-system-backend` test, the expected file is `workloads/intlsms/billing-system-backend/test/resources/env.tpl`.
-7. Create or reuse branch `hermes/gitops-agent/<task_id>-billing-minute-refresh-300`.
-8. If the remote branch already exists, check it out, verify the target file already contains `MINUTE_STATS_TEMP_TABLE_REFRESH_SECONDS=300`, then create or reuse the Codeup MR and complete the task.
-9. If the branch does not exist, create a task worktree, edit only that env key, validate, commit, push, create Codeup MR, then complete the task.
+5. Use `git-codeup:codeup_create_change_request` for repository `yuexin-infra`,
+   source branch from `BRANCH`, target branch from `GITOPS_YUEXIN_INFRA_BRANCH`,
+   and title `fix(intlsms): update billing minute refresh in test`.
+6. If the MR already exists, list or get the existing Codeup change request and
+   reuse its link.
+7. Call `kanban_complete` immediately after MR creation or reuse.
+8. If the execution block or MR call fails, call `kanban_block` immediately with
+   the exact failing command/tool and required human action.
 
 The completion summary must include the branch, changed file, commit, validation result, and MR link or the exact MR creation blocker.
 
