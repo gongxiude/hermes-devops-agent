@@ -19,6 +19,15 @@ env_requires:
   - name: KUBECONFIG_READONLY_TEST
     description: "Read-only kubeconfig path for test cluster"
     required: false
+  - name: CUSTOM_BASE_URL
+    description: "OpenAI-compatible LLM relay base URL for the default observability model"
+    required: true
+  - name: CUSTOM_API_KEY
+    description: "LLM relay API key for the default observability model"
+    required: true
+  - name: GPT_RELAY_API_KEY
+    description: "Optional GPT relay API key for fallback or manual testing"
+    required: false
 distribution_owned:
   - SOUL.md
   - config.yaml

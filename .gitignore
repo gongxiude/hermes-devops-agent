@@ -43,6 +43,17 @@ htmlcov/
 *.swp
 
 # >>> vendored-skills (auto-managed by scripts/sync-shared-skills.py) >>>
+distributions/gitops-agent/skills/artifact-pyramids/
+distributions/gitops-agent/skills/implementation-planning/
+distributions/gitops-agent/skills/platform-engineering/
 distributions/gitops-agent/skills/review-methodology/
+distributions/gitops-agent/skills/systematic-debugging/
+distributions/infra-agent/skills/artifact-pyramids/
+distributions/infra-agent/skills/implementation-planning/
+distributions/infra-agent/skills/platform-engineering/
+distributions/infra-agent/skills/systematic-debugging/
+distributions/observability/skills/artifact-pyramids/
+distributions/observability/skills/implementation-planning/
+distributions/observability/skills/site-reliability-engineering/
 distributions/observability/skills/systematic-debugging/
 # <<< vendored-skills <<<

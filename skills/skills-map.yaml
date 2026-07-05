@@ -13,6 +13,18 @@
 
 distributions:
   observability:
+    - artifact-pyramids
+    - site-reliability-engineering
     - systematic-debugging
+    - implementation-planning
   gitops-agent:
+    - artifact-pyramids
+    - platform-engineering
+    - implementation-planning
     - review-methodology
+    - systematic-debugging
+  infra-agent:
+    - artifact-pyramids
+    - platform-engineering
+    - implementation-planning
+    - systematic-debugging

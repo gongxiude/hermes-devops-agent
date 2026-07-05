@@ -14,6 +14,9 @@ PROFILE = ROOT
 # 每个技能位于 skills/<category>/<name>/SKILL.md。这是测试的真值来源，
 # 并与 specs/profiles/observability.yaml 的 allowed_skill_categories 互校。
 SKILL_CATEGORIES = {
+    "devops": [
+        "kanban-worker",
+    ],
     "assets": [
         "intlsms-inspection",
         "intlsms-domain-context",
@@ -59,6 +62,13 @@ SKILL_CATEGORIES = {
     ],
 }
 
+SHARED_SKILLS = [
+    "artifact-pyramids",
+    "site-reliability-engineering",
+    "systematic-debugging",
+    "implementation-planning",
+]
+
 
 def load_yaml(path: Path) -> dict:
     data = yaml.safe_load(path.read_text(encoding="utf-8"))
@@ -82,16 +92,23 @@ def main() -> int:
     manifest = load_yaml(ROOT / "distribution.yaml")
     assert manifest["name"] == "hermes-devops-observability"
     assert manifest["hermes_requires"] == ">=0.12.0"
+    env_names = {item["name"] for item in manifest.get("env_requires", [])}
+    assert {"CUSTOM_BASE_URL", "CUSTOM_API_KEY", "GPT_RELAY_API_KEY"} <= env_names
 
     config = load_yaml(PROFILE / "config.yaml")
+    config_text = (PROFILE / "config.yaml").read_text(encoding="utf-8")
+    env_text = (PROFILE / ".env.EXAMPLE").read_text(encoding="utf-8")
+    assert "sk-" not in config_text, "config.yaml must not contain raw API keys"
+    assert "sk-" not in env_text, ".env.EXAMPLE must not contain raw API keys"
+    assert config["fallback_providers"][0]["api_key"] == "${CUSTOM_API_KEY}"
     assert config["observability_query"]["supported_environments"] == ["prod", "test"]
     assert set(config["plugins"]["enabled"]) >= {
-        "devops_agent",
         "observability",
         "kubernetes",
     }
     cli_toolsets = set(config["platform_toolsets"]["cli"])
-    assert {"devops_governance", "observability", "kubernetes", "kanban"} <= cli_toolsets
+    assert {"observability", "kubernetes", "kanban"} <= cli_toolsets
+    assert "devops_governance" not in cli_toolsets
     assert config["observability"]["prometheus"]["default_category"] == "intlsms"
     assert config["observability"]["prometheus"]["default_env"] == "prod"
     assert {t["id"] for t in config["observability"]["prometheus"]["targets"]} == {
@@ -121,6 +138,8 @@ def main() -> int:
     soul = (PROFILE / "SOUL.md").read_text(encoding="utf-8")
     assert "Never switch profiles" in soul
     assert "Never execute restart" in soul
+    assert "Do not repeat `kanban_show`, `skill_view`, or `kanban_complete`" in soul
+    assert "site-reliability-engineering" in soul
 
     # 三层分类技能：每个技能存在于 skills/<category>/<name>/SKILL.md 且 frontmatter 含 name/description。
     for category, names in SKILL_CATEGORIES.items():
@@ -130,12 +149,19 @@ def main() -> int:
             meta = load_skill(skill_path)
             assert meta.get("name"), f"skill missing name: {skill_path}"
             assert meta.get("description"), f"skill missing description: {skill_path}"
+    for name in SHARED_SKILLS:
+        skill_path = PROFILE / "skills" / name / "SKILL.md"
+        assert skill_path.exists(), f"missing shared skill: {skill_path}"
+        meta = load_skill(skill_path)
+        assert meta.get("name"), f"shared skill missing name: {skill_path}"
+        assert meta.get("description"), f"shared skill missing description: {skill_path}"
 
-    # 磁盘上的分类目录必须与 SKILL_CATEGORIES 完全一致（无遗漏、无多余、无残留扁平目录）。
+    # 磁盘上的分类目录必须与 SKILL_CATEGORIES + SHARED_SKILLS 完全一致。
     skills_root = PROFILE / "skills"
     on_disk_categories = {p.name for p in skills_root.iterdir() if p.is_dir()}
-    assert on_disk_categories == set(SKILL_CATEGORIES), (
-        f"skills/ 顶层应只含分类目录 {set(SKILL_CATEGORIES)}，实际 {on_disk_categories}"
+    expected_top = set(SKILL_CATEGORIES) | set(SHARED_SKILLS)
+    assert on_disk_categories == expected_top, (
+        f"skills/ 顶层应只含分类目录和共享 skill {expected_top}，实际 {on_disk_categories}"
     )
     for category, names in SKILL_CATEGORIES.items():
         on_disk = {p.name for p in (skills_root / category).iterdir() if p.is_dir()}

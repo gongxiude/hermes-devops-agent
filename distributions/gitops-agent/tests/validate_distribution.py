@@ -45,6 +45,14 @@ SKILL_CATEGORIES = {
     ],
 }
 
+SHARED_SKILLS = [
+    "artifact-pyramids",
+    "platform-engineering",
+    "implementation-planning",
+    "review-methodology",
+    "systematic-debugging",
+]
+
 
 def load_yaml(path: Path) -> dict:
     data = yaml.safe_load(path.read_text(encoding="utf-8"))
@@ -90,22 +98,32 @@ def main() -> int:
             meta = load_skill(skill_path)
             assert meta.get("name"), f"skill missing name: {skill_path}"
             assert meta.get("description"), f"skill missing description: {skill_path}"
+    for name in SHARED_SKILLS:
+        skill_path = ROOT / "skills" / name / "SKILL.md"
+        assert skill_path.exists(), f"missing shared skill: {skill_path}"
+        meta = load_skill(skill_path)
+        assert meta.get("name"), f"shared skill missing name: {skill_path}"
+        assert meta.get("description"), f"shared skill missing description: {skill_path}"
     assert not (ROOT / "skills/devops").exists(), "skills/devops shell must be removed"
     assert not (ROOT / "skills/git-workspace-draft-tool").exists()
 
+    config_text = (ROOT / "config.yaml").read_text(encoding="utf-8")
+    assert "sk-" not in config_text, "config.yaml must not contain raw API keys"
     config = load_yaml(ROOT / "config.yaml")
+    assert config.get("model", {}).get("provider") == "deepseek-relay"
+    assert config.get("agent", {}).get("max_turns") == 24
     assert "terminal" in config.get("toolsets", []), "gitops-agent must enable Hermes terminal toolset"
     assert config.get("terminal", {}).get("cwd") == "${SOFTWARE_DELIVERY_WORKSPACE_ROOT}"
     assert config.get("gitops_agent", {}).get("git_execution") == "terminal_git_command"
 
     mcp_servers = config.get("mcp_servers", {})
     assert "git-workspace" not in mcp_servers, "gitops-agent must not enable git-workspace MCP"
-    assert set(mcp_servers) == {"git-codeup", "argocd"}, "gitops-agent MCP scope must stay explicit"
+    assert set(mcp_servers) == {"git-codeup"}, "gitops-agent MCP scope must stay explicit"
 
     mcp_json = json.loads((ROOT / "mcp.json").read_text(encoding="utf-8"))
     mcp_json_servers = mcp_json.get("mcpServers", {})
     assert "git-workspace" not in mcp_json_servers, "mcp.json must not register git-workspace"
-    assert set(mcp_json_servers) == {"git-codeup", "argocd"}
+    assert set(mcp_json_servers) == {"git-codeup"}
 
     distribution = load_yaml(ROOT / "distribution.yaml")
     env_names = {item["name"] for item in distribution.get("env_requires", [])}
@@ -137,10 +155,15 @@ def main() -> int:
     assert "GIT_WORKSPACE_" not in bundled_text, "gitops-agent must not reference GIT_WORKSPACE_*"
 
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
-    assert "hermes profile install hermes-devops-agent/distributions/gitops-agent" in readme
-    assert "hermes profile alias gitops-agent" in readme
-    assert "gitops-agent chat -q" in readme
-    assert "hermes -p gitops-agent --version" in readme
+    assert "profile install /opt/distributions/gitops-agent" in readme
+    assert "profile update gitops-agent --yes" in readme
+    assert "hermes -p gitops-agent tools --summary list" in readme
+    assert "hermes -p gitops-agent mcp test git-codeup" in readme
+
+    soul = (ROOT / "SOUL.md").read_text(encoding="utf-8")
+    assert "Do not repeat `kanban_show`, `skill_view`, or `kanban_complete`" in soul
+    assert "platform-engineering" in soul
+    assert "implementation-planning" in soul
 
     print("gitops_agent_distribution_ok")
     return 0

@@ -9,6 +9,8 @@ runtime_boundary:
 # 列表必须与 distributions/observability/skills/<category>/<name>/ 目录一一对应，
 # 由 tests/validate_distribution.py 校验。
 allowed_skill_categories:
+  devops:
+    - kanban-worker
   assets:
     - intlsms-inspection
     - intlsms-domain-context

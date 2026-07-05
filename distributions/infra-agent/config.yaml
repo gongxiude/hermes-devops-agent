@@ -4,23 +4,23 @@ display:
 hooks_auto_accept: false
 
 model:
-  provider: gpt-relay
-  model: gpt-5.5
-  default: gpt-5.5
+  provider: deepseek-relay
+  model: deepseek-v4-pro
+  default: deepseek-v4-pro
   api_mode: chat_completions
 
 fallback_providers:
 - provider: custom
   model: deepseek-v4-pro
-  base_url: http://llm-relay.yuexin.domain:33033/v1
-  api_key: sk-a64ySCyDInT1mDFsCAVGZ8AlfRJDyAP8yDPoRbP3aoiwAPN9
+  base_url: "${LLM_RELAY_BASE_URL}"
+  api_key: "${LLM_RELAY_API_KEY}"
   api_mode: chat_completions
 
 
 custom_providers:
 - name: deepseek-relay
-  base_url: http://llm-relay.yuexin.domain:33033/v1
-  api_key: sk-a64ySCyDInT1mDFsCAVGZ8AlfRJDyAP8yDPoRbP3aoiwAPN9
+  base_url: "${LLM_RELAY_BASE_URL}"
+  api_key: "${LLM_RELAY_API_KEY}"
   model: deepseek-v4-pro
   api_mode: chat_completions
   models:
@@ -28,17 +28,19 @@ custom_providers:
       name: deepseek-v4-pro
 
 - name: gpt-relay
-  base_url: http://llm-relay.yuexin.domain:33033/v1
-  api_key: sk-wMLcU1cEOo122R1K7tceOtmw6f9uOvKQxSfMEYC0E29LKdBy
+  base_url: "${LLM_RELAY_BASE_URL}"
+  api_key: "${LLM_RELAY_API_KEY}"
   model: gpt-5.5
   api_mode: chat_completions
   models:
     gpt-5.5:
       name: gpt-5.5
 
+agent:
+  max_turns: 18
+
 plugins:
-  enabled:
-    - devops_agent
+  enabled: []
 
 toolsets:
   - kanban

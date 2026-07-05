@@ -24,27 +24,6 @@
           "codeup_create_change_request"
         ]
       }
-    },
-    "argocd": {
-      "transport": "stdio",
-      "command": "/opt/hermes/.venv/bin/python",
-      "args": [
-        "/opt/mcp-servers/argocd/src/server.py"
-      ],
-      "env": {
-        "MCP_SERVER_NAME": "argocd",
-        "ARGOCD_SERVER": "${ARGOCD_SERVER}",
-        "ARGOCD_TOKEN": "${ARGOCD_TOKEN}",
-        "MCP_LOG_LEVEL": "INFO"
-      },
-      "tools": {
-        "include": [
-          "argocd_get_version",
-          "argocd_list_applications",
-          "argocd_get_application",
-          "argocd_get_recent_syncs"
-        ]
-      }
     }
   }
 }
