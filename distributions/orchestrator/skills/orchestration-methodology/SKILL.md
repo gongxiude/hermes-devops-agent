@@ -1,143 +1,144 @@
 ---
 name: orchestration-methodology
-description: "DevOps/SRE orchestration methodology — decompose operational questions, route to the observability / infra-agent / gitops-agent fleet under autonomy gates, correlate evidence on a timeline, and synthesize into evidence → risk → next human action."
-version: 2.0.0
+description: "DevOps/SRE orchestration methodology — identify the user request, load the matching routing reference, create the right Kanban task, and synthesize specialist results when needed."
+version: 2.1.0
 author: Hermes Agent community
 license: MIT
 metadata:
   hermes:
-    tags: [orchestration, devops, sre, multi-agent, routing, autonomy-gate, synthesis]
+    tags: [orchestration, devops, sre, kanban, routing, synthesis]
 ---
 
 # Orchestration Methodology
 
-分解、路由、合成 —— DevOps/SRE 编排生命周期。
+这个 skill 是 orchestrator 的方法论入口，不是额外的审批门禁。
 
-编排通用骨架驱动一个针对生产系统的证据环路，并受硬性自主性上限约束：
+收到 DevOps/SRE 请求后，按这个顺序执行：
 
-**先取证据，再谈变更；每一跳都带自主性闸门；本舰队止步于 `draft`，`act` 交人工。**
+1. 识别用户请求类型、业务域、服务、环境、时间窗和期望产物。
+2. 读取最相关的 reference，补齐 assignee、body 字段和是否需要 parent 依赖。
+3. 调用 `kanban_create` 创建任务。
+4. 建单后回复用户任务已创建；多任务场景只说明任务关系和等待回传。
 
+orchestrator 不直接查询 Kubernetes、Prometheus、Loki、Jenkins、ArgoCD、Git 或云资源。
+这些证据读取和草稿变更由 specialist profile 完成。
 
-## 编排生命周期（Orchestration Lifecycle）
+## Request Routing
 
+先按意图选择 specialist：
+
+| 用户意图 | assignee | reference |
+|---|---|---|
+| CPU、内存、QPS、延迟、错误率、Pod 状态、日志、服务健康、K8s 只读排障 | `observability` | `references/request-type-routing.md` |
+| Jenkins 构建、镜像构建、发布流水线、ArgoCD、Kustomize、GitOps、仓库配置、K8s YAML、PR/MR 草稿 | `gitops-agent` | `references/request-type-routing.md` |
+| 阿里云资源、网络、集群容量、云资源成本、安全合规、基础设施巡检 | `infra-agent` | `references/request-type-routing.md` |
+
+如果用户只是问服务清单，回答 service catalog，不创建 Kanban task。
+如果用户只给了业务域但没有服务、环境或意图，先要求补充缺失字段。
+如果用户请求已经能推断出 assignee 和期望产物，直接创建 Kanban task。
+
+## Reference Loading
+
+按需读取 reference，不要反复读取同一个 skill：
+
+| 场景 | 读取 |
+|---|---|
+| 单个普通运维查询或交付请求 | `references/request-type-routing.md` |
+| 需要明确 task body、reply_target、parent、fan-out/pipeline 规则 | `references/kanban-task-contract.md` |
+| 多步骤、多 profile、需要拆分依赖 | `references/task-decomposition.md` + `references/kanban-task-contract.md` |
+| 需要把子任务匹配到 specialist 并说明自主性边界 | `references/specialist-routing.md` |
+| 需要合成多个 specialist 结果 | `references/synthesis-patterns.md` |
+| 需要解释 DevOps 事件/变更生命周期 | `references/devops-orchestration-loop.md` |
+
+## Kanban Creation
+
+创建任务时使用 Hermes 原生 `kanban_create`。
+
+普通单任务：
+
+- `assignee`: 根据意图选择 `observability`、`gitops-agent` 或 `infra-agent`
+- `title`: 服务 + 环境 + 对象/动作
+- `body`: plain text `key: value` 行
+- `idempotency_key`: 来源 + 服务/仓库 + 环境 + 请求类型
+
+推荐 body 字段：
+
+```text
+domain: <business domain>
+service: <service or all_services>
+environment: <prod/test/staging>
+cluster: <cluster if known>
+namespace: <namespace if known>
+request_type: <normalized type>
+original_request: <user text>
+reply_target: feishu:<chat id if available>
 ```
-DECOMPOSE（分解）→ ROUTE（路由）→ MONITOR（监控）→ SYNTHESIZE（合成）→ DELIVER（交付）
-     （证据先于动作 · 每一跳都带自主性闸门）
+
+对 GitOps / PR / 仓库配置 类请求，body 还应包含：
+
+```text
+repo: yuexin-infra
+path: workloads/datacenter
+repository_refresh_before_answer: true
+required_action: refresh repository, inspect files, collect readonly runtime evidence if needed, draft changes, validate, commit branch, push, create MR or report blocker
 ```
 
-底层是 DevOps 的 OODA / 事件生命周期环路，详见
-`references/devops-orchestration-loop.md`。
+## Board Tool Selection
 
-## 舰队（The Fleet）
+按意图选择 Kanban 动作：
 
-只路由到这三个真实 profile 及其子专家 —— 不存在 researcher / writer：
+- 新的明确执行/交付请求：优先 `kanban_create`
+- 看板状态、任务状态、调度恢复、失败排查、继续处理已知任务：使用 `kanban_show`、`kanban_list` 或 `kanban_context`
 
-- **observability** — Prometheus/Loki/Grafana/K8s 运行时证据（observe · recommend）
-- **infra-agent** — 阿里云 + K8s 资源（observe · recommend）
-- **gitops-agent** — Jenkins/ArgoCD/Codeup 交付与 MR 起草（observe · recommend · **draft**）
+`kanban_show/list/context` 不是禁用工具；它们只是不作为新执行请求的默认前置步骤。
 
-没有 `act` 层 profile：任何需要 scale/rollback/restart/sync/patch/delete 的步骤
-不可路由，落为 `next human action`。
+## Delivery Boundary
 
-## Hermes / Feishu / Kanban 入口契约
+当前 fleet 只有三个 specialist profile：
 
-Feishu gateway 进入 orchestrator 后，orchestrator 只负责创建 Kanban task、监控任务状态、
-读取专家结果并交付合成结果。不要在 orchestrator 会话里直接查询生产系统。
+- `observability`: observe / recommend
+- `infra-agent`: observe / recommend
+- `gitops-agent`: observe / recommend / draft
 
-### Mandatory Routing Fast Path
+直接生产动作不在 orchestrator 内执行，包括 scale、restart、rollback、ArgoCD sync、kubectl apply/delete、
+Jenkins 发布触发和生产配置直接修改。这类请求应创建草稿、证据或人工下一步，而不是执行动作。
 
-For a single ordinary DevOps query, routing is already decided only when
-SOUL.md has classified the current user message as `specific_ops_query` or
-`all_services_ops_query` and selected the specialist profile by intent. After
-loading this skill for that case, the next tool call MUST be `kanban_create`.
+## Examples
 
-This fast path does not apply to `catalog_query` or `domain_only_ops_query`.
-If the latest user message asks which services a business domain contains, or
-only names a business domain without a specific service / metric / time window,
-do not call `kanban_create`; answer from the already loaded service catalog or
-ask for the missing routing fields.
+用户请求：
 
-Do not default every concrete request to `observability`. Choose the assignee by
-intent:
+```text
+yuexin-infra/workloads/datacenter 下所有服务缺少 svc 和 ingress，
+连接 datacenter 测试 K8s 补充资源并创建 PR
+```
 
-- runtime metrics, logs, pod status, health, K8s readonly diagnosis -> `observability`
-- Jenkins, image build, release pipeline, ArgoCD, Kustomize, GitOps config -> `gitops-agent`
-- GitOps repository edits, Kubernetes YAML generation, svc/ingress backfill, and PR/MR drafting -> `gitops-agent`
-- Alicloud resources, network, cluster capacity, cloud cost, security/compliance -> `infra-agent`
+动作：
 
-This skill MUST NOT be loaded repeatedly for the same user request. If the
-previous tool call already loaded `orchestration-methodology`, do not call
-`skill_view` again. For `specific_ops_query`, the next tool call must be
-`kanban_create`, or a single clarifying response if a required field is
-genuinely missing.
+- 读取 `references/request-type-routing.md`
+- 如需 parent/fan-out，读取 `references/kanban-task-contract.md`
+- 创建 exactly one `gitops-agent` task
+- body 写明 `repo: yuexin-infra`、`path: workloads/datacenter`、`environment: test`、
+  `repository_refresh_before_answer: true` 和 PR/MR 草稿要求
 
-Do not answer with recognized parameters only.
-Do not answer with "recommended next step".
-Do not ask for confirmation when service, environment, time window, and metric/log intent are inferable.
-Do not spend tool budget on unrelated inspection before creating the task.
-Use intent-based Kanban routing: for an explicit execution or delivery request,
-create the task directly when the assignee and requested outcome are inferable.
-Use `kanban_show`, `kanban_list`, or `kanban_context` for board status, task
-status, dispatcher recovery, failure diagnosis, or continuation of a known task;
-they are not the default preflight for a new execution request.
+用户请求：
 
-For a single ordinary DevOps query, call `kanban_create` to create exactly one Kanban task:
+```text
+查看国际短信生产环境 gateway 最近 10 分钟 CPU 和内存
+```
 
-- assignee: selected specialist profile by intent
-- title: concise service + environment + window + metric intent
-- idempotency_key: stable key from source, service, environment, window, request type
-- body: plain text `key: value` lines, not JSON
-- required body fields: `service`, `environment`, `request_type`, `window`, `original_request`, `reply_target: feishu:<feishu chat id>`
+动作：
 
-`reply_target:` is the Feishu notify contract. Child or intermediate tasks must omit
-`reply_target:` or set `notify_user: false` unless the task is the single user-facing result.
-Never use placeholders such as `current_conversation`, `<current chat>`, or `<当前会话>` as `reply_target`.
+- 创建 exactly one `observability` task
+- body 写明 `domain: intlsms`、`service: gateway`、`environment: production`、
+  `window: last_10_minutes`、`request_type: metrics_cpu_memory`
 
-Delivery note (Hermes >= 0.17): the gateway natively auto-subscribes the originating
-Feishu chat when you call `kanban_create` from the session (`auto_subscribe_on_create`,
-default true), so the completed worker result is pushed back to Feishu **as long as the
-task is created**. The single failure mode you control is *not creating the task*. Reply
-delivery is not your job — creating the task is. `reply_target:` is a redundant, harmless
-hint on this version; do not let uncertainty about the chat id stop you from calling
-`kanban_create`.
+用户请求：
 
-Chinese ops parsing:
+```text
+当前 running 的看板为什么为空
+```
 
-- `生产环境`, `线上`, `prod` => `environment: production`
-- `国际短信` => `domain: intlsms`
-- `近10分钟`, `最近10分钟` => `window: last_10_minutes`
-- `CPU和内存`, `内存和CPU` => `request_type: metrics_cpu_memory`
-- `日志`, `报错日志`, `error日志` => `request_type: logs`
-- `状态`, `健康`, `是否正常` => `request_type: health_check`
+动作：
 
-Example user request:
-
-`查看国际短信生产环境gateway服务近10分钟的内存和CPU`
-
-Correct action:
-
-- tool: `kanban_create`
-- assignee: `observability`
-- title: `国际短信 gateway production last_10_minutes CPU和内存`
-- body:
-  `service: gateway`
-  `domain: intlsms`
-  `environment: production`
-  `request_type: metrics_cpu_memory`
-  `window: last_10_minutes`
-  `original_request: 查看国际短信生产环境gateway服务近10分钟的内存和CPU`
-  `reply_target: feishu:<current Feishu chat id>`
-
-Do not call kubectl from orchestrator.
-Do not call Prometheus from orchestrator.
-Do not call Loki, Git, Jenkins, ArgoCD, or Kubernetes tools from orchestrator.
-Route those reads to the specialist profile that owns the evidence source.
-
-## 参考文件（Reference Files）
-
-| 参考文件 | 何时加载 |
-|-----------|-------------|
-| `references/task-decomposition.md` | 你需要将复杂的运维问题分解成适合专家处理的子任务。 |
-| `references/specialist-routing.md` | 你需要将子任务匹配到 observability/infra-agent/gitops-agent 并确定自主性闸门。 |
-| `references/synthesis-patterns.md` | 你需要将多源证据在时间线上关联，合成为 evidence → risk → next human action。 |
-| `references/devops-orchestration-loop.md` | 你需要 DevOps 专属的编排环路：OODA、事件生命周期、变更生命周期、自主性分层。 |
+- 使用 `kanban_list` / `kanban_show` / `kanban_context` 排查
+- 不创建新的业务执行任务，除非用户明确要求继续处理某个任务
