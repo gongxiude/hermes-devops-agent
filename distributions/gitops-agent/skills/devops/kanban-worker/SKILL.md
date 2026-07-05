@@ -46,12 +46,29 @@ If the required repository cannot be refreshed, call `kanban_block` and include 
 
 For tasks like changing `MINUTE_STATS_TEMP_TABLE_REFRESH_SECONDS`:
 
-1. Refresh `yuexin-infra` first.
-2. Locate the final effective config for the requested service and environment.
-3. Create an isolated task worktree before editing.
-4. Modify only the requested field.
-5. Run repository validators.
-6. Commit and push a branch, then create or prepare a Codeup change request.
-7. Call `kanban_complete` with branch, changed file, validation result, and MR link or exact MR creation blocker.
+1. Call `kanban_show` once, then stop reading the card.
+2. Do not call `skill_view` for the known `billing-system-backend` test env change unless the file search fails.
+3. Refresh `yuexin-infra` first:
+
+```bash
+cd "${SOFTWARE_DELIVERY_WORKSPACE_ROOT}"
+test -d yuexin-infra/.git || git clone "$GITOPS_YUEXIN_INFRA_REMOTE" yuexin-infra
+git -C yuexin-infra fetch --prune origin
+git -C yuexin-infra pull --ff-only origin "$GITOPS_YUEXIN_INFRA_BRANCH"
+```
+
+4. Locate the key with:
+
+```bash
+git -C "${SOFTWARE_DELIVERY_WORKSPACE_ROOT}/yuexin-infra" grep -n "MINUTE_STATS_TEMP_TABLE_REFRESH_SECONDS" -- workloads/intlsms/billing-system-backend
+```
+
+5. For `billing-system-backend` test, edit only `workloads/intlsms/billing-system-backend/test/resources/env.tpl`.
+6. Use branch `hermes/gitops-agent/<task_id>-billing-minute-refresh-300`.
+7. If the remote branch already exists, check it out or clone it into a task worktree, verify the file already contains `MINUTE_STATS_TEMP_TABLE_REFRESH_SECONDS=300`, then create or reuse the Codeup change request.
+8. If the branch does not exist, create an isolated task worktree before editing.
+9. Run repository validators.
+10. Commit and push the branch, then create or prepare a Codeup change request.
+11. Call `kanban_complete` with branch, changed file, commit, validation result, and MR link or exact MR creation blocker.
 
 If the config path cannot be found after one search pass, call `kanban_block` with searched paths and the missing key.

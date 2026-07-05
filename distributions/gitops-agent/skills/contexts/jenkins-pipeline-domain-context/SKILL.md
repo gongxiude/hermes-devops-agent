@@ -20,7 +20,7 @@ Provide repository context for `jenkins-pipeline`. This context does not grant J
 `gitops-agent` uses:
 
 ```text
-/Users/gongxiude/.hermes/profiles/gitops-agent/workspace/jenkins-pipeline
+${SOFTWARE_DELIVERY_WORKSPACE_ROOT}/jenkins-pipeline
 ```
 
 ## Common Paths

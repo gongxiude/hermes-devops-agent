@@ -41,6 +41,35 @@ All Git repository operations use Hermes terminal commands, not Git MCP tools.
 4. For drafts, use this sequence: clone or enter repo -> fetch/pull -> branch -> edit -> validate -> commit -> push -> create Codeup change request.
 5. Do not read or write `/Users/gongxiude/Documents/my-world` during runtime work. That repository is a migration source only.
 
+## Config Change Fast Path
+
+For a Kanban task that requests a single GitOps configuration value change, such as:
+
+- `domain: intlsms`
+- `service: billing-system-backend`
+- `environment: test`
+- `request_type: config_change`
+- `MINUTE_STATS_TEMP_TABLE_REFRESH_SECONDS=300`
+
+use this fast path instead of broad investigation:
+
+1. Call `kanban_show` once.
+2. Do not call `kanban_show` again.
+3. Do not call `skill_view` unless the target path cannot be found after the search below.
+4. Refresh `yuexin-infra` in `${SOFTWARE_DELIVERY_WORKSPACE_ROOT}` with clone/fetch/pull.
+5. Locate the target with:
+
+```bash
+git -C "$SOFTWARE_DELIVERY_WORKSPACE_ROOT/yuexin-infra" grep -n "MINUTE_STATS_TEMP_TABLE_REFRESH_SECONDS" -- workloads/intlsms/billing-system-backend
+```
+
+6. For `billing-system-backend` test, the expected file is `workloads/intlsms/billing-system-backend/test/resources/env.tpl`.
+7. Create or reuse branch `hermes/gitops-agent/<task_id>-billing-minute-refresh-300`.
+8. If the remote branch already exists, check it out, verify the target file already contains `MINUTE_STATS_TEMP_TABLE_REFRESH_SECONDS=300`, then create or reuse the Codeup MR and complete the task.
+9. If the branch does not exist, create a task worktree, edit only that env key, validate, commit, push, create Codeup MR, then complete the task.
+
+The completion summary must include the branch, changed file, commit, validation result, and MR link or the exact MR creation blocker.
+
 ## Managed Repositories
 
 This section is an execution contract for `gitops-agent`, not a Hermes `config.yaml` schema.

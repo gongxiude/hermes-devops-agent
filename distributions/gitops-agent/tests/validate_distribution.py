@@ -208,12 +208,24 @@ def main() -> int:
     assert "Every Kanban worker run must call exactly one terminal Kanban tool" in soul
     assert "`kanban_complete` for success or `kanban_block` for a blocked result" in soul
     assert "A prose summary without `kanban_complete` or `kanban_block` is a protocol violation" in soul
+    assert "Config Change Fast Path" in soul
+    assert "hermes/gitops-agent/<task_id>-billing-minute-refresh-300" in soul
+    assert "If the remote branch already exists" in soul
 
     kanban_worker = (ROOT / "skills/devops/kanban-worker/SKILL.md").read_text(encoding="utf-8")
     assert "Call `kanban_show` at most once" in kanban_worker
     assert "never call `skill_view(\"kanban-worker\")` again" in kanban_worker
     assert "call exactly one terminal Kanban tool" in kanban_worker
     assert "MINUTE_STATS_TEMP_TABLE_REFRESH_SECONDS" in kanban_worker
+    assert "billing-system-backend/test/resources/env.tpl" in kanban_worker
+    assert "If the remote branch already exists" in kanban_worker
+
+    assert "${SOFTWARE_DELIVERY_WORKSPACE_ROOT}/yuexin-infra" in (
+        ROOT / "skills/contexts/yuexin-infra-domain-context/SKILL.md"
+    ).read_text(encoding="utf-8")
+    assert "${SOFTWARE_DELIVERY_WORKSPACE_ROOT}/jenkins-pipeline" in (
+        ROOT / "skills/contexts/jenkins-pipeline-domain-context/SKILL.md"
+    ).read_text(encoding="utf-8")
 
     print("gitops_agent_distribution_ok")
     return 0

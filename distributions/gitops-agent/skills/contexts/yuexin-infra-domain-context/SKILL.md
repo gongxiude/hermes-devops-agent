@@ -20,7 +20,7 @@ Provide repository context for `yuexin-infra`. This context does not grant tool 
 `gitops-agent` uses:
 
 ```text
-/Users/gongxiude/.hermes/profiles/gitops-agent/workspace/yuexin-infra
+${SOFTWARE_DELIVERY_WORKSPACE_ROOT}/yuexin-infra
 ```
 
 `/Users/gongxiude/Documents/my-world` is historical source material only and must not be treated as runtime workspace.
