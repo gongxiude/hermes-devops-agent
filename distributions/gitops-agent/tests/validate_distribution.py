@@ -154,8 +154,8 @@ def main() -> int:
     config_text = (ROOT / "config.yaml").read_text(encoding="utf-8")
     assert "sk-" not in config_text, "config.yaml must not contain raw API keys"
     config = load_yaml(ROOT / "config.yaml")
-    assert config.get("model", {}).get("provider") == "gpt-relay"
-    assert config.get("model", {}).get("model") == "gpt-5.5"
+    assert config.get("model", {}).get("provider") == "deepseek-relay"
+    assert config.get("model", {}).get("model") == "deepseek-v4-pro"
     assert config["fallback_providers"][0]["api_key"] == "${DEEPSEEK_RELAY_API_KEY}"
     providers = {item["name"]: item for item in config.get("custom_providers", [])}
     assert providers["deepseek-relay"]["api_key"] == "${DEEPSEEK_RELAY_API_KEY}"

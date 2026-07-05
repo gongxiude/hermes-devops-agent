@@ -21,7 +21,7 @@ Kubernetes 中的观测 specialist profile。profile name 固定为 `observabili
 | gateway | 不需要，当前 stopped | `hermes profile list` 显示 `observability` gateway stopped |
 | MCP 发现 | 成功 | `loki-intlsms-prod` 发现 5 个工具 |
 | Loki health | 成功 | `loki_backend_health` 返回成功 |
-| toolsets | 成功 | `observability`、`kubernetes`、`devops_governance` plugin toolsets enabled |
+| toolsets | 成功 | `observability`、`kubernetes` plugin toolsets enabled |
 
 ## 安装和更新
 

@@ -13,7 +13,7 @@ KEPT_DISTRIBUTIONS = [
     "observability",
     "infra-agent",
     "gitops-agent",
-    "devops-orchestrator",
+    "orchestrator",
 ]
 
 
@@ -37,22 +37,21 @@ def main() -> int:
         ROOT / "mcp-servers/aliyun",
         ROOT / "mcp-servers/jenkins",
         ROOT / "mcp-servers/cmdb",
-        ROOT / "plugins/devops_agent",
+        ROOT / "skills",
         ROOT / "tests",
     ]
     required_dirs += [ROOT / "distributions" / d for d in KEPT_DISTRIBUTIONS]
     for path in required_dirs:
         assert path.exists(), f"missing repo path: {path}"
 
-    # 中央 skills/ 已退役:每个 distribution 自带 skills/,不应再有仓库级 skills/ 源。
-    assert not (ROOT / "skills").exists(), "central skills/ must be retired (distributions are self-contained)"
+    # 共享方法论 skills 统一放在仓库级 skills/，distribution 仍保留自身运行时 skills/。
+    shared_skills = sorted((ROOT / "skills").glob("*/SKILL.md"))
+    assert shared_skills, "repo-level skills/ must contain shared methodology skills"
 
     required_files = [
         ROOT / "README.md",
         ROOT / "docs/implementation/observability-intlsms-runtime-inspection.md",
         ROOT / "docs/research/official-basis.md",
-        ROOT / "plugins/devops_agent/plugin.yaml",
-        ROOT / "plugins/devops_agent/README.md",
         ROOT / "mcp-servers/prometheus/src/server.py",
         ROOT / "mcp-servers/k8s/src/server.py",
         ROOT / "mcp-servers/loki/src/server.py",
