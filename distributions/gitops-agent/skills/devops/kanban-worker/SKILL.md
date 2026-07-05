@@ -113,7 +113,8 @@ printf 'BRANCH=%s\nCOMMIT=%s\nFILE=%s\nVALIDATION=grep target value ok; git push
 
 4. After the terminal block succeeds, use `git-codeup:codeup_create_change_request`
    for repository `yuexin-infra`, source branch from `BRANCH`, target branch
-   from `GITOPS_YUEXIN_INFRA_BRANCH`, and title
+   from `GITOPS_YUEXIN_INFRA_BRANCH`, `repository_id=6390496`,
+   `source_project_id=6390496`, `target_project_id=6390496`, and title
    `fix(intlsms): update billing minute refresh in test`.
 5. If Codeup says the change request already exists, list or get the existing
    change request and reuse its link.

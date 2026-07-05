@@ -214,6 +214,8 @@ def main() -> int:
     assert "single execution block" in soul
     assert "Do not create a todo list" in soul
     assert "codeup_create_change_request" in soul
+    assert "repository_id=6390496" in soul
+    assert "source_project_id=6390496" in soul
 
     kanban_worker = (ROOT / "skills/devops/kanban-worker/SKILL.md").read_text(encoding="utf-8")
     assert "Call `kanban_show` at most once" in kanban_worker
@@ -225,6 +227,8 @@ def main() -> int:
     assert "single terminal block" in kanban_worker
     assert "Do not create a todo list" in kanban_worker
     assert "codeup_create_change_request" in kanban_worker
+    assert "repository_id=6390496" in kanban_worker
+    assert "source_project_id=6390496" in kanban_worker
 
     assert "${SOFTWARE_DELIVERY_WORKSPACE_ROOT}/yuexin-infra" in (
         ROOT / "skills/contexts/yuexin-infra-domain-context/SKILL.md"

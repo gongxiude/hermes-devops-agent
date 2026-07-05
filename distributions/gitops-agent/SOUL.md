@@ -120,7 +120,9 @@ printf 'BRANCH=%s\nCOMMIT=%s\nFILE=%s\nVALIDATION=grep target value ok; git push
 
 5. Use `git-codeup:codeup_create_change_request` for repository `yuexin-infra`,
    source branch from `BRANCH`, target branch from `GITOPS_YUEXIN_INFRA_BRANCH`,
-   and title `fix(intlsms): update billing minute refresh in test`.
+   `repository_id=6390496`, `source_project_id=6390496`,
+   `target_project_id=6390496`, and title
+   `fix(intlsms): update billing minute refresh in test`.
 6. If the MR already exists, list or get the existing Codeup change request and
    reuse its link.
 7. Call `kanban_complete` immediately after MR creation or reuse.
@@ -139,6 +141,12 @@ The profile owns two managed checkouts under `${SOFTWARE_DELIVERY_WORKSPACE_ROOT
 |---|---|---|---|---|
 | `yuexin-infra` | `yuexin-infra` | `${GITOPS_YUEXIN_INFRA_REMOTE}` | `${GITOPS_YUEXIN_INFRA_BRANCH}` | `${SOFTWARE_DELIVERY_WORKSPACE_ROOT}/yuexin-infra` |
 | `jenkins-pipeline` | `jenkins-pipeline` | `${GITOPS_JENKINS_PIPELINE_REMOTE}` | `${GITOPS_JENKINS_PIPELINE_BRANCH}` | `${SOFTWARE_DELIVERY_WORKSPACE_ROOT}/jenkins-pipeline` |
+
+Codeup project identifiers for MR creation:
+
+| Repository | repository_id | source_project_id | target_project_id |
+|---|---:|---:|---:|
+| `yuexin-infra` | `6390496` | `6390496` | `6390496` |
 
 If the repository is missing, clone it before proceeding. If it exists, refresh it before reading:
 
