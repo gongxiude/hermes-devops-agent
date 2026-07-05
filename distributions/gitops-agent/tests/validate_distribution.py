@@ -170,6 +170,8 @@ def main() -> int:
     assert set(mcp_servers) == {"git-codeup", "jenkins"}, "gitops-agent MCP scope must stay explicit"
     jenkins = mcp_servers["jenkins"]
     assert jenkins.get("transport") == "streamable_http"
+    assert jenkins.get("sampling", {}).get("enabled") is False
+    assert jenkins.get("elicitation", {}).get("enabled") is False
     assert jenkins.get("url") == "${JENKINS_MCP_URL}"
     assert jenkins.get("headers", {}).get("Authorization") == "${JENKINS_MCP_AUTHORIZATION}"
     jenkins_tools = set(jenkins.get("tools", {}).get("include", []))
@@ -182,6 +184,8 @@ def main() -> int:
     assert set(mcp_json_servers) == {"git-codeup", "jenkins"}
     mcp_json_jenkins = mcp_json_servers["jenkins"]
     assert mcp_json_jenkins.get("transport") == "streamable_http"
+    assert mcp_json_jenkins.get("sampling", {}).get("enabled") is False
+    assert mcp_json_jenkins.get("elicitation", {}).get("enabled") is False
     assert mcp_json_jenkins.get("url") == "${JENKINS_MCP_URL}"
     assert mcp_json_jenkins.get("headers", {}).get("Authorization") == "${JENKINS_MCP_AUTHORIZATION}"
     assert set(mcp_json_jenkins.get("tools", {}).get("include", [])) == JENKINS_READONLY_TOOLS

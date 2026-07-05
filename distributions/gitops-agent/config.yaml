@@ -76,6 +76,10 @@ mcp_servers:
         - codeup_create_change_request
   jenkins:
     transport: streamable_http
+    sampling:
+      enabled: false
+    elicitation:
+      enabled: false
     url: "${JENKINS_MCP_URL}"
     headers:
       Authorization: "${JENKINS_MCP_AUTHORIZATION}"
