@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 import yaml
@@ -51,13 +52,49 @@ SHARED_SKILLS = [
     "implementation-planning",
     "review-methodology",
     "systematic-debugging",
+    "gitops-change-workflow",
+    "kubernetes-workload-workflow",
+    "jenkins-workflow",
+    "release-review-workflow",
+    "delivery-debugging-workflow",
+    "service-catalog-intlsms",
+    "service-catalog-datacenter",
+    "service-catalog-platform",
+    "yuexin-infra-domain-context",
 ]
+
+REQUIRED_ENTRY_WORKFLOWS = [
+    "gitops-change-workflow",
+    "kubernetes-workload-workflow",
+    "jenkins-workflow",
+    "release-review-workflow",
+    "delivery-debugging-workflow",
+]
+
+REQUIRED_CONTEXT_SKILLS = [
+    "service-catalog-intlsms",
+    "service-catalog-datacenter",
+    "service-catalog-platform",
+    "yuexin-infra-domain-context",
+]
+
+FORBIDDEN_DISTRIBUTION_FILES = {
+    "auth.json",
+    ".env",
+    "memories.jsonl",
+    "sessions.jsonl",
+    "state.db",
+}
+
+FORBIDDEN_DISTRIBUTION_DIRS = {
+    "logs",
+    "cache",
+    "workspace",
+    "plans",
+    "state",
+}
 
 TOP_LEVEL_SKILLS = [
-]
-
-DEVOPS_SKILLS = [
-    "kanban-worker",
 ]
 
 JENKINS_READONLY_TOOLS = {
@@ -101,6 +138,16 @@ def load_skill(path: Path) -> dict:
     return data
 
 
+def assert_skill_frontmatter(path: Path) -> None:
+    text = path.read_text(encoding="utf-8")
+    assert text.startswith("---\n"), f"skill must start with YAML frontmatter: {path}"
+    match = re.match(r"---\n(.*?)\n---\n", text, re.S)
+    assert match, f"skill frontmatter is not closed: {path}"
+    frontmatter = match.group(1)
+    assert re.search(r"^name:\s*.+$", frontmatter, re.M), f"skill frontmatter missing name: {path}"
+    assert re.search(r"^description:\s*.+$", frontmatter, re.M), f"skill frontmatter missing description: {path}"
+
+
 def main() -> int:
     core_files = [
         ROOT / "distribution.yaml",
@@ -118,6 +165,12 @@ def main() -> int:
     ]
     for path in core_files:
         assert path.exists(), f"missing gitops-agent file: {path}"
+    for name in FORBIDDEN_DISTRIBUTION_FILES:
+        assert not (ROOT / name).exists(), f"runtime/user file must not be packaged in distribution: {name}"
+    for name in FORBIDDEN_DISTRIBUTION_DIRS:
+        assert not (ROOT / name).exists(), f"runtime/user directory must not be packaged in distribution: {name}"
+    symlinks = [path for path in (ROOT / "skills").rglob("*") if path.is_symlink()]
+    assert not symlinks, f"distribution skills must be physical directories/files, not symlinks: {symlinks}"
 
     # 自包含技能按分类目录存在且 frontmatter 含 name/description。
     for category, names in SKILL_CATEGORIES.items():
@@ -130,6 +183,7 @@ def main() -> int:
     for name in SHARED_SKILLS:
         skill_path = ROOT / "skills" / name / "SKILL.md"
         assert skill_path.exists(), f"missing shared skill: {skill_path}"
+        assert_skill_frontmatter(skill_path)
         meta = load_skill(skill_path)
         assert meta.get("name"), f"shared skill missing name: {skill_path}"
         assert meta.get("description"), f"shared skill missing description: {skill_path}"
@@ -140,15 +194,7 @@ def main() -> int:
         assert meta.get("name") == name, f"top-level skill name mismatch: {skill_path}"
         assert meta.get("description"), f"top-level skill missing description: {skill_path}"
     devops_root = ROOT / "skills/devops"
-    assert devops_root.exists(), "skills/devops must contain the gitops kanban-worker guardrail"
-    on_disk_devops = {p.name for p in devops_root.iterdir() if p.is_dir()}
-    assert on_disk_devops == set(DEVOPS_SKILLS), f"unexpected devops skills: {on_disk_devops}"
-    for name in DEVOPS_SKILLS:
-        skill_path = devops_root / name / "SKILL.md"
-        assert skill_path.exists(), f"missing devops skill: {skill_path}"
-        meta = load_skill(skill_path)
-        assert meta.get("name") == name, f"devops skill name mismatch: {skill_path}"
-        assert meta.get("description"), f"devops skill missing description: {skill_path}"
+    assert not devops_root.exists(), "gitops-agent must not package internal Kanban/devops worker skills"
     assert not (ROOT / "skills/git-workspace-draft-tool").exists()
 
     config_text = (ROOT / "config.yaml").read_text(encoding="utf-8")
@@ -204,6 +250,10 @@ def main() -> int:
     assert profile["runtime_boundary"]["workspace_env"] == "SOFTWARE_DELIVERY_WORKSPACE_ROOT"
     assert "my-world" in profile["runtime_boundary"]["previous_workspace_forbidden"]
     assert "git-command-workflow" in profile["allowed_skill_categories"]["tool_contracts"]
+    for skill in REQUIRED_ENTRY_WORKFLOWS:
+        assert skill in profile["allowed_skill_categories"]["workflows"]
+    for skill in REQUIRED_CONTEXT_SKILLS:
+        assert skill in profile["allowed_skill_categories"]["contexts"]
     assert "git-workspace-draft-tool" not in str(profile)
     assert "jenkins" in profile.get("mcp_servers", [])
     assert "git-workspace" not in profile.get("mcp_servers", [])
@@ -248,41 +298,23 @@ def main() -> int:
     assert "GITOPS_JENKINS_PIPELINE_REMOTE" in readme
 
     soul = (ROOT / "SOUL.md").read_text(encoding="utf-8")
-    assert "Do not repeat `kanban_show`, `skill_view`, `kanban_complete`, or `kanban_block`" in soul
-    assert "platform-engineering" in soul
-    assert "implementation-planning" in soul
+    assert "Mandatory Skill Routing" in soul
+    for skill in REQUIRED_ENTRY_WORKFLOWS:
+        assert skill in soul, f"SOUL.md does not reference required entry workflow: {skill}"
+    assert "GitOps Completion Hard Gates" in soul
+    assert "no `svc.yaml` exists under `workloads/datacenter/*/test/`" in soul
     assert "Before answering any request about `yuexin-infra` or `jenkins-pipeline`" in soul
     assert "git pull --ff-only origin <branch>" in soul
     assert "worktree add" in soul
     assert "not a Hermes `config.yaml` schema" in soul
     assert "GITOPS_YUEXIN_INFRA_REMOTE" in soul
     assert "GITOPS_JENKINS_PIPELINE_REMOTE" in soul
-    assert "Every Kanban worker run must call exactly one terminal Kanban tool" in soul
-    assert "`kanban_complete` for success or `kanban_block` for a blocked result" in soul
-    assert "A prose summary without `kanban_complete` or `kanban_block` is a protocol violation" in soul
-    assert "Config Change Fast Path" in soul
-    assert "branch=\"hermes/gitops-agent/${task_id}-billing-minute-refresh-300\"" in soul
-    assert "ls-remote --exit-code --heads origin \"$branch\"" in soul
-    assert "single execution block" in soul
-    assert "Do not create a todo list" in soul
-    assert "codeup_create_change_request" in soul
-    assert "repository_id=6390496" in soul
-    assert "source_project_id=6390496" in soul
+    assert "Use Codeup MCP for repository and change request metadata" in soul
+    assert "| `yuexin-infra` | `6390496` | `6390496` | `6390496` |" in soul
     assert "Use Jenkins MCP only for read-only Jenkins evidence" in soul
     assert "Do not use Jenkins MCP `triggerBuild` or `updateBuild`" in soul
-
-    kanban_worker = (ROOT / "skills/devops/kanban-worker/SKILL.md").read_text(encoding="utf-8")
-    assert "Call `kanban_show` at most once" in kanban_worker
-    assert "never call `skill_view(\"kanban-worker\")` again" in kanban_worker
-    assert "call exactly one terminal Kanban tool" in kanban_worker
-    assert "MINUTE_STATS_TEMP_TABLE_REFRESH_SECONDS" in kanban_worker
-    assert "billing-system-backend/test/resources/env.tpl" in kanban_worker
-    assert "ls-remote --exit-code --heads origin \"$branch\"" in kanban_worker
-    assert "single terminal block" in kanban_worker
-    assert "Do not create a todo list" in kanban_worker
-    assert "codeup_create_change_request" in kanban_worker
-    assert "repository_id=6390496" in kanban_worker
-    assert "source_project_id=6390496" in kanban_worker
+    for forbidden in ["api_key:", "sk-", "kubectl apply", "argocd app sync", "Kanban", "kanban_"]:
+        assert forbidden not in soul, f"SOUL.md contains forbidden operational detail or secret marker: {forbidden}"
 
     jenkins_contract = (ROOT / "skills/tool_contracts/jenkins-readonly-tool/SKILL.md").read_text(encoding="utf-8")
     for tool in JENKINS_READONLY_TOOLS:
@@ -293,6 +325,10 @@ def main() -> int:
     assert "${SOFTWARE_DELIVERY_WORKSPACE_ROOT}/yuexin-infra" in (
         ROOT / "skills/contexts/yuexin-infra-domain-context/SKILL.md"
     ).read_text(encoding="utf-8")
+    domain_context = (ROOT / "skills/yuexin-infra-domain-context/SKILL.md").read_text(encoding="utf-8")
+    assert "禁止创建 `svc.yaml`" in domain_context or "Do not create `svc.yaml`" in domain_context
+    assert "namespace |" in domain_context
+    assert "`datacenter` | `test` | `test-aliyun-zjk-datacenter` | `test`" in domain_context
     assert "${SOFTWARE_DELIVERY_WORKSPACE_ROOT}/jenkins-pipeline" in (
         ROOT / "skills/contexts/jenkins-pipeline-domain-context/SKILL.md"
     ).read_text(encoding="utf-8")

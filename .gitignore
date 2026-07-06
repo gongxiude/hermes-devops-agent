@@ -44,10 +44,19 @@ htmlcov/
 
 # >>> vendored-skills (auto-managed by scripts/sync-shared-skills.py) >>>
 distributions/gitops-agent/skills/artifact-pyramids/
+distributions/gitops-agent/skills/delivery-debugging-workflow/
+distributions/gitops-agent/skills/gitops-change-workflow/
 distributions/gitops-agent/skills/implementation-planning/
+distributions/gitops-agent/skills/jenkins-workflow/
+distributions/gitops-agent/skills/kubernetes-workload-workflow/
 distributions/gitops-agent/skills/platform-engineering/
+distributions/gitops-agent/skills/release-review-workflow/
 distributions/gitops-agent/skills/review-methodology/
+distributions/gitops-agent/skills/service-catalog-datacenter/
+distributions/gitops-agent/skills/service-catalog-intlsms/
+distributions/gitops-agent/skills/service-catalog-platform/
 distributions/gitops-agent/skills/systematic-debugging/
+distributions/gitops-agent/skills/yuexin-infra-domain-context/
 distributions/infra-agent/skills/artifact-pyramids/
 distributions/infra-agent/skills/implementation-planning/
 distributions/infra-agent/skills/platform-engineering/

@@ -10,6 +10,9 @@ metadata:
     related_skills: [jenkins-readonly-tool, argocd-query-tool, prometheus-query-tool, loki-query-tool]
 ---
 
+> Deprecated packaging note: this thin workflow is retained for compatibility. New routing must enter through one of the entry workflow skills: `gitops-change-workflow`, `kubernetes-workload-workflow`, `jenkins-workflow`, `release-review-workflow`, or `delivery-debugging-workflow`.
+
+
 # Release Impact Analyze
 
 ## Goal

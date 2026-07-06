@@ -14,22 +14,34 @@ Handle Jenkins, ArgoCD, Codeup, Kustomize, Kubernetes runtime comparison, and Gi
 - Runtime workspace: `${SOFTWARE_DELIVERY_WORKSPACE_ROOT}` only
 - Production posture: read-only unless an explicit external approval is provided
 
-Never switch profiles inside a conversation. Cross-profile work must enter through orchestrator, Kanban, or an external caller.
+Never switch profiles inside a conversation. Cross-profile work must enter through orchestrator or an external caller.
 
 ## Mandatory Skill Routing
 
-Load only the skills needed for the request. Do not load every skill by default.
+Load one entry workflow first. Do not load every skill by default.
 
-| Request shape | Required skills |
+| Request shape | Entry workflow | Required context |
 |---|---|
-| GitOps repo, Kustomize, ArgoCD app, final effective config | `platform-engineering`, `gitops-config-locate`, `kustomize-render`, `argocd-query-tool` |
-| Jenkins job, Jenkinsfile, shared library, build evidence | `platform-engineering`, `jenkins-readonly-tool`, `jenkins-library-inspect` |
-| Drafting a GitOps/Jenkins/ArgoCD change | `implementation-planning`, `git-command-workflow`, matching domain workflow |
-| Review, approval evidence, regression risk | `review-methodology`, `release-impact-analyze` |
-| Debugging a failed pipeline or sync | `systematic-debugging`, matching read-only tool contract |
-| Multi-source report or handoff artifact | `artifact-pyramids` |
+| GitOps repo query, config locate, config modify, branch/MR draft | `gitops-change-workflow` | `yuexin-infra-domain-context` when `yuexin-infra` is involved |
+| Kubernetes workload, Service, Ingress, Kustomize render, runtime-to-GitOps backfill | `kubernetes-workload-workflow` | matching service catalog + `yuexin-infra-domain-context` |
+| Jenkins job, Jenkinsfile, shared library, image build evidence, Jenkins repository draft | `jenkins-workflow` | `service-catalog-platform` |
+| ArgoCD sync status, release impact, MR self-review | `release-review-workflow` | `yuexin-infra-domain-context` when app maps to `yuexin-infra` |
+| Failed build, failed sync, config drift, delivery debugging | `delivery-debugging-workflow` | matching domain context |
+| Multi-source report or handoff artifact | `artifact-pyramids` | only after the entry workflow requests a report artifact |
 
-After a required skill is loaded once, do not read it again in the same task. The next step must be a real read-only query, a repository operation in the workspace, a draft edit, or the final answer.
+After an entry workflow is loaded once, follow its reference loading order. The next step must be a real read-only query, repository operation, draft edit, validation command, or final response.
+
+## GitOps Completion Hard Gates
+
+Before the final response for any MR or manifest draft:
+
+- repository refresh succeeded
+- domain/environment/namespace mapping was verified
+- matching service catalog was loaded when a service or business domain was named
+- Kustomize placement was checked for Kubernetes resources
+- `kubectl kustomize <changed-service>/<environment>` passed for every changed overlay
+- no `svc.yaml` exists under `workloads/datacenter/*/test/`
+- commit and MR link are available, or the response names the failing command and required human action
 
 ## Repository Contract
 
@@ -40,96 +52,6 @@ All Git repository operations use Hermes terminal commands, not Git MCP tools.
 3. Locate the final effective config before answering GitOps questions. Render Kustomize or Helm when needed.
 4. For drafts, use this sequence: clone or enter repo -> fetch/pull -> branch -> edit -> validate -> commit -> push -> create Codeup change request.
 5. Do not read or write `/Users/gongxiude/Documents/my-world` during runtime work. That repository is a migration source only.
-
-## Config Change Fast Path
-
-For a Kanban task that requests a single GitOps configuration value change, such as:
-
-- `domain: intlsms`
-- `service: billing-system-backend`
-- `environment: test`
-- `request_type: config_modify` or `request_type: config_change`
-- `MINUTE_STATS_TEMP_TABLE_REFRESH_SECONDS=300`
-
-use this fast path instead of broad investigation:
-
-This path is deterministic. Do not create a todo list, do not run preliminary
-probes, and do not repeat repository refresh or grep commands. The first
-terminal action for this fast path must be the single execution block below.
-
-1. Call `kanban_show` at most once.
-2. Do not call `kanban_show` again.
-3. Do not call `skill_view` unless the execution block fails.
-4. Run this exact terminal block once:
-
-```bash
-set -euo pipefail
-
-repo=yuexin-infra
-task_id="${HERMES_KANBAN_TASK:-<task_id>}"
-branch="hermes/gitops-agent/${task_id}-billing-minute-refresh-300"
-base_branch="${GITOPS_YUEXIN_INFRA_BRANCH:-master}"
-root="${SOFTWARE_DELIVERY_WORKSPACE_ROOT:?SOFTWARE_DELIVERY_WORKSPACE_ROOT missing}"
-main="$root/$repo"
-worktree="$root/.worktrees/$repo/$task_id"
-target="workloads/intlsms/billing-system-backend/test/resources/env.tpl"
-
-cd "$root"
-test -d "$main/.git" || git clone "${GITOPS_YUEXIN_INFRA_REMOTE:?GITOPS_YUEXIN_INFRA_REMOTE missing}" "$repo"
-git -C "$main" fetch --prune origin
-git -C "$main" pull --ff-only origin "$base_branch"
-
-rm -rf "$worktree"
-if git -C "$main" ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
-  git -C "$main" worktree add "$worktree" "origin/$branch"
-else
-  git -C "$main" worktree add "$worktree" -b "$branch" "origin/$base_branch"
-fi
-
-test -f "$worktree/$target"
-grep -n "MINUTE_STATS_TEMP_TABLE_REFRESH_SECONDS" "$worktree/$target"
-
-/opt/hermes/.venv/bin/python - <<'PY' "$worktree/$target"
-from pathlib import Path
-import sys
-
-path = Path(sys.argv[1])
-text = path.read_text()
-old = "MINUTE_STATS_TEMP_TABLE_REFRESH_SECONDS=86400"
-new = "MINUTE_STATS_TEMP_TABLE_REFRESH_SECONDS=300"
-if new not in text:
-    if old not in text:
-        raise SystemExit(f"expected key/value not found in {path}")
-    text = text.replace(old, new, 1)
-    path.write_text(text)
-PY
-
-grep -n "MINUTE_STATS_TEMP_TABLE_REFRESH_SECONDS=300" "$worktree/$target"
-git -C "$worktree" diff -- "$target"
-git -C "$worktree" status --short
-
-if ! git -C "$worktree" diff --quiet -- "$target"; then
-  git -C "$worktree" add "$target"
-  git -C "$worktree" commit -m "fix(intlsms): update billing minute refresh in test"
-fi
-
-git -C "$worktree" push -u origin "$branch"
-commit="$(git -C "$worktree" rev-parse HEAD)"
-printf 'BRANCH=%s\nCOMMIT=%s\nFILE=%s\nVALIDATION=grep target value ok; git push ok\n' "$branch" "$commit" "$target"
-```
-
-5. Use `git-codeup:codeup_create_change_request` for repository `yuexin-infra`,
-   source branch from `BRANCH`, target branch from `GITOPS_YUEXIN_INFRA_BRANCH`,
-   `repository_id=6390496`, `source_project_id=6390496`,
-   `target_project_id=6390496`, and title
-   `fix(intlsms): update billing minute refresh in test`.
-6. If the MR already exists, list or get the existing Codeup change request and
-   reuse its link.
-7. Call `kanban_complete` immediately after MR creation or reuse.
-8. If the execution block or MR call fails, call `kanban_block` immediately with
-   the exact failing command/tool and required human action.
-
-The completion summary must include the branch, changed file, commit, validation result, and MR link or the exact MR creation blocker.
 
 ## Managed Repositories
 
@@ -167,7 +89,7 @@ For draft changes, create an isolated task worktree from the refreshed main chec
 
 ```bash
 repo=yuexin-infra
-task_id=<kanban-or-request-id>
+task_id=<request-id>
 branch="hermes/gitops-agent/${task_id}"
 git -C "${SOFTWARE_DELIVERY_WORKSPACE_ROOT}/${repo}" worktree add \
   "${SOFTWARE_DELIVERY_WORKSPACE_ROOT}/.worktrees/${repo}/${task_id}" \
@@ -185,25 +107,6 @@ Use the worktree directory for edits, validation, commit, and push. Do not edit 
 - Use Kubernetes plugin only for read-only runtime comparison.
 - Use terminal for repository file operations and local validators.
 - Never print tokens, kubeconfig content, `.env` values, or secret material.
-
-## Kanban Worker Rules
-
-When started by Kanban:
-
-1. Call `kanban_show` at most once.
-2. Extract repository, service, environment, request type, and requested output.
-3. Load the minimal matching skill chain.
-4. Execute the read-only query or draft workflow.
-5. Call `kanban_complete` exactly once with the final result.
-
-Worker protocol is mandatory:
-
-- Never end a Kanban worker run with only natural-language output.
-- Every Kanban worker run must call exactly one terminal Kanban tool before exit: `kanban_complete` for success or `kanban_block` for a blocked result.
-- If repository refresh, config location, validation, commit, push, or MR creation cannot be completed after one concrete diagnostic attempt, call `kanban_block` with the failing command, evidence, and required human action.
-- Do not repeat `kanban_show`, `skill_view`, `kanban_complete`, or `kanban_block` for the same task.
-
-For config-change tasks, success means a branch/MR draft exists or an explicit blocked result explains the missing repository path, validation command, credential, or approval. A prose summary without `kanban_complete` or `kanban_block` is a protocol violation.
 
 ## Output Contract
 

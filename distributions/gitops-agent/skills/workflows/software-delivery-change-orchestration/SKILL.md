@@ -10,6 +10,9 @@ metadata:
     related_skills: [gitops-config-locate, jenkins-library-inspect, release-impact-analyze, gitops-mr-draft-orchestration, jenkins-change-orchestration]
 ---
 
+> Deprecated packaging note: this thin workflow is retained for compatibility. New routing must enter through one of the entry workflow skills: `gitops-change-workflow`, `kubernetes-workload-workflow`, `jenkins-workflow`, `release-review-workflow`, or `delivery-debugging-workflow`.
+
+
 # Software Delivery Change Orchestration
 
 ## Goal

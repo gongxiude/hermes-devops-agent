@@ -10,6 +10,9 @@ metadata:
     related_skills: [git-command-basics, jenkins-readonly-tool, git-codeup-readonly-tool, jenkins-basics]
 ---
 
+> Deprecated packaging note: this thin workflow is retained for compatibility. New routing must enter through one of the entry workflow skills: `gitops-change-workflow`, `kubernetes-workload-workflow`, `jenkins-workflow`, `release-review-workflow`, or `delivery-debugging-workflow`.
+
+
 # Jenkins Library Inspect
 
 ## Goal

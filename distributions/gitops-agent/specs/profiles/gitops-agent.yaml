@@ -21,6 +21,11 @@ allowed_skill_categories:
     - jenkins-readonly-tool
     - argocd-query-tool
   workflows:
+    - gitops-change-workflow
+    - kubernetes-workload-workflow
+    - jenkins-workflow
+    - release-review-workflow
+    - delivery-debugging-workflow
     - gitops-config-locate
     - kustomize-render
     - jenkins-library-inspect
@@ -29,6 +34,9 @@ allowed_skill_categories:
     - jenkins-change-orchestration
     - software-delivery-change-orchestration
   contexts:
+    - service-catalog-intlsms
+    - service-catalog-datacenter
+    - service-catalog-platform
     - skill-policy-gate
     - audit-trail
     - secret-redaction

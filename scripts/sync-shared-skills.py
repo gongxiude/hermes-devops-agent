@@ -30,6 +30,7 @@ except ImportError:
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CANONICAL = REPO_ROOT / "skills"
 MAP_FILE = CANONICAL / "skills-map.yaml"
+PROFILE_LINKS = CANONICAL / "profile-links"
 DISTRIBUTIONS = REPO_ROOT / "distributions"
 
 
@@ -39,6 +40,26 @@ def load_map() -> dict[str, list[str]]:
     if not isinstance(dists, dict):
         sys.exit(f"{MAP_FILE} 的 distributions 必须是 mapping")
     return {str(d): list(skills or []) for d, skills in dists.items()}
+
+
+def load_profile_links() -> dict[str, list[str]]:
+    result: dict[str, list[str]] = {}
+    if not PROFILE_LINKS.is_dir():
+        return result
+    canonical_root = CANONICAL.resolve()
+    for profile_dir in sorted(p for p in PROFILE_LINKS.iterdir() if p.is_dir()):
+        skills: list[str] = []
+        for link in sorted(profile_dir.iterdir()):
+            if not link.is_symlink():
+                sys.exit(f"profile-links 只允许软链接：{link}")
+            target = link.resolve()
+            if not target.is_dir() or not (target / "SKILL.md").is_file():
+                sys.exit(f"profile-links 指向的 skill 无效：{link} -> {target}")
+            if target.parent != canonical_root:
+                sys.exit(f"profile-links 必须指向 repo 根 skills/<name>：{link} -> {target}")
+            skills.append(target.name)
+        result[profile_dir.name] = skills
+    return result
 
 
 GITIGNORE_BEGIN = "# >>> vendored-skills (auto-managed by scripts/sync-shared-skills.py) >>>"
@@ -88,6 +109,11 @@ def main() -> int:
     args = ap.parse_args()
 
     mapping = load_map()
+    for dist, linked_skills in load_profile_links().items():
+        current = mapping.setdefault(dist, [])
+        for skill in linked_skills:
+            if skill not in current:
+                current.append(skill)
     drift: list[str] = []
     vendored: list[str] = []
     synced = 0

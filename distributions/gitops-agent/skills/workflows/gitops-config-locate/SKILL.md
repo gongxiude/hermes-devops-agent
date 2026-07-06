@@ -10,6 +10,9 @@ metadata:
     related_skills: [git-command-basics, kustomize-basics, git-codeup-readonly-tool, kubernetes-object-basics]
 ---
 
+> Deprecated packaging note: this thin workflow is retained for compatibility. New routing must enter through one of the entry workflow skills: `gitops-change-workflow`, `kubernetes-workload-workflow`, `jenkins-workflow`, `release-review-workflow`, or `delivery-debugging-workflow`.
+
+
 # GitOps Config Locate
 
 ## Goal

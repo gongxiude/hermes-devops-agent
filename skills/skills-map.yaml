@@ -23,6 +23,15 @@ distributions:
     - implementation-planning
     - review-methodology
     - systematic-debugging
+    - gitops-change-workflow
+    - kubernetes-workload-workflow
+    - jenkins-workflow
+    - release-review-workflow
+    - delivery-debugging-workflow
+    - service-catalog-intlsms
+    - service-catalog-datacenter
+    - service-catalog-platform
+    - yuexin-infra-domain-context
   infra-agent:
     - artifact-pyramids
     - platform-engineering
